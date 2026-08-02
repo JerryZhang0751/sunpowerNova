@@ -1,0 +1,7 @@
+{
+  "cited_sources_extract_method": "structured",
+  "cited_urls_subset": ["https://www.consumerreports.org", "https://www.energysage.com"],
+  "mentioned": false,
+  "cited_with_link": false,
+  "competitors_mentioned_contains": ["Tesla"]
+}

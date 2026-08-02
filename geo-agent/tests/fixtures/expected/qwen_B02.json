@@ -1,0 +1,7 @@
+{
+  "cited_sources_extract_method": "structured",
+  "cited_urls_subset": ["https://sunhestia.com/"],
+  "mentioned": true,
+  "cited_with_link": true,
+  "competitors_mentioned_contains": ["BYD", "Enphase", "SolarEdge"]
+}
