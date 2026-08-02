@@ -4,12 +4,18 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from geo.shared.config import settings, REPO
 from geo.shared.storage import snapshot_dir
+import httplib2
 
 SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
 def _build_service():
     creds = service_account.Credentials.from_service_account_file(settings.gsc_key_file, scopes=SCOPES)
-    return build("searchconsole", "v1", credentials=creds, cache_discovery=False)
+    http = httplib2.Http()
+    if settings.proxy:
+        proxy_info = httplib2.proxy_info_from_url(settings.proxy)
+        http = httplib2.Http(proxy_info=proxy_info)
+    http = creds.authorize(http)
+    return build("searchconsole", "v1", http=http, cache_discovery=False)
 
 def snapshot_gsc(week:int, rule_version:str, days=28) -> dict:
     site = settings.targets["site"]["url"]

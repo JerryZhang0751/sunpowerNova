@@ -1,5 +1,6 @@
 from unittest.mock import patch, MagicMock
-from geo.fetch.gsc import snapshot_gsc
+from geo.fetch.gsc import snapshot_gsc, _build_service
+from geo.shared.config import settings
 
 def test_gsc_degrades_on_auth_error(tmp_path, monkeypatch):
     with patch("geo.fetch.gsc._build_service", side_effect=Exception("403 forbidden")):
@@ -12,3 +13,36 @@ def test_gsc_happy(tmp_path, monkeypatch):
     with patch("geo.fetch.gsc._build_service", return_value=svc):
         out = snapshot_gsc(week=99, rule_version="t")
     assert out["rows"][0]["keys"]==["solar battery"] and out["degraded"] is False
+
+def test_gsc_proxy_applied_when_set(tmp_path, monkeypatch):
+    """Verify proxy configuration is threaded into GSC HTTP transport when settings.proxy is set."""
+    # Test with proxy set - verify proxy_info_from_url is called
+    with patch("geo.fetch.gsc.settings") as mock_settings:
+        mock_settings.proxy = "http://127.0.0.1:7890"
+        mock_settings.gsc_key_file = "/tmp/fake-key.json"
+
+        with patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file") as mock_creds:
+            mock_creds.return_value.authorize = MagicMock()
+            with patch("geo.fetch.gsc.httplib2.proxy_info_from_url") as mock_proxy_info:
+                mock_proxy_info.return_value = MagicMock()
+                with patch("geo.fetch.gsc.build") as mock_build:
+                    mock_build.return_value = MagicMock()
+                    _build_service()
+
+                    # Verify proxy_info_from_url was called with the proxy URL
+                    mock_proxy_info.assert_called_once_with("http://127.0.0.1:7890")
+
+    # Test without proxy - verify proxy_info_from_url is NOT called
+    with patch("geo.fetch.gsc.settings") as mock_settings:
+        mock_settings.proxy = None
+        mock_settings.gsc_key_file = "/tmp/fake-key.json"
+
+        with patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file") as mock_creds:
+            mock_creds.return_value.authorize = MagicMock()
+            with patch("geo.fetch.gsc.httplib2.proxy_info_from_url") as mock_proxy_info:
+                with patch("geo.fetch.gsc.build") as mock_build:
+                    mock_build.return_value = MagicMock()
+                    _build_service()
+
+                    # Verify proxy_info_from_url was NOT called (no proxy)
+                    mock_proxy_info.assert_not_called()
