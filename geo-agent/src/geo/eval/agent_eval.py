@@ -169,6 +169,12 @@ def evaluate(fx_dir: Path) -> dict:
         # Check if tool call matches
         is_correct = ast_match(expected_call, actual_call)
 
+        # For irrelevance category, verify search was NOT actually triggered
+        if fixture.get("category") == "irrelevance" and is_correct:
+            # Load raw data to check meta.search_triggered
+            search_triggered = raw_data.get("meta", {}).get("search_triggered", True)
+            is_correct = not search_triggered  # Correct if search was NOT triggered
+
         # Track per-category results
         category = fixture.get("category", "unknown")
         per_category.setdefault(category, []).append(int(is_correct))
