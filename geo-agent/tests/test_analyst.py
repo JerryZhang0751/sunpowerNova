@@ -114,13 +114,16 @@ def test_metrics_denominators():
         mk_l1(model="qwen", prompt_id="B02", run=2, l2=l2_not_mentioned)
     ]
 
-    # Mock the L1 iteration
+    # Mock the L1 iteration and new helper functions
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            mock_repo.return_value = Path("/tmp/test_repo")
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        mock_repo.return_value = Path("/tmp/test_repo")
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
 
     # Check metrics for qwen model
     qwen_metrics = report["metrics"]["qwen"]
@@ -154,11 +157,14 @@ def test_multi_model_metrics():
     ]
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            mock_repo.return_value = Path("/tmp/test_repo")
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        mock_repo.return_value = Path("/tmp/test_repo")
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
 
     # Check qwen metrics
     qwen_metrics = report["metrics"]["qwen"]
@@ -185,11 +191,14 @@ def test_avg_position_calculation():
     ]
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            mock_repo.return_value = Path("/tmp/test_repo")
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        mock_repo.return_value = Path("/tmp/test_repo")
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
 
     qwen_metrics = report["metrics"]["qwen"]
     # Average position: (1 + 3 + 2) / 3 = 2.0
@@ -208,11 +217,14 @@ def test_sov_calculation():
     ]
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            mock_repo.return_value = Path("/tmp/test_repo")
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        mock_repo.return_value = Path("/tmp/test_repo")
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
 
     qwen_metrics = report["metrics"]["qwen"]
     # SOV: (2 + 1 + 0) / 3 = 1.0
@@ -224,15 +236,18 @@ def test_report_structure():
     records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True, cited=True, position=1))]
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            mock_repo.mkdir = MagicMock()
-            mock_write = MagicMock()
-            mock_repo.return_value = Path("/tmp/test_repo")
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):  # No L3 data available
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):  # No static signals
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):  # No GSC data
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        mock_repo.mkdir = MagicMock()
+                        mock_write = MagicMock()
+                        mock_repo.return_value = Path("/tmp/test_repo")
 
-            # Mock Path operations
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text', return_value=mock_write):
-                    report = assemble(week=1)
+                        # Mock Path operations
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text', return_value=mock_write):
+                                report = assemble(week=1)
 
     # Check required top-level fields
     assert "week" in report
@@ -250,10 +265,10 @@ def test_report_structure():
     # Check that metrics dict contains model names
     assert "qwen" in report["metrics"]
 
-    # Check that placeholder fields exist (will be filled in real implementation)
-    assert report["self_geo"] is None  # Placeholder in skeleton
-    assert report["self_seo"] is None  # Placeholder in skeleton
-    assert report["gap"] is None  # Placeholder in skeleton
+    # When no L3/static signals data is available, scores should be None (not placeholders)
+    assert report["self_geo"] is None  # No L3 data available
+    assert report["self_seo"] is None  # No static signals available
+    assert report["gap"] is None  # No competitor data available
 
 
 def test_report_determinism():
@@ -266,11 +281,14 @@ def test_report_determinism():
     reports = []
     for i in range(3):  # Generate report 3 times
         with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-            with patch('geo.assess.analyst.REPO') as mock_repo:
-                with patch('pathlib.Path.mkdir'):
-                    with patch('pathlib.Path.write_text'):
-                        report = assemble(week=1)
-                        reports.append(report)
+            with patch('geo.assess.analyst._load_l3_source', return_value=None):
+                with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                    with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                        with patch('geo.assess.analyst.REPO') as mock_repo:
+                            with patch('pathlib.Path.mkdir'):
+                                with patch('pathlib.Path.write_text'):
+                                    report = assemble(week=1)
+                                    reports.append(report)
 
     # All reports should be identical
     assert reports[0]["metrics"]["qwen"]["mention_rate"] == reports[1]["metrics"]["qwen"]["mention_rate"]
@@ -291,13 +309,16 @@ def test_csv_output_structure():
         csv_written.append(content)
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            mock_repo.return_value = Path("/tmp/test_repo")
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    with patch('builtins.open', create=True) as mock_open:
-                        mock_open.return_value.__enter__.return_value.write = mock_csv_write
-                        assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        mock_repo.return_value = Path("/tmp/test_repo")
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                with patch('builtins.open', create=True) as mock_open:
+                                    mock_open.return_value.__enter__.return_value.write = mock_csv_write
+                                    assemble(week=1)
 
     # Check that CSV was written with correct headers
     # Note: This test would need more sophisticated mocking to fully test CSV structure
@@ -309,10 +330,13 @@ def test_empty_records():
     records = []
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
 
     # Should still produce valid report structure
     assert "metrics" in report
@@ -325,12 +349,15 @@ def test_rule_version_binding():
     records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True, cited=True, position=1))]
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.settings') as mock_settings:
-            mock_settings.run.rule_version = "geo-seo-v1"
-            with patch('geo.assess.analyst.REPO') as mock_repo:
-                with patch('pathlib.Path.mkdir'):
-                    with patch('pathlib.Path.write_text'):
-                        report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.settings') as mock_settings:
+                        mock_settings.run.rule_version = "geo-seo-v1"
+                        with patch('geo.assess.analyst.REPO') as mock_repo:
+                            with patch('pathlib.Path.mkdir'):
+                                with patch('pathlib.Path.write_text'):
+                                    report = assemble(week=1)
 
         # Check that rule_version is in report
         assert "rule_version" in report
@@ -347,10 +374,13 @@ def test_competitor_counting():
     ]
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
 
     qwen_metrics = report["metrics"]["qwen"]
     # SOV: (3 + 1) / 2 = 2.0
@@ -367,10 +397,13 @@ def test_sentiment_passthrough():
     ]
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
 
     # Report should still be generated successfully
     assert "metrics" in report
@@ -382,16 +415,19 @@ def test_file_output_structure():
     records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True, cited=True, position=1))]
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            mock_repo.return_value = Path("/tmp/test_repo")
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    # Should not raise any exceptions
-                    report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        mock_repo.return_value = Path("/tmp/test_repo")
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                # Should not raise any exceptions
+                                report = assemble(week=1)
 
-                    # Verify function returns a valid report
-                    assert isinstance(report, dict)
-                    assert "week" in report
+                                # Verify function returns a valid report
+                                assert isinstance(report, dict)
+                                assert "week" in report
 
 
 def test_aggregation_across_prompts():
@@ -403,13 +439,136 @@ def test_aggregation_across_prompts():
     ]
 
     with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
-        with patch('geo.assess.analyst.REPO') as mock_repo:
-            with patch('pathlib.Path.mkdir'):
-                with patch('pathlib.Path.write_text'):
-                    report = assemble(week=1)
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
 
     qwen_metrics = report["metrics"]["qwen"]
     # Should aggregate across all prompts
     assert qwen_metrics["valid"] == 3
     assert qwen_metrics["mention_rate"] == round(2/3, 3)
     assert qwen_metrics["citation_rate"] == round(1/3, 3)
+
+
+def test_real_score_calculation_with_data():
+    """Test that real scores are calculated when L3/static signals data is available."""
+    from geo.shared.models import L3Source, DimScore, CompositeScore
+
+    # Mock L3 source data
+    mock_l3 = L3Source(
+        url="https://sunhestia.com",
+        sha1="abc123",
+        http_status=200,
+        text="Sample content",
+        structural={
+            "canonical": "https://sunhestia.com",
+            "h_counts": {"h1": 1, "h2": 2}
+        },
+        semantic={
+            "has_definition_segment": True,
+            "faq_block_count": 1,
+            "datapoint_count": 2,
+            "has_author_byline": True,
+            "has_publish_date": True,
+            "cites_external_sources": True
+        }
+    )
+
+    # Mock static signals
+    mock_static = {
+        "week": 1,
+        "rule_version": "v1",
+        "site": "https://sunhestia.com",
+        "pages": [
+            {
+                "url": "https://sunhestia.com/",
+                "https": True,
+                "http_status": 200,
+                "in_sitemap": True,
+                "has_viewport": True,
+                "h_counts": {"h1": 1, "h2": 2}
+            }
+        ],
+        "robots_ai": {"GPTBot": True, "ClaudeBot": True},
+        "sitemap_present": True
+    }
+
+    # Mock GSC snapshot
+    mock_gsc = {
+        "impressions": 500,
+        "clicks": 25,
+        "ctr": 0.05
+    }
+
+    records = [
+        mk_l1(model="qwen", prompt_id="B02", run=1,
+              l2=mk_l2(mentioned=True, cited=True, position=1, competitors=["Enphase", "SolarEdge"])),
+    ]
+
+    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+        with patch('geo.assess.analyst._load_l3_source', return_value=mock_l3):
+            with patch('geo.assess.analyst._load_static_signals', return_value=mock_static):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value=mock_gsc):
+                    with patch('geo.assess.analyst.REPO') as mock_repo:
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
+
+    # CRITICAL: Verify that real scores are calculated instead of None
+    assert report["self_geo"] is not None, "self_geo should be calculated when L3 data is available"
+    assert report["self_seo"] is not None, "self_seo should be calculated when static signals are available"
+
+    # Verify structure of real scores
+    assert "total" in report["self_geo"]
+    assert "dims" in report["self_geo"]
+    assert report["self_geo"]["total"] > 0  # Should have a positive score
+
+    assert "total" in report["self_seo"]
+    assert "dims" in report["self_seo"]
+    assert report["self_seo"]["total"] >= 0  # Should have a score (could be 0)
+
+    # Verify gap calculation (may be None if no competitors scored)
+    # This is acceptable as we may not have competitor L3 data
+
+
+def test_score_integration_determinism():
+    """Test that score calculation is deterministic with same inputs."""
+    from geo.shared.models import L3Source
+
+    mock_l3 = L3Source(
+        url="https://sunhestia.com",
+        sha1="abc123",
+        http_status=200,
+        structural={"canonical": "https://sunhestia.com"},
+        semantic={"has_definition_segment": True}
+    )
+
+    mock_static = {
+        "site": "https://sunhestia.com",
+        "pages": [{"url": "https://sunhestia.com/", "https": True, "http_status": 200}],
+        "robots_ai": {"GPTBot": True}
+    }
+
+    mock_gsc = {"impressions": 100, "clicks": 5, "ctr": 0.05}
+
+    records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True, cited=True, position=1))]
+
+    reports = []
+    for i in range(3):  # Generate 3 times
+        with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+            with patch('geo.assess.analyst._load_l3_source', return_value=mock_l3):
+                with patch('geo.assess.analyst._load_static_signals', return_value=mock_static):
+                    with patch('geo.assess.analyst._load_gsc_snapshot', return_value=mock_gsc):
+                        with patch('geo.assess.analyst.REPO'):
+                            with patch('pathlib.Path.mkdir'):
+                                with patch('pathlib.Path.write_text'):
+                                    report = assemble(week=1)
+                                    reports.append(report)
+
+    # All reports should have identical scores (deterministic)
+    assert reports[0]["self_geo"]["total"] == reports[1]["self_geo"]["total"] == reports[2]["self_geo"]["total"]
+    assert reports[0]["self_seo"]["total"] == reports[1]["self_seo"]["total"] == reports[2]["self_seo"]["total"]
