@@ -1,0 +1,85 @@
+<!doctype html><html lang="zh"><head><meta charset="utf-8">
+<title>SunHestia GEO/SEO 报告 W{{ report.week }}</title>
+<style>body{font-family:system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem}
+.gap{background:#fff3cd;padding:.6rem;border-radius:.4rem;margin:1rem 0}
+section{margin:2rem 0;border:1px solid #dee2e6;border-radius:.4rem;padding:1.5rem}
+table{border-collapse:collapse;width:100%;margin:1rem 0}
+table td,table th{border:1px solid #dee2e6;padding:.5rem;text-align:left}
+h1,h2,h3{color:#212529}</style>
+</head><body>
+<h1>SunHestia 评测报告 · 第 {{ report.week }} 周</h1>
+<p>rule_version: <code>{{ report.rule_version }}</code> · prompt_set_version: <code>{{ report.prompt_set_version }}</code></p>
+
+<section>
+<h2>①执行摘要</h2>
+<p>GEO总分: <strong>{{ '%.1f'|format(report.self_geo.total) }}</strong>/100</p>
+<p>SEO总分: <strong>{{ '%.1f'|format(report.self_seo.total) }}</strong>/100</p>
+</section>
+
+<section>
+<h2>②自审 GEO 6维雷达</h2>
+<div id="geo" style="width:520px;height:360px"></div>
+<p>GEO 6维得分详情</p>
+</section>
+
+<section>
+<h2>②自审 SEO 5支柱</h2>
+<div id="seo" style="width:520px;height:360px"></div>
+<p>SEO 5支柱得分详情</p>
+</section>
+
+<section>
+<h2>3 模型横向对比</h2><table border=1>
+<tr><th>model</th><th>mention</th><th>citation</th><th>position</th><th>SOV</th></tr>
+{% for m,v in report.metrics.items()|sort %}<tr><td>{{ m }}</td><td>{{ '%.3f'|format(v.mention_rate) }}</td>
+<td>{{ '%.3f'|format(v.citation_rate) }}</td><td>{{ v.avg_position if v.avg_position is not none else '-' }}</td>
+<td>{{ '%.3f'|format(v.sov) }}</td></tr>{% endfor %}</table>
+</section>
+
+<section>
+<h2>④竞品差值热图</h2>
+<h3>各维度与竞品的差异</h3>
+<table border=1>
+<tr><th>维度</th><th>差值</th></tr>
+{% for dim, diff in report.gap.dim_diff.items()|sort %}<tr><td>{{ dim }}</td><td>{{ '%.1f'|format(diff) }}</td></tr>{% endfor %}
+</table>
+<div class="gap">⚠️ {{ report.authority_gap_note }}</div>
+</section>
+
+<section>
+<h2>⑤规则迭代摘要</h2>
+<p>当前规则版本: <code>{{ report.rule_version }}</code></p>
+<p>规则迭代历史与变更记录</p>
+</section>
+
+<section>
+<h2>⑥优化建议</h2>
+<p>基于GEO和SEO分析结果的关键优化建议</p>
+<ul>
+<li>提升低分维度表现</li>
+<li>强化关键词覆盖与竞争定位</li>
+</ul>
+</section>
+
+<section>
+<h2>⑦数据附录</h2>
+<h3>GEO详细数据</h3>
+<pre>{{ report.self_geo | tojson }}</pre>
+<h3>SEO详细数据</h3>
+<pre>{{ report.self_seo | tojson }}</pre>
+</section>
+
+<footer>SunHestia GEO/SEO platform · P0</footer>
+<script>{{ echarts_js }}</script>
+<script>
+const G={{ report.self_geo | tojson }};
+new echarts.init(document.getElementById('geo')).setOption({
+  radar:{indicator:G.dims.map(d=>({name:d.name,max:100}))},
+  series:[{type:'radar',data:[{value:G.dims.map(d=>d.score)}]}]});
+
+const S={{ report.self_seo | tojson }};
+new echarts.init(document.getElementById('seo')).setOption({
+  radar:{indicator:S.dims.map(d=>({name:d.name,max:100}))},
+  series:[{type:'radar',data:[{value:S.dims.map(d=>d.score)}]}]});
+</script>
+</body></html>
