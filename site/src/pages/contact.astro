@@ -1,0 +1,64 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+<Layout
+  title="Contact SunHestia — Get a Solar Quote"
+  description="Contact SunHestia to request a quote for a residential solar and battery storage system."
+  path="contact"
+>
+  <section class="hero" style="padding: 64px 0">
+    <div class="wrap">
+      <h1 style="font-size: clamp(1.8rem, 4vw, 2.8rem)">Request a quote</h1>
+      <p class="lead">
+        Tell us about your roof and how much electricity you use. We will get back
+        to you with a system sized to your home.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap" style="display:grid; grid-template-columns: 1.2fr .8fr; gap: 40px">
+      <form
+        class="card"
+        style="display:grid; gap:16px"
+        action="mailto:info@sunhestia.com"
+        method="post"
+        enctype="text/plain"
+      >
+        <div style="display:grid; gap:6px">
+          <label for="name">Name</label>
+          <input id="name" name="name" type="text" required style="padding:11px 12px; border:1px solid var(--c-border); border-radius:10px; font-size:1rem" />
+        </div>
+        <div style="display:grid; gap:6px">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required style="padding:11px 12px; border:1px solid var(--c-border); border-radius:10px; font-size:1rem" />
+        </div>
+        <div style="display:grid; gap:6px">
+          <label for="country">Country</label>
+          <input id="country" name="country" type="text" placeholder="e.g. Germany, Italy, Netherlands" style="padding:11px 12px; border:1px solid var(--c-border); border-radius:10px; font-size:1rem" />
+        </div>
+        <div style="display:grid; gap:6px">
+          <label for="msg">About your home</label>
+          <textarea id="msg" name="message" rows="5" placeholder="Roof type, approximate annual electricity use, whether you have a heat pump or EV…" style="padding:11px 12px; border:1px solid var(--c-border); border-radius:10px; font-size:1rem; font-family:inherit"></textarea>
+        </div>
+        <button class="btn btn-primary" type="submit" style="border:0; cursor:pointer; justify-self:start">Send request</button>
+      </form>
+
+      <aside class="card">
+        <h3>Other ways to reach us</h3>
+        <p style="margin-bottom:18px">We respond to most enquiries within two business days.</p>
+        <p style="margin:4px 0"><strong>Email</strong><br /><a href="mailto:info@sunhestia.com">info@sunhestia.com</a></p>
+        <p style="margin:4px 0"><strong>Installer network</strong><br />Certified installers across European markets.</p>
+        <p style="margin:4px 0"><strong>Press</strong><br /><a href="mailto:info@sunhestia.com">info@sunhestia.com</a></p>
+      </aside>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  @media (max-width: 860px) {
+    section .wrap[style*="1.2fr"] {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>

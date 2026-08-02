@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 280" width="460" height="280">
+  <defs>
+    <linearGradient id="hsky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1d4e7a"/>
+      <stop offset="1" stop-color="#143a66"/>
+    </linearGradient>
+    <radialGradient id="hsun" cx="0.4" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#ffd27a"/>
+      <stop offset="1" stop-color="#f5a524"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="460" height="280" rx="18" fill="url(#hsky)"/>
+
+  <!-- sun -->
+  <circle cx="378" cy="58" r="24" fill="url(#hsun)"/>
+  <g stroke="#f5a524" stroke-width="4" stroke-linecap="round" opacity="0.8">
+    <line x1="378" y1="22" x2="378" y2="12"/>
+    <line x1="378" y1="104" x2="378" y2="94"/>
+    <line x1="342" y1="58" x2="332" y2="58"/>
+    <line x1="424" y1="58" x2="414" y2="58"/>
+    <line x1="353" y1="33" x2="346" y2="26"/>
+    <line x1="403" y1="83" x2="410" y2="90"/>
+  </g>
+
+  <!-- energy flow: sun to roof -->
+  <line x1="350" y1="84" x2="250" y2="122" stroke="#f5a524" stroke-width="3" stroke-linecap="round" opacity="0.45" stroke-dasharray="5 9"/>
+
+  <!-- house wall -->
+  <rect x="118" y="150" width="184" height="90" fill="#eaf1f8" rx="5"/>
+  <!-- door -->
+  <rect x="190" y="188" width="36" height="52" fill="#9fb2cc" rx="3"/>
+  <!-- roof -->
+  <polygon points="100,152 210,84 320,152" fill="#0b1f3a"/>
+  <!-- PV panels on roof -->
+  <polygon points="122,150 210,92 210,128 158,150" fill="#1f6feb"/>
+  <polygon points="210,92 298,150 262,150 210,126" fill="#1f6feb"/>
+  <g stroke="#cfe0f7" stroke-width="1.2" opacity="0.7">
+    <line x1="156" y1="150" x2="210" y2="111"/>
+    <line x1="190" y1="150" x2="210" y2="135"/>
+    <line x1="210" y1="126" x2="262" y2="150"/>
+    <line x1="210" y1="136" x2="236" y2="150"/>
+  </g>
+
+  <!-- energy flow: house to battery -->
+  <line x1="302" y1="180" x2="348" y2="180" stroke="#f5a524" stroke-width="3" stroke-linecap="round" opacity="0.5" stroke-dasharray="5 9"/>
+
+  <!-- wall-mounted LiFePO4 battery -->
+  <rect x="350" y="150" width="60" height="100" rx="9" fill="#0b1f3a" stroke="#2a3f5f" stroke-width="2"/>
+  <rect x="362" y="166" width="36" height="10" rx="2" fill="#f5a524"/>
+  <rect x="362" y="182" width="36" height="10" rx="2" fill="#f5a524" opacity="0.7"/>
+  <rect x="362" y="198" width="36" height="10" rx="2" fill="#f5a524" opacity="0.4"/>
+  <text x="380" y="232" fill="#9fb2cc" font-size="13" font-family="Inter, system-ui, sans-serif" text-anchor="middle" font-weight="700">LiFePO4</text>
+</svg>

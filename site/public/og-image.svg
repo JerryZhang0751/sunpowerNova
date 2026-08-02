@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="Inter, 'Segoe UI', system-ui, -apple-system, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1f3a"/>
+      <stop offset="1" stop-color="#143a66"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.35" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#f5a524"/>
+      <stop offset="1" stop-color="#d98212"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- sun, top right -->
+  <circle cx="1010" cy="150" r="66" fill="url(#sun)"/>
+  <g stroke="#f5a524" stroke-width="7" stroke-linecap="round" opacity="0.85">
+    <line x1="1010" y1="50" x2="1010" y2="24"/>
+    <line x1="1010" y1="276" x2="1010" y2="250"/>
+    <line x1="910" y1="150" x2="884" y2="150"/>
+    <line x1="1136" y1="150" x2="1110" y2="150"/>
+    <line x1="940" y1="80" x2="922" y2="62"/>
+    <line x1="1080" y1="220" x2="1098" y2="238"/>
+    <line x1="940" y1="220" x2="922" y2="238"/>
+    <line x1="1080" y1="80" x2="1098" y2="62"/>
+  </g>
+
+  <!-- brand row -->
+  <circle cx="96" cy="118" r="17" fill="url(#sun)"/>
+  <text x="124" y="127" fill="#ffffff" font-size="30" font-weight="700">SunHestia</text>
+
+  <!-- headline -->
+  <text x="94" y="290" fill="#ffffff" font-size="66" font-weight="800">Your roof. Your power.</text>
+  <text x="94" y="362" fill="#ffffff" font-size="66" font-weight="800">Your storage.</text>
+
+  <!-- tagline -->
+  <text x="96" y="430" fill="#d6e2f2" font-size="30">Solar panels &amp; home battery storage for European homes</text>
+
+  <!-- url -->
+  <text x="96" y="566" fill="#8aa0bd" font-size="24" font-weight="600">sunhestia.com</text>
+</svg>

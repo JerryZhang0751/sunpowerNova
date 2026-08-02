@@ -1,0 +1,48 @@
+# SunHestia robots.txt
+# W1 infrastructure: explicitly allow all AI / LLM crawlers so the site can be
+# discovered and read by generative engines (GPTBot, ClaudeBot, PerplexityBot,
+# Google-Extended, etc.). This is crawlability infrastructure, not content GEO.
+
+User-agent: *
+Allow: /
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+Sitemap: https://sunhestia.com/sitemap-index.xml

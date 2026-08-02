@@ -1,0 +1,38 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const docs = [
+  { t: "System datasheets", d: "Specifications for PV modules, the home battery and the hybrid inverter." },
+  { t: "Installation guidelines", d: "Mounting, electrical connection and commissioning notes for certified installers." },
+  { t: "Warranty terms", d: "25-year PV performance guarantee and 10-year battery warranty." },
+  { t: "Self-consumption guide", d: "How to read your production and consumption, and shift loads to sunny hours." },
+];
+---
+<Layout
+  title="Solar & Battery Storage Guides & Datasheets"
+  description="Technical resources, datasheets and guides for SunHestia residential solar and battery storage systems."
+  path="resources"
+>
+  <section class="hero" style="padding: 64px 0">
+    <div class="wrap">
+      <h1 style="font-size: clamp(1.8rem, 4vw, 2.8rem)">Technical resources</h1>
+      <p class="lead">Datasheets, guides and warranty information for homeowners and installers.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="grid cols-2">
+        {docs.map((d) => (
+          <div class="card">
+            <h3>{d.t}</h3>
+            <p>{d.d}</p>
+          </div>
+        ))}
+      </div>
+      <p style="margin-top: 32px">
+        Need a specific document? <a href="/contact/">Contact us →</a>
+      </p>
+    </div>
+  </section>
+</Layout>

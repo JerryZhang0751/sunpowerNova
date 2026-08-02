@@ -1,0 +1,71 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const values = [
+  { t: "Self-sufficiency first", d: "We design for high self-consumption, so homeowners rely less on the grid and more on their own roof." },
+  { t: "Right-sized, not oversized", d: "A system should match the home and its use — not the biggest stack of hardware we can sell." },
+  { t: "Clean by default", d: "Emission-free electricity, long-lived hardware, and chemistries without cobalt." },
+  { t: "Local rules respected", d: "Every system is configured to the connection rules and tariffs of its country." },
+];
+---
+<Layout
+  title="About SunHestia — Solar & Battery Storage"
+  description="SunHestia is a residential solar and battery storage company focused on self-consumption for European homeowners."
+  path="about"
+>
+  <section class="hero" style="padding: 64px 0">
+    <div class="wrap">
+      <h1 style="font-size: clamp(1.8rem, 4vw, 2.8rem)">About SunHestia</h1>
+      <p class="lead">
+        SunHestia builds residential solar photovoltaic and battery storage
+        systems. Our focus is self-consumption: helping homeowners generate clean
+        electricity, store it, and use it themselves.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap prose">
+      <h2>What we believe</h2>
+      <p>
+        Rooftop solar is most valuable when the energy it produces is used in the
+        home it came from. Selling surplus back to the grid at a low rate and
+        buying power back at a high rate rarely serves the homeowner. Storage
+        changes that equation: it lets a household keep its own clean energy and
+        spend it after the sun goes down.
+      </p>
+      <p>
+        SunHestia exists to make that straightforward — pairing reliable
+        generation with right-sized storage, designed for the homes and climates
+        of Europe.
+      </p>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="wrap">
+      <h2>How we work</h2>
+      <div class="grid cols-2">
+        {values.map((v) => (
+          <div class="card">
+            <h3>{v.t}</h3>
+            <p>{v.d}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap prose">
+      <h2>Who we build for</h2>
+      <p>
+        Our systems are designed for owner-occupiers of detached houses: people
+        who control their own roof, plan to stay in their home for years, and want
+        to reduce their dependence on grid electricity. If that sounds like you,
+        we would be glad to design a system for your home.
+      </p>
+      <p><a href="/contact/">Talk to us about your home →</a></p>
+    </div>
+  </section>
+</Layout>

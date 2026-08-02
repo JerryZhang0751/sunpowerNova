@@ -1,0 +1,7 @@
+I couldn’t find reliable review results specifically for **“SunHestia Solar”** in the search results. The closest match was **SunHeat Solar Inc.**, which appears to be an Illinois/Chicago-area solar installer.
+
+If you meant **SunHeat Solar**, the available reviews are limited but positive: one reviewer praised Garett/SunHeat for strong solar knowledge, competitive pricing, handling the SREC process, and completing installation on time; the reviewer also noted that the company doesn’t advertise much, so there isn’t much information available online [1]. Another reviewer called it the “Best Solar installation company in Chicago” and said SunHeat responded quickly and provided a detailed quote [1].
+
+Because review volume appears low, I’d recommend verifying the company carefully before signing anything. When comparing solar companies, look at customer reviews, warranties, financing terms, certifications such as NABCEP, insurance, and whether the installer uses in-house crews or subcontractors [2]. Also get multiple quotes and compare equipment, warranties, and total cost—not just the monthly payment [2].
+
+If you want, I can also help you check whether **SunHestia** is a legitimate company if you share their website, location, or quote details.

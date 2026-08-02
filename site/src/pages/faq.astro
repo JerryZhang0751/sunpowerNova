@@ -1,0 +1,67 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const faqs = [
+  {
+    q: "What does a residential solar and storage system include?",
+    a: "Typically rooftop solar panels, a hybrid inverter, and a home battery. The panels produce electricity, the inverter routes it to your home or the battery, and the battery stores surplus for use after dark.",
+  },
+  {
+    q: "How big should my battery be?",
+    a: "Battery size should match your evening electricity use. A common starting point for a detached home is 5–10 kWh, stackable to around 15 kWh. We size it based on your actual consumption, not a one-size-fits-all figure.",
+  },
+  {
+    q: "Do I need a battery with solar panels?",
+    a: "Solar works without a battery, but without storage most daytime surplus is exported to the grid. A battery lets you keep and use that energy yourself, which is usually better value than selling low and buying back high.",
+  },
+  {
+    q: "What roof types are suitable?",
+    a: "Pitched tile and metal roofs, flat roofs on garages, and ground-mounted frames where the main roof is shaded. Orientation and shading affect yield, so we assess each roof individually.",
+  },
+  {
+    q: "How long does installation take?",
+    a: "For a typical detached home, the physical installation is often completed within a day once the system is designed and the hardware is on site.",
+  },
+  {
+    q: "What warranty do you offer?",
+    a: "PV modules carry a 25-year linear performance guarantee, and the LiFePO4 home battery carries a 10-year warranty.",
+  },
+];
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+---
+<Layout
+  title="Solar & Battery Storage FAQ"
+  description="Frequently asked questions about SunHestia residential solar and battery storage systems."
+  path="faq"
+  jsonLd={faqSchema}
+>
+  <section class="hero" style="padding: 64px 0">
+    <div class="wrap">
+      <h1 style="font-size: clamp(1.8rem, 4vw, 2.8rem)">Frequently asked questions</h1>
+      <p class="lead">The basics on solar panels, home batteries and self-consumption.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap prose">
+      {faqs.map((f) => (
+        <div style="margin-bottom: 28px">
+          <h2 style="font-size:1.2rem">{f.q}</h2>
+          <p>{f.a}</p>
+        </div>
+      ))}
+      <p style="margin-top: 36px">
+        Have a question we haven't answered? <a href="/contact/">Ask us directly →</a>
+      </p>
+    </div>
+  </section>
+</Layout>

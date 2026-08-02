@@ -1,0 +1,5 @@
+# SDD scratch (subagent-driven-development workspace) — never commit
+.superpowers/
+
+# OS
+.DS_Store

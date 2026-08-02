@@ -1,0 +1,108 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const products = [
+  {
+    id: "battery",
+    tag: "Storage",
+    name: "SunHestia Home Battery",
+    spec: "LiFePO4 · 5–15 kWh · modular",
+    body: "A wall-mounted lithium-iron-phosphate battery that stores surplus solar produced during the day. Modular capacity means you can start small and add units as your needs grow. Designed for thousands of charge cycles with a 10-year warranty.",
+    points: [
+      "Modular from 5 kWh, stackable to 15 kWh",
+      "LiFePO4 chemistry — stable, long-lasting, cobalt-free",
+      "Built-in hybrid inverter compatibility",
+      "Wall or floor mounted, indoor or covered outdoor",
+    ],
+  },
+  {
+    id: "pv",
+    tag: "Generation",
+    name: "SunHestia Solar PV Modules",
+    spec: "Monocrystalline · 400–450 W · black",
+    body: "High-efficiency monocrystalline rooftop panels that turn sunlight into electricity for your home. Low-profile black modules sit close to the roofline and carry a 25-year performance guarantee.",
+    points: [
+      "High-efficiency monocrystalline cells",
+      "Black, low-profile aesthetic for pitched roofs",
+      "25-year linear performance guarantee",
+      "Resistant to salt mist and ammonia — suited to coastal and rural sites",
+    ],
+  },
+  {
+    id: "inverter",
+    tag: "Control",
+    name: "Hybrid Inverter & Energy Manager",
+    spec: "Smart hybrid · app monitoring",
+    body: "The brain of the system. The hybrid inverter converts solar DC power for your home, directs surplus into the battery, and only draws from the grid when needed. A companion app shows production, storage and consumption in real time.",
+    points: [
+      "Routes power between panels, battery, home and grid",
+      "Real-time monitoring from a phone",
+      "Backup-capable for short outages",
+      "Supports time-of-use scheduling",
+    ],
+  },
+];
+
+const productSchemas = products.map((p) => ({
+  "@context": "https://schema.org",
+  "@type": "Product",
+  name: p.name,
+  description: p.body,
+  category: p.tag,
+  brand: { "@type": "Brand", name: "SunHestia" },
+}));
+---
+<Layout
+  title="Solar Panels, Battery Storage & Inverters"
+  description="SunHestia products: residential solar PV modules, modular LiFePO4 home battery storage, and a hybrid inverter with app monitoring."
+  path="products"
+  jsonLd={productSchemas}
+>
+  <section class="hero" style="padding: 64px 0">
+    <div class="wrap">
+      <h1 style="font-size: clamp(1.8rem, 4vw, 2.8rem)">Solar generation, storage and control</h1>
+      <p class="lead">
+        Three components that work as one system: panels that produce, a battery
+        that stores, and an inverter that decides where every watt goes.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="grid">
+        {products.map((p) => (
+          <div class="card" id={p.id}>
+            <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px">
+              <h3 style="font-size:1.4rem">{p.name}</h3>
+              <span style="font-size:.8rem; color:var(--c-sun-deep); font-weight:600; text-transform:uppercase; letter-spacing:.05em">{p.tag}</span>
+            </div>
+            <div style="color:var(--c-ink-soft); font-size:.9rem; margin:4px 0 14px">{p.spec}</div>
+            <p>{p.body}</p>
+            <ul style="color:var(--c-ink-soft); margin:16px 0 0; padding-left:1.1em">
+              {p.points.map((pt) => <li>{pt}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="wrap prose">
+      <h2>How the parts fit together</h2>
+      <p>
+        Sunlight hits the panels and is converted into direct current. The hybrid
+        inverter turns that into the alternating current your home uses. While the
+        sun is up, your household runs on solar first. Any surplus flows into the
+        battery instead of being exported. When the panels stop producing in the
+        evening, the home automatically draws from the stored battery power, and
+        only falls back to the grid if the battery runs out.
+      </p>
+      <p>
+        The result is high self-consumption: a large share of the electricity you
+        use is produced and stored on your own property.
+      </p>
+    </div>
+  </section>
+</Layout>

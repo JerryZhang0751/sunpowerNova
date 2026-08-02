@@ -1,0 +1,23 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+<Layout
+  title="Page not found"
+  description="The page you were looking for could not be found. Return to the SunHestia homepage or browse our solar and battery storage products."
+  path="404"
+  noindex
+>
+  <section class="hero" style="padding: 96px 0">
+    <div class="wrap">
+      <h1 style="font-size: clamp(2.4rem, 6vw, 3.6rem)">404 — page not found</h1>
+      <p class="lead">
+        The page you're looking for doesn't exist or may have moved. Use the
+        links below to get back on track.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/">Back to home</a>
+        <a class="btn btn-ghost" href="/products/">View products</a>
+      </div>
+    </div>
+  </section>
+</Layout>

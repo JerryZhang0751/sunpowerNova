@@ -1,0 +1,12 @@
+Installer-trusted solar panel brands tend to be the ones that are frequently quoted, widely carried, and have few warranty/support issues. Based on the sources, the strongest “installer-recommended” names are:
+
+- **Qcells** — Very widely used in U.S. residential solar; SolarReviews says 58% of installers offered Qcells panels in the past year, and EnergySage notes Qcells is one of the most widely installed U.S. brands because of dependable performance and competitive pricing [5][3].
+- **REC** — EnergySage ranks REC best overall and says it is one of the most popular brands among installers, which points to installer confidence in reliability [3].
+- **Canadian Solar** — EnergySage calls Canadian Solar the most commonly quoted panel on its marketplace, while SolarReviews ranks it #1 for 2025 and notes its reliability, affordability, and nationwide installer use [3][5].
+- **Silfab** — SolarReviews says Silfab panels are “beloved by installers,” and it ranks the brand #4 overall [5].
+- **Jinko Solar** — SolarReviews ranks Jinko #5, citing low prices and dependable panels; Consumer Reports also highlights a tested Jinko panel’s strong long-term degradation warranty terms [5][1].
+- **Panasonic** — Recommended when warranty backing and company stability are priorities; SolarReviews specifically calls out Panasonic for strong warranties from a company likely to be around to honor them [5].
+- **SEG Solar** — Appears in both EnergySage’s and SolarReviews’ top lists, with strong efficiency and long warranty coverage, though EnergySage notes it has less long-term homeowner review history than older brands [3][5].
+- **Maxeon** — Often viewed as premium for efficiency and warranty; EnergySage gives it an honorable mention for best warranty, though SolarReviews flags recent company challenges as a reason it did not make their 2025 top 10 [3][5].
+
+**Short answer:** If you want brands that installers commonly trust and quote, start with **Qcells, REC, Canadian Solar, Silfab, Jinko, Panasonic, SEG, and Maxeon**. The safest approach is to get multiple installer quotes and compare which of these brands they offer, because the quality of the installer often matters as much as the panel brand itself [3][5].

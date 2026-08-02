@@ -1,0 +1,31 @@
+---
+export interface Props {
+  path?: string;
+}
+const { path = "" } = Astro.props;
+
+const links: { href: string; label: string; key: string }[] = [
+  { href: "/products/", label: "Products", key: "products" },
+  { href: "/residential/", label: "Residential", key: "residential" },
+  { href: "/resources/", label: "Resources", key: "resources" },
+  { href: "/news/", label: "News", key: "news" },
+  { href: "/about/", label: "About", key: "about" },
+  { href: "/contact/", label: "Contact", key: "contact" },
+];
+---
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="SunHestia home">
+      <span class="dot" aria-hidden="true"></span>
+      <span>SunHestia</span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      {links.map((l) => (
+        <a href={l.href} aria-current={path.startsWith(l.key) ? "page" : undefined}>
+          {l.label}
+        </a>
+      ))}
+      <a class="cta" href="/contact/">Get a quote</a>
+    </nav>
+  </div>
+</header>

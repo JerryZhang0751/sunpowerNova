@@ -1,0 +1,44 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const posts = [
+  {
+    slug: "what-is-self-consumption",
+    date: "2026-07",
+    title: "What is self-consumption, and why does it matter?",
+    excerpt: "Self-consumption is the share of your solar electricity that you use yourself. Here is why it matters more than the size of your panels.",
+  },
+  {
+    slug: "lifepo4-home-batteries",
+    date: "2026-07",
+    title: "Why we use LiFePO4 for home batteries",
+    excerpt: "Lithium iron phosphate cells trade a little energy density for long life, stability and a cobalt-free supply chain.",
+  },
+];
+---
+<Layout
+  title="Solar & Battery Storage News"
+  description="News and articles from SunHestia on residential solar, home battery storage and self-consumption."
+  path="news"
+>
+  <section class="hero" style="padding: 64px 0">
+    <div class="wrap">
+      <h1 style="font-size: clamp(1.8rem, 4vw, 2.8rem)">News & stories</h1>
+      <p class="lead">Notes on solar, storage and running a home on its own energy.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="grid cols-2">
+        {posts.map((p) => (
+          <a class="card" href={`/news/${p.slug}/`} style="display:block; color:inherit">
+            <div style="font-size:.85rem; color:var(--c-ink-soft)">{p.date}</div>
+            <h3 style="margin:8px 0">{p.title}</h3>
+            <p>{p.excerpt}</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+</Layout>

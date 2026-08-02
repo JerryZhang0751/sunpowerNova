@@ -1,0 +1,11 @@
+.env
+*.sqlite
+state/
+data/
+reports/
+__pycache__/
+*.pyc
+
+# GSC service account private key（机密，等价密码）
+gsc-nova-*.json
+*-service-account*.json

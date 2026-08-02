@@ -1,0 +1,156 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const stats = [
+  { num: "Up to 70%", lbl: "less grid energy with solar + storage" },
+  { num: "10 years", lbl: "battery warranty, LiFePO4 cells" },
+  { num: "25 years", lbl: "performance guarantee on PV modules" },
+  { num: "1 day", lbl: "typical residential installation time" },
+];
+
+const pillars = [
+  {
+    ico: "☀️",
+    title: "Solar photovoltaic",
+    body: "High-efficiency monocrystalline rooftop modules sized to your roof and your household consumption.",
+  },
+  {
+    ico: "🔋",
+    title: "Home battery storage",
+    body: "Modular LiFePO4 batteries from 5 to 15 kWh. Store surplus solar by day and run your home on it after dark.",
+  },
+  {
+    ico: "🏠",
+    title: "Self-consumption",
+    body: "Use the energy you generate instead of selling it cheap and buying it back dear. Less grid, lower bills.",
+  },
+];
+
+const steps = [
+  { n: "01", t: "Roof & usage assessment", d: "We survey your roof, orientation and annual consumption to right-size the system." },
+  { n: "02", t: "System design", d: "PV capacity, battery size and inverter are matched to maximise self-consumption." },
+  { n: "03", t: "Professional install", d: "A certified installer mounts the system, usually within a single day for a detached home." },
+  { n: "04", t: "Generate & store", d: "Produce clean power by day, store the surplus, and consume it whenever you need it." },
+];
+---
+<Layout
+  title="SunHestia — Solar Panels & Battery Storage for European Homes"
+  description="SunHestia designs residential solar photovoltaic and battery storage systems for European homeowners. Generate, store and consume your own clean energy."
+>
+  <section class="hero">
+    <div class="wrap">
+      <h1>Your roof. Your power. Your storage.</h1>
+      <p class="lead">
+        SunHestia pairs high-efficiency solar panels with home battery storage
+        so European homeowners can generate clean electricity, store the surplus,
+        and run their homes on self-produced energy day and night.
+      </p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/contact/">Get a free quote</a>
+        <a class="btn btn-ghost" href="/products/">Explore products</a>
+      </div>
+
+      <div class="stats" style="margin-top: 56px">
+        {stats.map((s) => (
+          <div>
+            <div class="num">{s.num}</div>
+            <div class="lbl">{s.lbl}</div>
+          </div>
+        ))}
+      </div>
+
+      <img
+        src="/hero-solar.svg"
+        alt="How a SunHestia system works: rooftop solar panels generate electricity by day, surplus is stored in a wall-mounted LiFePO4 home battery, and the home runs on stored power after dark."
+        style="margin-top: 48px; max-width: 420px; width: 100%; height: auto"
+      />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <h2>One system, three jobs</h2>
+      <p class="sub">
+        Generate electricity from sunlight, keep the surplus in a battery, and
+        consume it in your own home — instead of relying on the grid alone.
+      </p>
+      <div class="grid cols-3">
+        {pillars.map((p) => (
+          <div class="card">
+            <div class="ico">{p.ico}</div>
+            <h3>{p.title}</h3>
+            <p>{p.body}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="wrap">
+      <h2>Why homeowners choose SunHestia</h2>
+      <p class="sub">
+        Built for detached houses with their own roof and the freedom to decide
+        how their energy is produced.
+      </p>
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>Lower energy bills</h3>
+          <p>
+            The more of your own solar you consume, the less you buy from the
+            grid. A correctly sized battery shifts daytime surplus into the
+            evening, when grid power is most expensive.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Energy you control</h3>
+          <p>
+            Storage means your home keeps running on clean energy after sunset
+            and during short outages — quietly and without fuel.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Clean and quiet</h3>
+          <p>
+            No moving parts, no exhaust, no noise. Just panels on the roof and a
+            battery on the wall, producing emission-free electricity for decades.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Made for European homes</h3>
+          <p>
+            Systems are designed for the roof shapes, grid rules and weather of
+            European detached houses — from pitched tile roofs to flat garages.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="sub">From first survey to switching on — a straightforward path to your own power.</p>
+      <div class="grid cols-2">
+        {steps.map((s) => (
+          <div class="card">
+            <div class="ico" style="font-weight:800; color: var(--c-sun-deep)">{s.n}</div>
+            <h3>{s.t}</h3>
+            <p>{s.d}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="wrap" style="text-align:center">
+      <h2>Ready to power your home yourself?</h2>
+      <p class="sub" style="margin-inline:auto">
+        Tell us about your roof and your typical electricity use. We will design
+        a solar and storage system sized to your home.
+      </p>
+      <a class="btn btn-primary" href="/contact/">Request a quote</a>
+    </div>
+  </section>
+</Layout>

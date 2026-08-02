@@ -1,0 +1,112 @@
+---
+import "../styles/global.css";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+
+export interface Props {
+  title: string;
+  description?: string;
+  /** path without leading slash, e.g. "products" — used for canonical + nav active state */
+  path?: string;
+  ogImage?: string;
+  /** page-specific JSON-LD schema (Product, FAQPage, etc.) — Organization/WebSite are added site-wide */
+  jsonLd?: object | object[];
+  /** when true, emits <meta name="robots" content="noindex"> — use on the 404 page */
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description = "SunHestia builds residential solar photovoltaic and battery storage systems for European homeowners — generate, store and consume your own clean energy.",
+  path = "",
+  ogImage,
+  jsonLd,
+  noindex,
+} = Astro.props;
+
+const site = Astro.site ?? new URL("https://sunhestia.com");
+const canonical = new URL(path ? `/${path.replace(/\/$/, "")}/` : "/", site).href;
+// If a title already contains the brand (e.g. the keyword-led homepage title), render it verbatim.
+const fullTitle = title.includes("SunHestia") ? title : `${title} · SunHestia`;
+const og = new URL(ogImage ?? "/og-image.png", site).href;
+
+// Site-wide structured data: Organization (brand entity — aids LLM/entity disambiguation) + WebSite.
+const orgSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "SunHestia",
+  url: site.href,
+  logo: new URL("/favicon.svg", site).href,
+  email: "info@sunhestia.com",
+  contactPoint: [
+    {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      email: "info@sunhestia.com",
+      areaServed: ["EU"],
+      availableLanguage: ["en"],
+    },
+  ],
+  description:
+    "SunHestia designs residential solar photovoltaic and battery storage systems for European homeowners.",
+  knowsAbout: [
+    "Solar panels",
+    "Home battery storage",
+    "LiFePO4 batteries",
+    "Solar self-consumption",
+    "Hybrid inverters",
+  ],
+};
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "SunHestia",
+  url: site.href,
+  inLanguage: "en-GB",
+};
+const schemas = [
+  orgSchema,
+  websiteSchema,
+  ...(Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : []),
+];
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Open Graph / Twitter (standard social metadata) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SunHestia" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:image" content={og} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SunHestia — solar panels and home battery storage for European homes" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={og} />
+
+    <!-- Structured data (JSON-LD): Organization + WebSite site-wide, plus any page-specific schema -->
+    {schemas.map((schema) => (
+      <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+    ))}
+  </head>
+  <body>
+    <Header path={path} />
+    <main>
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

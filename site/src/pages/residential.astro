@@ -1,0 +1,82 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const benefits = [
+  { t: "Designed for detached homes", d: "Sized for the roofs, gardens and consumption patterns of owner-occupied houses across Europe." },
+  { t: "Pitched, flat or tile", d: "Mounting works on pitched tile and metal roofs, flat garage roofs, and ground frames where a roof is shaded." },
+  { t: "Right-sized storage", d: "Battery capacity is matched to your evening use, so stored solar actually covers your night-time demand." },
+  { t: "Grid-aware", d: "Systems respect local connection rules and feed-in arrangements, with smart scheduling for time-of-use tariffs." },
+];
+
+const use = [
+  { t: "Heating & hot water", d: "Run heat pumps and immersion heaters on surplus solar during the day." },
+  { t: "EV charging", d: "Charge an electric car from your own roof instead of the grid." },
+  { t: "Household appliances", d: "Shift dishwashers, washing machines and dryers into sunny hours." },
+  { t: "Backup", d: "Keep essentials running through short grid interruptions." },
+];
+---
+<Layout
+  title="Residential Solar & Storage Systems"
+  description="Solar and battery storage systems designed for European detached homes — pitched roofs, tile roofs, heat pumps, EV charging and self-consumption."
+  path="residential"
+>
+  <section class="hero" style="padding: 64px 0">
+    <div class="wrap">
+      <h1 style="font-size: clamp(1.8rem, 4vw, 2.8rem)">Built for the home you own</h1>
+      <p class="lead">
+        SunHestia residential systems are designed for detached houses with their
+        own roof. We size generation and storage to how your household actually
+        uses energy.
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <h2>What makes a residential system work</h2>
+      <p class="sub">Generation has to match the home, and storage has to match the evening. We design for both.</p>
+      <div class="grid cols-2">
+        {benefits.map((b) => (
+          <div class="card">
+            <h3>{b.t}</h3>
+            <p>{b.d}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section alt">
+    <div class="wrap">
+      <h2>Where your solar goes</h2>
+      <p class="sub">Self-consumption means using your own generation directly. These are the loads that benefit most.</p>
+      <div class="grid cols-2">
+        {use.map((u) => (
+          <div class="card">
+            <h3>{u.t}</h3>
+            <p>{u.d}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap prose">
+      <h2>Self-consumption, explained</h2>
+      <p>
+        Without a battery, a home exports most of its daytime surplus to the grid
+        and buys electricity back in the evening. With storage, that surplus is
+        kept on site and used after dark. The higher the share of your own energy
+        you consume, the less exposed you are to rising grid prices.
+      </p>
+      <p>
+        A well-designed SunHestia system targets high self-consumption first —
+        because a kilowatt-hour you avoid buying is worth more than one you sell.
+      </p>
+      <p>
+        <a href="/contact/">Find out what self-consumption your home could reach →</a>
+      </p>
+    </div>
+  </section>
+</Layout>
