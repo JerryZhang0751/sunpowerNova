@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from geo.shared.config import REPO, settings
 from geo.shared.models import L1Record, L2Record, L3Source, CompositeScore
+from geo.shared.storage import sha1_url
 from geo.assess.geo_scorer import score_geo
 from geo.assess.seo_scorer import score_seo
 from geo.assess.benchmarker import gap
@@ -49,26 +50,22 @@ def _iter_l1(week: int):
 
 
 def _load_l3_source(url: str) -> L3Source | None:
-    """Load L3 source by URL from data/sources directory."""
-    # Hash URL to find source file
-    import hashlib
-    url_hash = hashlib.sha1(url.encode("utf-8")).hexdigest()[:12]
+    """Load L3 source by URL.
 
-    sources_dir = REPO / "data" / "sources"
-    if not sources_dir.exists():
+    Reads the EXACT path the fetcher writes (storage.source_dir →
+    ``data/sources/{sha1[:12]}/meta.json``). Must stay aligned with
+    ``geo.fetch.fetcher.fetch_source`` / ``geo.shared.storage.source_dir``;
+    a mismatch here silently disables GEO scoring + benchmarker in production
+    (Critical-1 regression).
+    """
+    url_hash = sha1_url(url)[:12]
+    meta_path = REPO / "data" / "sources" / url_hash / "meta.json"
+    if not meta_path.exists():
         return None
-
-    # Search for the source file
-    for hash_dir in sources_dir.iterdir():
-        if hash_dir.is_dir():
-            source_file = hash_dir / f"{url_hash}.json"
-            if source_file.exists():
-                try:
-                    data = json.loads(source_file.read_text(encoding="utf-8"))
-                    return L3Source(**data)
-                except (json.JSONDecodeError, TypeError):
-                    return None
-    return None
+    try:
+        return L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return None
 
 
 def _load_static_signals(week: int) -> dict:
@@ -192,28 +189,51 @@ def assemble(week: int) -> dict:
         pages = static_signals.get("pages", [])
         for page in pages:
             try:
+                page_url = page.get("url")
+
+                # Cross-load L3 (Task 9) for this page so content signals are REAL,
+                # not fabricated. title/meta_desc come from the static-signals
+                # snapshot (captured by extract_structural at snapshot time, same
+                # versioned input → deterministic); L3 supplies word_count (real
+                # trafilatura text length) + Kimi semantic E-E-A-T. Where a field
+                # is genuinely unavailable in the P0 snapshot, it is marked
+                # unknown/degraded (None → scores 0) per the Global Constraint,
+                # never given a fabricated concrete value.
+                page_l3 = _load_l3_source(page_url) if page_url else None
+                sem = (page_l3.semantic if page_l3 else {}) or {}
+                st_l3 = (page_l3.structural if page_l3 else {}) or {}
+
+                title = page.get("title") or st_l3.get("title") or ""
+                meta_desc = page.get("meta_desc") or st_l3.get("meta_desc") or ""
+
+                if page_l3 and page_l3.text:
+                    word_count = len(page_l3.text.split())      # real extracted-text length
+                else:
+                    word_count = None                            # unknown → degraded, NOT fabricated
+
+                content_signals = {
+                    "word_count": word_count,
+                    "has_author_byline": sem.get("has_author_byline"),            # real (Kimi) or None
+                    "has_publish_date": sem.get("has_publish_date"),              # real (Kimi) or None
+                    "cites_external_sources": sem.get("cites_external_sources"),  # real (Kimi) or None
+                    "content_signals_source": "l3" if page_l3 else "missing",
+                    "p0_content_degraded": page_l3 is None or not page_l3.text,
+                }
+
                 # Prepare page data for SEO scoring
                 page_data = {
-                    "url": page.get("url"),
+                    "url": page_url,
                     "https": page.get("https", False),
                     "http_status": page.get("http_status"),
                     "in_sitemap": page.get("in_sitemap", False),
                     "robots_not_blocked": True,  # P0 proxy
-                    "canonical_self": page.get("canonical") == page.get("url"),
+                    "canonical_self": page.get("canonical") == page_url,
                     "has_viewport": page.get("has_viewport", False),
                     "http2": True,  # P0 proxy
                     "renderable_static": True,  # P0 proxy
-                    "title": "",  # Would need L3 for full data
+                    "title": title,               # real extracted <title>
                     "h_counts": page.get("h_counts", {}),
-                    "meta_desc": False,  # Would need L3
-                }
-
-                # Content signals (P0 proxy - would need L3)
-                content_signals = {
-                    "word_count": 500,  # P0 estimate
-                    "has_author_byline": False,
-                    "has_publish_date": False,
-                    "cites_external_sources": False
+                    "meta_desc": meta_desc,        # real extracted <meta description>
                 }
 
                 page_seo = score_seo(page_data, gsc_snapshot, content_signals)

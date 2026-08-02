@@ -12,8 +12,8 @@ h1,h2,h3{color:#212529}</style>
 
 <section>
 <h2>①执行摘要</h2>
-<p>GEO总分: <strong>{{ '%.1f'|format(report.self_geo.total) }}</strong>/100</p>
-<p>SEO总分: <strong>{{ '%.1f'|format(report.self_seo.total) }}</strong>/100</p>
+<p>GEO总分: <strong>{{ '%.1f'|format(report.self_geo.total) if report.self_geo else '-' }}</strong>/100</p>
+<p>SEO总分: <strong>{{ '%.1f'|format(report.self_seo.total) if report.self_seo else '-' }}</strong>/100</p>
 </section>
 
 <section>
@@ -39,10 +39,14 @@ h1,h2,h3{color:#212529}</style>
 <section>
 <h2>④竞品差值热图</h2>
 <h3>各维度与竞品的差异</h3>
+{% if report.gap %}
 <table border=1>
 <tr><th>维度</th><th>差值</th></tr>
 {% for dim, diff in report.gap.dim_diff.items()|sort %}<tr><td>{{ dim }}</td><td>{{ '%.1f'|format(diff) }}</td></tr>{% endfor %}
 </table>
+{% else %}
+<p>本期无竞品 L3 数据，竞品差值暂缺（GEO 自审仍独立产出）。</p>
+{% endif %}
 <div class="gap">⚠️ {{ report.authority_gap_note }}</div>
 </section>
 

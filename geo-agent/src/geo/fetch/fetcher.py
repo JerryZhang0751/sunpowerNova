@@ -7,7 +7,14 @@ from geo.shared.storage import sha1_url, source_dir
 from geo.fetch.meta_llm import extract_semantic
 
 def extract_structural(soup: BeautifulSoup) -> dict:
-    canon = (soup.find("link", rel="canonical") or {}).get("href") if soup.find("link", rel="canonical") else None
+    # On-page text signals the SEO scorer needs; captured at snapshot/fetch time
+    # so the analyst can feed REAL title/meta_desc instead of fabricating them.
+    canon_link = soup.find("link", rel="canonical")
+    canon = canon_link.get("href") if canon_link else None
+    title_tag = soup.find("title")
+    title = title_tag.get_text(strip=True) if title_tag else ""
+    desc_tag = soup.find("meta", attrs={"name": "description"})
+    meta_desc = (desc_tag.get("content") or "").strip() if desc_tag else ""
     schemas = []
     for s in soup.find_all("script", type="application/ld+json"):
         import json
@@ -17,7 +24,8 @@ def extract_structural(soup: BeautifulSoup) -> dict:
             schemas += [t] if isinstance(t, str) else (t if isinstance(t, list) else [])
         except Exception: pass
     h_counts = {f"h{i}": len(soup.find_all(f"h{i}")) for i in range(1,7)}
-    return {"canonical": canon, "schema_types": list(dict.fromkeys(schemas)),
+    return {"canonical": canon, "title": title, "meta_desc": meta_desc,
+            "schema_types": list(dict.fromkeys(schemas)),
             "h_counts": h_counts, "table_count": len(soup.find_all("table")),
             "ul_count": len(soup.find_all(["ul","ol"]))}
 
