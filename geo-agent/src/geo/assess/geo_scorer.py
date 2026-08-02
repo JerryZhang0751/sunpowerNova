@@ -18,6 +18,8 @@ def _ratio(n, lo, hi):  # n in [lo,hi] → 0..100
 
 
 def _dim(name, score, signals):
+    if name not in RULES.weights:
+        raise ValueError(f"Dimension '{name}' not found in geo rules weights. Available: {list(RULES.weights.keys())}")
     return DimScore(name=name, score=score, weight=RULES.weights[name], signals=signals)
 
 
@@ -35,9 +37,7 @@ def score_geo(src: L3Source, brand: dict, static: dict) -> CompositeScore:
                     + _ratio(sem.get("faq_block_count", 0), 0, 3)
                     + _ratio(st.get("table_count", 0), 0, 2)
                     + _ratio(sem.get("datapoint_count", 0), 0, 5)
-                    + _ratio(
-                        h.get("ul_count", 0) or len(st.get("ul_count", []) or []), 0, 3
-                    )
+                    + _ratio(h.get("ul_count", 0), 0, 3)
                 )
                 / 5,
                 1,
@@ -50,7 +50,7 @@ def score_geo(src: L3Source, brand: dict, static: dict) -> CompositeScore:
                 (
                     _ratio(brand.get("mention", 0), 0, 3)
                     + _ratio(brand.get("cited", 0), 0, 2)
-                    + _ratio(brand.get("sov", 0.0), 0, 0.2) * 100
+                    + _ratio(brand.get("sov", 0.0), 0, 0.2)
                     + _pct(brand.get("entity_known"))
                 )
                 / 4,
