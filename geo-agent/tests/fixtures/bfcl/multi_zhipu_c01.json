@@ -1,0 +1,19 @@
+{
+  "category": "multiple",
+  "provider": "zhipu",
+  "prompt_id": "C01",
+  "expected_tool_call": {
+    "function": "POST /messages",
+    "params": {
+      "model": "glm-5.2",
+      "tools": [
+        {
+          "type": "web_search_20250305",
+          "name": "web_search",
+          "max_uses": 5
+        }
+      ]
+    }
+  },
+  "actual_request_ref": "raw/zhipu_C01.json"
+}

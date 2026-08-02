@@ -1,0 +1,17 @@
+{
+  "category": "parallel",
+  "provider": "qwen",
+  "prompt_id": "B02",
+  "expected_tool_call": {
+    "function": "MultiModalConversation.call",
+    "params": {
+      "model": "qwen3.7-plus",
+      "enable_search": true,
+      "search_options": {
+        "search_strategy": "agent",
+        "enable_source": true
+      }
+    }
+  },
+  "actual_request_ref": "raw/qwen_B02.json"
+}

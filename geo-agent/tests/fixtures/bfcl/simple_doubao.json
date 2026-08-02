@@ -1,0 +1,17 @@
+{
+  "category": "simple",
+  "provider": "doubao",
+  "prompt_id": "C01",
+  "expected_tool_call": {
+    "function": "POST /responses",
+    "params": {
+      "model": "doubao-seed-2-1-pro-260628",
+      "tools": [
+        {
+          "type": "web_search"
+        }
+      ]
+    }
+  },
+  "actual_request_ref": "raw/doubao_C01.json"
+}
