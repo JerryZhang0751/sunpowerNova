@@ -23,15 +23,25 @@ def snapshot_static_signals(week:int, rule_version:str) -> dict:
         except Exception: sitemap = ""
         out["robots_ai"] = _robots_allows_ai(robots)
         out["sitemap_present"] = bool(sitemap)
+
+        # Parse sitemap URLs for inclusion checking
+        sitemap_urls = []
+        if sitemap:
+            try:
+                sitemap_soup = BeautifulSoup(sitemap, "xml")
+                sitemap_urls = [loc.text for loc in sitemap_soup.find_all("loc")]
+            except Exception:
+                sitemap_urls = []
         for path in pages:
             url = site.rstrip("/") + path
             rec = {"url":url, "path":path, "https": url.startswith("https://")}
             try:
                 r = c.get(url); rec["http_status"]=r.status_code
-                st = extract_structural(BeautifulSoup(r.text,"lxml"))
-                rec.update(st); rec["schema_types"]=st["schema_types"]
-                rec["has_viewport"] = bool(BeautifulSoup(r.text,"lxml").find("meta", attrs={"name":"viewport"}))
-                rec["in_sitemap"] = (path in sitemap)
+                soup = BeautifulSoup(r.text,"lxml")
+                st = extract_structural(soup)
+                rec.update(st)
+                rec["has_viewport"] = bool(soup.find("meta", attrs={"name":"viewport"}))
+                rec["in_sitemap"] = (url in sitemap_urls) if sitemap_urls else False
             except Exception as e:
                 rec["http_status"]=None; rec["error"]=f"{type(e).__name__}: {e}"
             out["pages"].append(rec)
