@@ -1,0 +1,23 @@
+Metadata-Version: 2.4
+Name: geo
+Version: 0.1.0
+Requires-Python: <3.13,>=3.11
+Requires-Dist: dashscope>=1.20
+Requires-Dist: openai>=1.40
+Requires-Dist: httpx>=0.27
+Requires-Dist: python-dotenv>=1.0
+Requires-Dist: pydantic>=2.7
+Requires-Dist: pydantic-settings>=2.3
+Requires-Dist: beautifulsoup4>=4.12
+Requires-Dist: lxml>=5.2
+Requires-Dist: trafilatura>=1.12
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: langgraph>=0.2
+Requires-Dist: langgraph-checkpoint-sqlite>=2.0
+Requires-Dist: Jinja2>=3.1
+Requires-Dist: google-api-python-client>=2.130
+Requires-Dist: google-auth>=2.30
+Requires-Dist: tenacity>=8.3
+Provides-Extra: dev
+Requires-Dist: pytest>=8.2; extra == "dev"
+Requires-Dist: pytest-cov>=5.0; extra == "dev"

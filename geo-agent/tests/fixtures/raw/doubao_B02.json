@@ -1,0 +1,251 @@
+{
+  "provider": "doubao",
+  "prompt_id": "B02",
+  "prompt": "Is SunHestia a good brand for home solar and battery storage?",
+  "model": "doubao-seed-2-1-pro-260628",
+  "request": {
+    "model": "doubao-seed-2-1-pro-260628",
+    "input": [
+      {
+        "role": "user",
+        "content": "Is SunHestia a good brand for home solar and battery storage?"
+      }
+    ],
+    "tools": [
+      {
+        "type": "web_search"
+      }
+    ],
+    "stream": false,
+    "_endpoint": "https://ark.cn-beijing.volces.com/api/v3/responses"
+  },
+  "response": {
+    "created_at": 1785654513,
+    "id": "resp_021785654511143988bfabceb5f218095cf340564d9f2908a8f0f",
+    "max_output_tokens": 32768,
+    "model": "doubao-seed-2-1-pro-260628",
+    "object": "response",
+    "output": [
+      {
+        "id": "rs_02178565451328100000000000000000000ffffac154ee9cb61d9",
+        "type": "reasoning",
+        "summary": [
+          {
+            "type": "summary_text",
+            "text": "针对SunHestia品牌的相关信息，我将展开搜索。针对该品牌的相关信息，我将通过搜索引擎及头条文章渠道，使用中英文关键词组合检索，全面获取其评价、口碑等相关内容。"
+          }
+        ],
+        "status": "completed"
+      },
+      {
+        "type": "web_search_call",
+        "action": {
+          "query": "SunHestia 家用太阳能 电池存储 品牌 评价 质量;SunHestia home solar and battery storage brand reviews reliability reputation",
+          "type": "search"
+        },
+        "status": "completed",
+        "id": "ws_02178565451826800000000000000000000ffffac154ee9f0aaf3"
+      },
+      {
+        "id": "rs_02178565452885100000000000000000000ffffac154ee9ab6c87",
+        "type": "reasoning",
+        "summary": [
+          {
+            "type": "summary_text",
+            "text": "针对SunHestia品牌的首次搜索未获取到有效信息，我将调整搜索关键词，简化检索逻辑，补充精准的品牌相关检索词后重新发起搜索，以确认该品牌的基本信息。"
+          }
+        ],
+        "status": "completed"
+      },
+      {
+        "type": "web_search_call",
+        "action": {
+          "query": "SunHestia solar battery storage brand introduction;SunHestia 光伏储能 品牌 公司介绍;SunHestia 户用光储 用户评价",
+          "type": "search"
+        },
+        "status": "completed",
+        "id": "ws_02178565452921100000000000000000000ffffac154ee994879f"
+      },
+      {
+        "id": "rs_02178565453660800000000000000000000ffffac154ee9ff13c0",
+        "type": "reasoning",
+        "summary": [
+          {
+            "type": "summary_text",
+            "text": "此前两次搜索未找到SunHestia的相关信息，我怀疑存在拼写误差或其为小众品牌，接下来将不加限定直接搜索该关键词查找相关品牌信息。我将尝试用精简关键词搜索该品牌，若仍无结果，会告知用户其公开信息极少，需谨慎选择并给出产品选购参考。"
+          }
+        ],
+        "status": "completed"
+      },
+      {
+        "type": "web_search_call",
+        "action": {
+          "query": "SunHestia brand;SunHestia solar;SunHestia 品牌",
+          "type": "search"
+        },
+        "status": "completed",
+        "id": "ws_02178565454011800000000000000000000ffffac154ee9146a2e"
+      },
+      {
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "目前公开可查询的权威行业资料、用户评测、正规品牌名录中，**没有名为“SunHestia”的独立家用太阳能+储能电池品牌的有效信息**，你可能是出现了拼写混淆，或者遇到了非常小众的区域性/新兴贴牌品牌：\n1. 名称最接近的相关主体是美国户用光伏企业Sunnova的「Project Hestia」项目：这是Sunnova在2023年申请美国能源部贷款担保、面向低收入社区推广户用光伏+储能+虚拟电厂的项目，并非独立品牌；而且Sunnova已经在2025年6月申请破产，相关资产已被出售，相关用户服务也已转移，不存在“SunHestia”这一产品品牌。\n2. 截至2026年8月，国内户用光储主流品牌榜单、海外主流户储品牌（如特斯拉Powerwall、派能科技、阳光电源、晶科能源、阿诗特能源、东方日升等）中均无SunHestia的相关备案、产品认证、大规模用户反馈记录。\n\n如果你是在选购时遇到这个品牌，需要特别谨慎，建议从以下维度核实风险：\n- 要求商家提供产品的核心安全认证：国内市场需要有CQC认证、锂电池UN38.3认证，海外市场需要对应地区的UL/CE/TUV等强制认证，避免购买无认证的拼装、翻新电芯产品；\n- 核实售后能力：确认是否有本地安装、运维团队，明确质保年限（正规品牌一般提供5-10年产品质保，电芯循环寿命承诺通常不低于6000次），避免找不到售后维权渠道；\n- 优先选择行业公开可查、有大量落地案例的头部品牌，避免参数虚标、安全防护不足的劣质产品——这类产品不仅可能出现发电/储电效率不达预期、寿命大幅缩水的问题，还存在电芯过热自燃的安全隐患。",
+            "annotations": [
+              {
+                "type": "url_citation",
+                "title": "2026评价高的家庭光储厂家十大品牌全解析：技术选型+避坑指南",
+                "url": "https://m.sohu.com/a/983105173_121743652/",
+                "logo_url": "https://p26-volcsearch-sign.byteimg.com/isp-i18n-media/image/6b1d3a6f49304d84d8268210e144399e~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726519&x-signature=cWF64cb2NT7%2F%2F3U950ehBi6voeU%3D",
+                "site_name": "手机搜狐网",
+                "publish_time": "2026年02月03日 10:49:00(CST) 星期二",
+                "summary": "2026评价高的家庭光储厂家十大品牌全解析：技术选型+避坑指南\n电化学储能\n2026-02-03 10:49\n痛点直击：80%家庭光储踩坑源于这两大误区，年收益缩水超千元还藏安全隐患！\n“花5万装的屋顶光储，运行8个月就充放电故障，维权半年无果”“宣传循环寿命6000次，实测不足2000次便大幅衰减”“高温天电芯温差超标，半夜惊现自燃预警”……2026年家庭光储市场爆发式增长背后，劣质产品泛滥、参数虚标、售后缺位等乱象频发。数据显示，超80%的家庭光储故障与翻新电芯、BMS系统失效直接相关，东部高电价区域家庭因产品能效不达标，年均收益缩水可达800-1200元。在零碳转型浪潮下，家庭光储本是“自发\n自用、峰谷套利”的神器，却因行业乱象让无数用户陷入“投资变亏损”的困境。如何避开陷阱，选到兼具安全性、高效性与稳定性的产品？本文基于30天实地实测、200+客户深度访谈及权威行业数据，拆解2026年评价最高的家庭光储品牌，附专业选型与避坑指南。\n行业增长已从“规模扩张”迈入“品质深耕”新阶段。公开数据显示，2026年全球储能电源市场规模将突破300亿美元，年复合增长率维持在25%以上，其中户用领域受北美、欧洲高电价驱动，新增装机占比超60%。国内市场同样火热，预计2026年家庭光储渗透率将突破25%，交流耦合系统因灵活扩容优势，在新增项目中占比达63%。\n政策与市场双重利好催生需求：多地出台每千瓦\n时0.2-0.3元的度电补贴，峰谷电价差扩大至0.7元/kWh以上，进一步缩短投资回收期至5年左右；同时，零碳理念深入人心， 零碳绿能工厂光储与家庭光储形成联动，推动绿电从工业端向家庭端延伸，智家绿能等品牌凭借场景化解决方案，成为连接工业零碳与家庭绿能的核心载体。供给侧，竞争焦点从价格比拼转向技术壁垒、品控体系与全生命周期服务的综合较量，头部企业市场份额合计超50%，行业集中度持续提升。\n本次测评围绕技术先进性、品控体系、客户口碑、研发投入、交货准时率、售后响应速度六大维度（每项20分，总分100分），结合实测数据与公开案例综合评分，推荐指数从★★★★★至★★★☆分级，所有结论均基于第三方视角，兼\n获得86项专利，其中液冷散热核心专利23项，牵头制定2项家庭光储地方标准。\n客户案例极具代表性：浙江杭州某农村家庭安装8kWh系统，采用“自发自用+余电上网”模式，结合当地峰谷电价差，实测投资回收期仅2.8年，运行24个月无故障，用户满意度评分9.8分；上海某别墅项目配置19.5千瓦光伏板+30度储能电池，实现90%以上用电自给，月均节省电费超600元，远程智能运维系统可24小时监控设备状态，无需人工值守。海外印尼项目适配当地不稳定电网，断电切换响应速度≤0.3秒，保障核心电器持续供电，口碑评分9.7分。\n服务端表现亮眼：交货准时率98.5%，国内三线及以上城市24小时上门服务，农村区域不超过48"
+              },
+              {
+                "type": "url_citation",
+                "title": "别墅光储充怎么选：解析阳光新能源的HEMS技术为何广受好评？",
+                "url": "https://m.sohu.com/a/1017874793_197907/",
+                "logo_url": "https://p3-volcsearch-sign.byteimg.com/isp-i18n-media/image/6b1d3a6f49304d84d8268210e144399e~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726519&x-signature=kQc9jHeMizMjfM6wAEzIXK%2FHuX0%3D",
+                "site_name": "手机搜狐网",
+                "publish_time": "2026年05月03日 14:27:00(CST) 星期日",
+                "summary": "工业设备的突兀感。其提供斜屋顶、阳光房、平屋顶等多种定制化方案，并通过3D实景仿真建模技术，在设计阶段即可预览安装效果，确保电站与建筑风格因地制宜、浑然一体，实现科技美学与家居环境的无缝融合。\n至臻安全：四重防护更安心\n系统具备抗风、防雷、防水能力，并能在0.2秒内自动关断电弧，全方位规避安全隐患。电池系统提供5重保护，让业主无需担忧设备老化或极端天气带来的风险。\n个性化套系，匹配不同宅邸需求\n阳光家庭能源为不同面积和用能需求的别墅，提供了针对性的产品系列：\n生活家系列：定位“绿色住宅用电新体验”，推荐配置为8kW装机容量+9.6kWh储能，适用屋顶面积约30㎡，是舒适之选。\n智享家系列：主打“重塑别墅智慧用电”，推荐20kW装机容量+20kWh储能或20kW+30kWh储能，适用屋顶约100㎡，满足进阶需求。\n理想家系列：旨在“迈入极致生活新境界”，推荐25kW装机容量+30kWh或40kWh储能，适用屋顶约120㎡，为大型宅邸提供澎湃电力。\n此外，针对追求美学极致的业主，还可选择琉璃源筑系列（BIPV家庭光储充），将光伏建材与建筑完美融合；或光合源邸系列（BAPV家庭光储充），实现高效加装。\n全生命周期可靠服务\n选择家庭电站，服务同样关键。阳光家庭能源提供从售前到售后的全流程托付：\n售前：销售+技术2V1咨询，无人机精细化勘测，结合家庭用电习惯综合评估。\n安装：标准化快装方案，涵盖5大工艺流程、98项施工工序。\n售后：2小时内服务响应，48小时内上门维护，全套系统提供5年质保，并每年赠送上门维保服务，贯穿电站全生命周期。\n总结\n对于追求稳定、安全、绿色、美学兼具的别墅大宅业主来说，一套HEMS能源管理技术先进的家庭电站，是实现用电自主、提升生活品质的关键投资。阳光新能源旗下的阳光家庭能源，凭借其技术先进的HEMS系统、至臻的四维体验、个性化的套系选择以及无忧的全周期服务，无疑是值得重点推荐的实力厂家。它不只是安装一套设备，更是为您的宅邸引入了一位懂能、安全、高效的“能源管家”，让绿色科技真正服务于从容生活。\n"
+              },
+              {
+                "type": "url_citation",
+                "title": "全屋绿电 零碳生活新风尚",
+                "url": "https://cn.sungrowpower.com/special_solution/47.html",
+                "logo_url": "https://p11-volcsearch-sign.byteimg.com/isp-i18n-media/image/cfdd5de10b7c7c7fcd0bd23f36fe5e69~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726519&x-signature=tjIH0cKgacizex2YLjySMPfN88Y%3D",
+                "site_name": "阳光电源",
+                "publish_time": "2026年07月31日 00:00:00(CST) 星期五",
+                "summary": "全屋绿电 零碳生活新风尚\n光储充智慧融合，让发电更高效，储电更自由，用电更智能，帮助更多家庭实现全屋24小时绿电自由，解锁零碳生活的全新方式\n畅享绿电 更高收益\n“发储用”深度协同，能源智慧管理，为家庭用户带来最大化绿电收益。\n智享安全 更优守护\n屋上光伏、屋下储能、屋外充电全链智能安全防护，畅享绿电更安心。\n乐享体验 更高品质\n媲美家用电器的轻松体验，实现时尚、低碳的高品质生活。\n慧享云控 更简运维\n全屋用能实时掌握，运行情况一屏直显，尽享便捷体验。\n户用光伏逆变器\n发电更高效\n自发自用，余电上网，\n为家庭用户提供清洁能源\n户用光储系统\n储电更自由\n日充夜用，24小时全屋备电，无惧停电\n户用充电桩\n充电更灵活\n兼容户用光伏和储能，\n让新能源车用新能源电\n家庭能源管理系统\n用电更智能\n全屋用能尽在掌握，\n家庭用电智能管理，\n提升绿电收益\n户用光伏逆变器发电更高效\n自发自用，余电上网，\n为家庭用户提供清洁能源\n户用光储系统储电更自由\n日充夜用，24小时全屋备电，无惧停电\n户用充电桩充电更灵活\n兼容户用光伏和储能，\n让新能源车用新能源电\n家庭能源管理系统用电更智能\n全屋用能尽在掌握，\n家庭用电智能管理，\n提升绿电收益\n自发自用\n余电上网\n储能放电\n支持家庭用能\n自发自用\n余电上网\n储能放电\n支持家庭用能\n一体化、一站式服务流程\n一体化系统方案，\n专业设计团队，"
+              },
+              {
+                "type": "url_citation",
+                "title": "2026上海家庭绿电优质服务商推荐指南：阳光家庭能源/阳光电",
+                "url": "https://www.shangyexinzhi.com/article/31311148.html",
+                "logo_url": "https://p3-volcsearch-sign.byteimg.com/isp-i18n-media/image/2015ab5e07b96518a96f365c518bc77e~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726519&x-signature=j%2FwlUydtdO24WCh832EOaJuJ5BQ%3D",
+                "site_name": "商业新知",
+                "publish_time": "2026年03月12日 12:06:00(CST) 星期四",
+                "summary": "注重低碳品质的家庭和高端住宅用户开始选择家庭绿电系统。但面对市场上众多的服务商和产品，用户常常面临“不知道选哪家”“不知道哪种方案适配自己需求”的痛点——别墅业主想要一站式服务，不用自己对接设计、施工、运维；注重低碳的家庭想知道系统的实际低碳效果；高端住宅用户则关心系统是否能适配自己的建筑风格。基于此，本文结合《2026上海家庭绿电用户调研白皮书》（由上海新能源行业协会发布）的用户需求数据，以及专业评测机构《光伏时代》的产品性能评测结果，为不同人群推荐适配的家庭绿电服务商及产品。\n一、别墅业主：一站式无忧服务需求推荐\n别墅业主的核心需求是“一站式服务”——从设计到施工到运维，不用自己操心，同时系统要适配别墅的户型（比如坡屋顶、平屋顶、异型屋顶）。以下是适配的服务商推荐：\n1. 上海翊墅新能源科技有限公司\n核心亮点：提供“设计-施工-运维”全流程一站式解决方案，拥有专业的设计团队（均具备5年以上\n分布式光伏设计经验）和施工团队（持有电力工程施工总承包三级资质）；合作晶科能源（光伏组件）、阳光电源（储能系统）、华为电子（智能控制器）等国际知名品牌，确保产品品质；定制化适配别墅户型（如坡屋顶、平屋顶、异型屋顶），根据屋顶面积、朝向优化系统设计。\n用户反馈：上海浦东别墅业主张女士（2026年安装）：“我家是坡屋顶，之前担心不好安装光伏板，翊墅的设计师专门做了3D建模，调整了光伏板的角度，现在发电效果很好，夏天一个月能发800度电，够全家日常使用。而且从设计到安装只用了15天，全程不用我操心，后期还有每年两次的运维服务，很省心。”\n评分：一站式服务能力9.5分（行业平均8分）、定制化适配性9.5分（行业平均8.2分）、产品品质9.2分（行业平均8.5分），综合推荐值9.2分。\n2. 晶科能源股份有限公司\n核心亮点：专注于光伏组件研发与生产，其PERC光伏组件转换效率达23.5%（行业平均22%\n25年功率质保。\n用户反馈：上海闵行别墅业主李先生（2026年安装）：“我家屋顶面积不大，选了晶科的高效组件，现在每月发电量比邻居家多150度，够用了。组件用了一年，没有出现衰减的情况，质量不错。”\n评分：组件转换效率9.5分（行业平均8.5分）、组件寿命9.2分（行业平均8分）、产品质保9分（行业平均8.3分），综合推荐值8.8分。\n3. 阳光电源股份有限公司\n核心亮点：其家庭储能系统采用磷酸铁锂电池，循环寿命达6000次（行业平均5000次），能储存多余的光伏电量（比如白天发电多，晚上用），减少电网用电；系统支持“峰谷套利”（利用晚上低谷电价充电，白天高峰电价放电），降低用电成本；具备智能BMS（电池管理系统），实时监控电池状态，防止过充过放。\n用户反馈：上海徐汇别墅业主陈先生（2026年安装）：“我家安装了阳光的储能系统，夏天白天发电多，储存起来晚上用，现在每月电费比之前少了300块。系"
+              },
+              {
+                "type": "url_citation",
+                "title": "阳光电源，狂揽100亿合同!",
+                "url": "https://cj.sina.cn/article/norm_detail?url=https%3A%2F%2Fcj.sina.cn%2Farticle%2Fnorm_detail%3Furl%3Dhttp%3A%2F%2Ffinance.sina.cn%2F2025-11-12%2Fdetail-infxcuqx3451428.d.html",
+                "logo_url": "https://p3-volcsearch-sign.byteimg.com/isp-i18n-media/image/cffdfef02d548dd95fecc6ef79881092~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726530&x-signature=sBavNCXRl8BZEYy3xkfMGrX%2FFlw%3D",
+                "site_name": "新浪财经",
+                "publish_time": "2025年11月12日 18:01:00(CST) 星期三",
+                "summary": "24年，阳光电源储能业务从12亿元飙升至250亿元，2025年上半年达178亿元，完成了从“边缘业务”到“核心引擎”的蜕变。\n回顾储能业务发展之路，阳光电源的聪明之处，在于选择了扬长避短的轻资产路径。\n储能系统中，电芯成本占比达60%。阳光电源果断将这一重资产环节交由上游，自身则聚焦储能变流器、液冷电池柜等高附加值环节，以技术优势构建壁垒。\n让人好奇的是：外采电芯，公司难道不会失去主动权？\n阳光电源的答案是“反向掌控”。公司以集成商身份，直接参与电芯规格定义。它虽不亲手生产电芯，却会根据自身系统平台的需求，深度介入电芯设计，定制出更适配的产品。\n在第三代电芯技术迭代的关键期，阳光电源精准发力。\n2025年6月，阳光电源在最新推出的Power Titan3.0智储平台上，搭载了可量产的684Ah电芯产品。这款电芯，采用专用叠片工艺，循环寿命突破15000次，能量密度超440Wh/L，创下行业新纪录。\n阳光电源，以系统集成商身份实现对上游技术的“反向定义”，与宁德时代的卷绕工艺产品形成直接竞争，打破了“电芯主导系统”的传统格局。\n除了技术，安全性是储能业务的另一核心生命线。\n储能电站长期充放电易引发火灾风险，而阳光电源参与的所有储能项目均未出现一例安全事故。\n不仅如此，公司还主动开展高规格电池舱燃烧测试，以严苛模拟验证产品安全性，进一步获得客户的信任。\n技术深耕与安全坚守，为阳光电源储能业务筑起了坚实的“护城河”。而其增长天花板的进一步打开，还离不开全球化战略的深度布局。\n全球攻坚：\n打开增长天花板\n储能业务的爆发，背后是阳光电源“全球化战略”的坚定推进。\n海外大储市场门槛极高，实行20年终身考核追责制，对储能系统产品性能、厂商综合实力的要求极为苛刻，这使得海外市场成为头部厂商的“竞技场”。\n而阳光电源早已提前布局，截至2025年6月底，其储能产品已拿下欧盟CE、北美UL等12项国际认证，比晚入局的企业至少提前3年构建起坚实的出海壁垒。\n高壁垒，往往对应高回报。\n2020到2024年，阳光电源海外业务毛利率持续保持在25%以上，2024年甚至高达40%，远远领先于国内业务。\n订单的持续落地，更是为储能业务的增长注入了强劲动力。\n公开资料显示，2025年以来，阳光电源接连斩获日本500MWh、芬兰100MWh、智利1GWh等国际储能订单，国内也中标中国电建、华电等多个储能项目。\n合同负债，作为签订合同时支付的定金，能够直观反映订单储备。2020年到2025年前三季度，阳光电源合同负债从14亿元飙升至100亿元，在手订单充足。\n为应对订单热潮，阳光电源的产能扩张也在同步推进。\n2024年6月，公司在南京启动年产25GWh的新型储能装备制造项目，作为全球最大的储能制造基地之一，该项目将有力保障产品的交付。\n与此同时，匈牙利15GWh基地将于2025年第三季度投产，泰国"
+              },
+              {
+                "type": "url_citation",
+                "title": "公司概况",
+                "url": "https://www.rct-power.com.cn/about-us/company-profile?tp=48",
+                "logo_url": "https://p26-volcsearch-sign.byteimg.com/isp-i18n-media/image/a140ca58a6c8a1c200a7cdfae0cbc688~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726530&x-signature=URAd%2B5iraLa50Ov9LBDy52oMXEo%3D",
+                "site_name": "RCT Power 阿诗特能源",
+                "publish_time": "2025年12月04日 19:08:38(CST) 星期四",
+                "summary": "级“专精特新”小巨人企业认定，展现了公司强大的创新实力与发展潜力。\nBNEF Tier1全球一级储能厂商\n2024年10月，RCT Power入榜由全球知名研究机构彭博新能源财经（BloombergNEF，简称“BNEF”) 发布的“BNEF Tier1全球一级储能厂商榜单”。\n2025\n首次发布ESG报告\n2025年4月，阿诗特能源正式发布首份《2024年度环境、社会及管治（ESG）报告》，标志着公司在可持续发展战略实施进程中迈出关键一步。\n荣誉资质\n2024年12月\nBNEF Tier 1\n全球一级储能厂商名单\n2024年10月\nTOP BRAND BATTERY STORAGE 2024\n2024年10月\n年度户用储能十大品牌\n2024年9月\n苏州市新能源“独角兽”培育企业\n2024年8月\n中国新型储能工商业/户用储能系统综合竞争力企业TOP20\n2024年8月\n中国储能系统技术创新企业\nStorage\n2023年\nSolar-ProsumerAwards\nInverter\n2021~2023年\nSPI检测排名冠军\n2023年\n瓦锡兰全球供应商奖\n2020年\nSpotlight 2020\n2021年\n瓦锡兰庆祝投产\n2017年\nTOP Stromspicher\n2023年5月\n储能技术卓越奖\n2023年5月\n2023年度中国储能产业最佳工商业储能解决方案奖\n2023年2月\n2022年中国储能产业最佳工商业储能解决方案奖\n2023年2月\n2022年中国储能产业最佳系统集成解决方案奖\n2023年2月\n储能系统优秀品牌\n2022年11月\n2022最佳储能示范项目\n2022年7月\n2021年度光储设备十大供应商奖\n2022年7月\n2021年度光伏行业新锐企业奖\n2022年2月\n2021年度经济贡献突出奖\n2022年1月\n低碳创新社会责任企业\n2022年1月\n高质量发展技术创新解决方案\n"
+              },
+              {
+                "type": "url_citation",
+                "title": "阳光家庭能源",
+                "url": "https://cn.sungrowpower.com/solution_detail/7.html",
+                "logo_url": "https://p3-volcsearch-sign.byteimg.com/isp-i18n-media/image/cfdd5de10b7c7c7fcd0bd23f36fe5e69~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726530&x-signature=wqsUxnkT6fnvrOsRFtlQaHsiV2k%3D",
+                "site_name": "阳光电源",
+                "publish_time": "2025年12月22日 02:52:21(CST) 星期一",
+                "summary": "阳光家庭能源\n能源更自由 生活更自在\n优势特点\n至臻美学\n至臻发电\n至臻安全\n至臻智能\n极简美学 极致融合\n产品外观红点设计奖\n隐藏布线工艺\n一房一设与建筑/生活浑然融合\n全栈自研 高效发电\n智能设计软件全局寻优设计\n“光-储-充-优-云”全栈自研，高效协同\n组件灵活多朝向无惧遮挡，发电量提升20%\n主动安全 立体防护\n高防护，无惧高温雨淋\n24小时备电，无惧停电\n紧急情况 一键关断\n智能互联 畅享绿电\nAI用电学习，电网电价跟踪，发电精准预测\n最优策略充放，享用绿电100%，用电成本再降8%\n用户案例\n云南松赞茨中山居酒店光储充项目\n上海别墅光储充项目\n上海\n广西南宁别墅光储充项目\n云南松赞茨中山居酒店光储充项目\n上海别墅光储充项目\n上海\n"
+              },
+              {
+                "type": "url_citation",
+                "title": "东方日升：2023 年户储全球第 4 ，2024-2025 年TOP5 ，欧洲头部供应商",
+                "url": "https://www.jiuyangongshe.com/h5/article/jnfk6raman",
+                "logo_url": "https://p11-volcsearch-sign.byteimg.com/isp-i18n-media/image/a9e05173ed8e8fa1e429f83d55350f0b~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726530&x-signature=rJ7AMvgeXEMwg31jv5kuWW5bPx0%3D",
+                "site_name": "韭研公社",
+                "publish_time": "2026年03月20日 11:27:00(CST) 星期五",
+                "summary": "品。\n“昇家” 户用光储全场景解决方案（2026 年主推款）\n面向欧洲家庭打造的一站式光储方案，搭配公司高效伏曦系列光伏组件、Luvit 微型逆变器 / Barq 系列混合逆变器，支持 5kWh 至 50kWh 容量灵活拓展，可通过 Risen PV APP 实现一键式智能管理，完美适配欧洲家庭绿电自给、峰谷套利、备用电源等核心需求，已在英国、德国、意大利、西班牙等多国落地。\nSunease 系列（新兴市场高性价比款）\n面向东南亚、中东、拉美等电网不稳定地区打造，包含 Hifz 系列 5kWh 堆叠式电池包、Rige 系列 5kWh 壁挂式电池包，单套最高可扩展至 50kWh 总容量，支持光伏、电池、电网、柴发四源接入，主打高可靠性与高性价比，解决家庭停电焦虑与高电费痛点。\n三、全球市场布局与核心订单\n核心市场分布\n欧洲是公司户储业务第一大市场，出货量占比超 60%，已在德国、英国、意大利、西班牙、比利时等国建立本土化销售与服务团队；第二增长曲线为澳洲、美国、东南亚、中东、拉美市场，业务覆盖全球 90 余个国家和地区。\n标志性大额订单\n2024 年 11 月，公司与德国能源巨头 E.ON 签订 5GWh 户用储能系统订单，订单金额超 40 亿元人民币，交付周期覆盖 2024-2026 年，是欧洲户储市场有史以来最大的单笔订单之一，直接锁定了公司户储业务未来 2 年的核心增长空间，也奠定\n，宁波基地年产 10GWh 高效储能系统项目建成后，总产能将提升至 25GWh；户储系统产能可与工商业、大储产能柔性切换，能够快速响应全球市场的订单需求。\n海外本土化产能：美国南卡罗来纳州 1GWh 储能工厂已于 2024 年 12 月正式投产，可覆盖北美户储与工商业储能市场，享受美国 IRA 法案税收抵免政策，同时规避贸易壁垒，大幅提升北美市场竞争力。\n供应链保障：与海辰储能签订三年 15GWh 磷酸铁锂电芯战略供货协议，锁定户储产品核心电芯供应，保障交付能力与成本稳定性。\n五、核心竞争优势\n光储一体化协同优势：作为全球头部光伏组件厂商，可提供 “发电 - 储电 - 用电 - 管电” 一站式户用光储解决方案，产品协同效率更高，度电成本更低；同时光伏业务的渠道、品牌、客户资源可全面复用，获客成本显著低于纯储能集成商。\n全栈自研与认证壁垒：BMS、PCS、EMS 三大核心系统全栈自研，产品适配全球主流市场的严苛安全与性能认证，循环寿命、系统效率、宽温域运行能力均达到行业第一梯队，具备与国际巨头同台竞争的技术实力。\n全球化本土化布局：欧美核心市场均设有本土化服务团队与仓储体系，交付与售后响应速度快；海外产能布局有效规避贸易壁垒，提升区域市场竞争力。\n头部大客户绑定优势：与 E.ON、WEG 等全球能源巨头达成长期战略合作，订单确定性强，同时依托大客户资源快速渗透当地市场，提升品牌影响力。\n"
+              },
+              {
+                "type": "url_citation",
+                "title": "Project Hestia | Department of Energy",
+                "url": "https://www.energy.gov/lpo/Hestia?nrg_redirect=462326",
+                "logo_url": "https://p3-volcsearch-sign.byteimg.com/isp-i18n-media/image/c8c279237fe93807612e1c1c0697ac64~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726541&x-signature=LF%2Fddp1tFaJrokAN76KT1K0DRAw%3D",
+                "site_name": "U.S. Department of Energy",
+                "publish_time": "2011年11月11日 00:00:00(CST) 星期五",
+                "summary": "Project Hestia\nPROJECT SUMMARY\nIn September 2023, the Department of Energy announced the closing of a $3 billion partial loan guarantee to Sunnova Energy Corporation’s Project Hestia. The Project will make distributed energy resources — including residential rooftop solar, battery storage, and virtual power plant-ready, consumer-facing software — available to more American homeowners.\nTECHNOLOGY INNOVATION\nProject Hestia will offer homeowners innovative software to accompany solar energy and batteries and to support energy-conscious decision-making. The software will give customers insight into \ntheir household’s energy usage and carbon dioxide emissions, allowing customers to reduce electricity use—or even contribute electricity to the system in markets that allow such contributions—when the grid is under stress.\nECONOMIC IMPACT\nProject Hestia will create more than 3,400 good-paying, high-quality American jobs, supporting the installation and maintenance of clean energy systems.\nCLIMATE BENEFIT\nBy increasing distributed solar energy supply and batteries, Project Hestia will decrease grid-supplied energy consumption, decrease greenhouse gas emissions, and increase power reliability and "
+              },
+              {
+                "type": "url_citation",
+                "title": "Sunnova Energy International Inc.",
+                "url": "https://www.influencewatch.org/for-profit/sunnova-energy-international-inc/",
+                "logo_url": "https://p26-volcsearch-sign.byteimg.com/isp-i18n-media/image/88ba9327500f442a6cb285b6a38c3251~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726541&x-signature=lE2INjQk9pCv%2BKptUsy7NEhucMM%3D",
+                "site_name": "InfluenceWatch",
+                "publish_time": "2025年06月09日 00:00:00(CST) 星期一",
+                "summary": "Loan Guarantees and Energy Policy\nOperations and Finances\nBankruptcy and Aftermath\nControversies and Criticism\nAssociations and Related Organizations\nLeadership\nContents\nFounded in 2012 and publicly traded on the New York Stock Exchange under the ticker “NOVA” beginning in 2019, Sunnova sold rooftop solar and storage systems through long‑term leases, power purchase agreements, and loans, with a heavy focus on policy‑favored markets such as California and Puerto Rico. The company received a record Department of Energy (DOE) Loan Programs Office guarantee of up to roughly $3 billion for its Projec\nt Hestia platform, marketed as serving “disadvantaged” and lower‑income communities, which critics tied directly to the Biden administration’s climate and environmental‑justice goals. The second Trump administration subsequently canceled the DOE guarantee, and Sunnova’s assets were sold to Solaris Assets LLC, with servicing of many contracts shifting to SunStrong Management. 1 4 2 5 6 7 After persistent losses, heavy leverage, and growing consumer‑protection concerns, Sunnova filed for Chapter 11 bankruptcy in June 2025. 3\nBackground\nSunnova was founded in 2012 in Houston, Texas by energy execut"
+              },
+              {
+                "type": "url_citation",
+                "title": "美国全面开发虚拟电厂",
+                "url": "https://www.pv-magazine-china.com/2023/06/21/%E7%BE%8E%E5%9B%BD%E5%85%A8%E9%9D%A2%E5%BC%80%E5%8F%91%E8%99%9A%E6%8B%9F%E7%94%B5%E5%8E%82/",
+                "logo_url": "https://p11-volcsearch-sign.byteimg.com/isp-i18n-media/image/b2c1614deeddc5aae94433496dd7e890~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726541&x-signature=elkW3RQnCS9bUaZPMU%2BccpPx7po%3D",
+                "site_name": "pv magazine China",
+                "publish_time": "2023年06月30日 00:00:00(CST) 星期五",
+                "summary": "资源充足性需求，且成本比替代方案低150亿至350亿美元。同时，这还可以在未来十年内提供价值超过200亿美元的排放和弹性效益。\nShah说道：“VPP不仅仅提供脱碳和电网服务，它们还通过提高自动化效率、容量支持和非线缆替代方案，越来越多地为电网运营商提供大规模、公用事业级发电和系统扩建替代方案。”\nHestia计划\n美国能源部贷款项目办公室一直支持VPP。最近，该办公室提议向能源即服务提供商Sunnova公司提供30亿美元的有条件贷款，以在全国范围内推出“Hestia计划”。该计划旨在为美国各地的贫困社区提供太阳能和VPP服务，否则这些社区可能无法获得住宅光伏系统的贷款。Sunnova公司将获得间接的、部分担保的资助，用于支持客户账户的贷款。\n符合条件的家庭必须使用Sunnova公司的能源管理系统，他们可以通过智能手机或其他电子设备访问。该系统将推荐需求响应行为，使家庭用户能够降低能源成本，同时在高峰需求期间帮助平衡电网运营。\n如果获得批准，美国能源部的一揽子计划将支持太阳能、储能及其他具有VPP能力的Sunnova家用自适应技术的贷款发放。这些担保可以推动高达50亿美元的贷款发放，节省利息并降低加权平均投资成本。\nSunnova公司首席执行官William J. Berger表示：“Hestia计划将使私营部门对美国弱势社区和能源基础设施的历史性投资成为可能。”\n顺应市场趋势\n不断变化的美国能源市场状况进一步推动了VPP的采用。《削减通胀法案》提供的3690亿美元气候和能源资金中包括为能源社区服务的许多要求，而弱势社区对公平的能源转型至关重要。指定能源社区的项目有资格额外获得10%的投资税收抵免，在可再生能源项目30%的基本投资税收抵免基础上提供补充。\n美国其他州也开始效仿加利福尼亚州，削减或取消净能源计量（NEM），这是一种有助于启动美国住宅太阳能市场的电力计费机制。原来的NEM电价为客户提供所有向电网输送电力的零售价值。加利福尼亚州的NEM 3.0费率基本上扼杀了输出电力的价值，其他州也会效仿。太阳能安装商警告称，这可能会催生一个基于储能电池自发自用的市场，并因此导致脱离电网，而这对电网的灵活性几乎毫无助益。而VPP提供包括需求响应、调整峰值需求等在内的电网服务，可以激励客户在电网高峰时段减少能源使用或输出电力，使电网运营更加灵活。\n增强电网弹性\nVPP还能加强受气候变化相关极端天气影响地区的电网弹性。住宅太阳能安装商Sunrun已被选中在波多黎各地区部署一个17 MW的太阳能+储能VPP网络。\n在2017年遭遇玛丽亚飓风重创之后，这个加勒比岛屿的政府通过2019年《波多黎各能源公共政策法案》创建了一个分布式能源（DER）的框架。\nSunrun公司将于今年为在波多黎各安装VPP，并从明年开始运营。该公司表示，当地客户将节省电力成本，且可以就他们向电网（"
+              },
+              {
+                "type": "url_citation",
+                "title": "推动能源转型!美国加快开发虚拟发电厂",
+                "url": "https://news.solarbe.com/202306/20/368992.html",
+                "logo_url": "https://p11-volcsearch-sign.byteimg.com/isp-i18n-media/image/8a36d2740af168c42256c98c4834d04b~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726541&x-signature=ElBBJf0ab0vWe90FmL89O7JLx6Q%3D",
+                "site_name": "索比光伏网",
+                "publish_time": "2023年06月20日 15:51:08(CST) 星期二",
+                "summary": "区提供光伏系统和虚拟发电厂服务，否则这些社区可能无法获得住宅光伏系统的贷款。Sunnova公司将获得间接的、部分担保的资助，用于支持客户账户的贷款。\n符合条件的家庭用户必须使用Sunnova公司的能源管理系统，通过智能手机或其他电子设备访问。该系统将推荐需求响应行为，使家庭用户能够降低能源成本，同时在高峰需求期间帮助平衡电网运营。\n如果获得批准，美国能源部的一揽子计划将支持光伏系统、储能系统和其他具有虚拟发电厂能力的Sunnova自适应技术的贷款发放。这些贷款担保可以推动高达50亿美元的贷款发放，节省利息并降低加权平均投资成本。\nSunnova公司首席执行官William J.Berger说：“Hestia计划将使私营部门对美国弱势社区和能源基础设施的历史性投资成为可能。”\n美国能源市场发展\n不断变化的美国能源市场状况进一步推动了拟发电厂的采用。《削减通胀法案》提供的3690亿美元的气候和能源资金包括为能源社区服务的许多要求，而弱势社区对公平的能源转型至关重要。指定能源社区的项目有资格获得10%的投资税收抵免，为可再生能源项目获得30%的投资税收抵免提供补充。\n美国其他州也开始效仿加州削减或取消净能源计量(NEM)，这是一种有助于启动美国住宅光伏发电市场的电价机制。原有的净能源计量(NEM)为客户提供输往电网电力的零售价值。加利福尼亚州的NEM 3.0费率基本上扼杀了输出电力的价值，其\n。光伏系统安装商警告称，这可能催生一个基于电池储能系统自我消费的市场，由此导致的脱离电网对电网的灵活性几乎没有帮助。然而，虚拟发电厂提供包括需求响应、调整峰值需求等在内的电网服务。可以鼓励客户在电网高峰时段减少能源使用或输出电力，从而使电网运营更加灵活。\n增强电网的弹性\n虚拟发电厂还加强了受气候变化相关极端天气影响地区的电网弹性。住宅光伏安装商Sunrun公司已被选中在波多黎各地区部署一个17MW的光伏+储能系统构建的虚拟发电厂网络。\n在2017遭遇年玛丽亚飓风之后，加勒比岛地区政府通过2019年的《波多黎各能源公共政策法案》为分布式可再生能源创建了一个框架。\nSunrun公司将于今年在波多黎各安装虚拟发电厂，并于2024年开始运营。该公司表示，将为当地客户节省电力成本，并因向目前由LUMA Energy公司运营的电网提供电池储能系统的容量而获得补偿。Sunrun公司表示，这个为期10年的虚拟发电厂计划允许客户选择退出。\nSunrun公司首席执行官Mary Powell说:“我们正在通过改变模式来解决加勒比岛的能源安全问题，屋顶光伏系统的电力可以储存在电池储能系统中，为每个家庭供电，然后与邻居分享，创造清洁的共享能源经济。”\n索比光伏网 https://news.solarbe.com/202306/20/368992.html\n责任编辑：xinrui\n屋顶光伏 光伏系统 电力 国际\n"
+              }
+            ]
+          }
+        ],
+        "status": "completed",
+        "id": "msg_02178565454328500000000000000000000ffffac154ee9909040"
+      }
+    ],
+    "service_tier": "default",
+    "status": "completed",
+    "tools": [
+      {
+        "type": "web_search"
+      }
+    ],
+    "usage": {
+      "input_tokens": 21707,
+      "output_tokens": 1451,
+      "total_tokens": 23158,
+      "input_tokens_details": {
+        "cached_tokens": 0
+      },
+      "output_tokens_details": {
+        "reasoning_tokens": 769
+      },
+      "tool_usage": {
+        "web_search": 8
+      },
+      "tool_usage_details": {
+        "web_search": {
+          "search_engine": 8
+        }
+      }
+    },
+    "caching": {
+      "type": "disabled"
+    },
+    "store": true,
+    "expire_at": 1785913711
+  },
+  "meta": {
+    "http_status": 200,
+    "elapsed_s": 42.9,
+    "search_triggered": true,
+    "citation_url_count": 24,
+    "captured_at_note": "real live capture 2026-08-02"
+  }
+}

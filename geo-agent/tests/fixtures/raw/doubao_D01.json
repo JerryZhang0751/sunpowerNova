@@ -1,0 +1,177 @@
+{
+  "provider": "doubao",
+  "prompt_id": "D01",
+  "prompt": "How to size a home solar battery",
+  "model": "doubao-seed-2-1-pro-260628",
+  "request": {
+    "model": "doubao-seed-2-1-pro-260628",
+    "input": [
+      {
+        "role": "user",
+        "content": "How to size a home solar battery"
+      }
+    ],
+    "tools": [
+      {
+        "type": "web_search"
+      }
+    ],
+    "stream": false,
+    "_endpoint": "https://ark.cn-beijing.volces.com/api/v3/responses"
+  },
+  "response": {
+    "created_at": 1785654514,
+    "id": "resp_021785654511150d2e580f6bb6385a445f3c475c512e9aefc77c4",
+    "max_output_tokens": 32768,
+    "model": "doubao-seed-2-1-pro-260628",
+    "object": "response",
+    "output": [
+      {
+        "id": "rs_02178565451406600000000000000000000ffffac174ebdf8a696",
+        "type": "reasoning",
+        "summary": [
+          {
+            "type": "summary_text",
+            "text": "我将梳理确定家用太阳能电池尺寸的相关因素与步骤。确定家用太阳能电池尺寸需优先评估日常及应急用电需求、匹配太阳能系统发电量，同时结合用户目标（备用/自用最大化/离网），还要考虑电池深度放电、充放电及逆变器效率等影响因素。除此之外，还需考虑连续阴雨天的天气影响、不同电池的DoD差异，先区分关键与非关键负载，可按每日关键负载用电量乘以自给天数，再除以DoD与效率得出电池容量。除此之外，还需匹配太阳能板发电量与电池存储能力，同时分并网、离网两种电网场景考量，接下来我将搜索权威行业资料确认相关计算步骤，避免给出错误建议。接下来我将搜索家用太阳能电池配置的相关权威指南，明确不同配置场景的核心差异，确保给出的建议准确可靠。\n\n家庭太阳能电池的容量选型还需结合峰谷电价套利需求、详细负载功率与使用时间、备用支撑天数，且要区分电池容量与功率的不同参数要求。已明确电池选型需同时覆盖容量、额定功率与峰值功率，满足电机类负载的启动需求，接下来将搜索相关计算示例辅助说明。\n\n目前我已梳理出电池容量测算的大致计算逻辑，也发现太阳能发电量、安装条件等因素会对系统匹配产生影响，接下来我将搜索权威的家用太阳能电池配置相关指南，获取全面的步骤、参数差异等信息，后续整理出清晰的操作指引、计算示例及注意事项。"
+          }
+        ],
+        "status": "completed"
+      },
+      {
+        "type": "web_search_call",
+        "action": {
+          "query": "how to size a home solar battery step by step guide;home solar battery sizing factors capacity vs power;off-grid vs grid-tied solar battery sizing differences;solar battery depth of discharge efficiency calculation for sizing",
+          "type": "search"
+        },
+        "status": "completed",
+        "id": "ws_02178565455961900000000000000000000ffffac174ebda01ffd"
+      },
+      {
+        "id": "rs_02178565456386100000000000000000000ffffac174ebd3e933d",
+        "type": "reasoning",
+        "summary": [
+          {
+            "type": "summary_text",
+            "text": "整理搜索结果，将由我来作答。要确定家用太阳能电池尺寸，首先需明确使用目标，不同系统类型对应不同的电池容量区间，同时要区分用电负载的容量与功率，不少人容易忽略功率要求。\n\n我明确了负载计算需统计各电器的功率与使用时长，可借助电表实测提升冰箱等循环设备的计算精度，同时需考虑功率峰值适配，不同类型电池的深度放电率差异较大，需按对应比例折算可用容量。现有计算模型的效率相关问题已完成梳理，当前现有公式的安全系数已覆盖充放电损耗、温度影响等因素，无需额外单独计算；同时已明确不同场景下的电池天数自主性要求，离网场景最低储备3天，推荐5天，关键应用需7天以上。\n\n并网备用场景的电池天数需求根据当地停电频率调整，匹配光伏板的容量配比有对应行业参考，同时明确了每日负载用电量的计算规则，需区分备用类型筛选对应核算范围。\n\n我进一步梳理出电池容量计算公式需结合安全系数（1.2-1.5），具体取值可根据负载测算精度调整，同时明确需区分电池功率与容量的不同要求，功率不足时即使有剩余电量也无法带动高功耗电器。选电池和逆变器功率需大于总运行峰值。\n\n针对不同场景的户用储能配置，关键负载的界定是核心前提，比如是否包含冷暖空调这类高功耗设备会直接影响容量需求。选型时还需注意避开只看标称容量、忽略功率预留、未考虑温度影响等常见误区，可优先选择模块化产品，不确定需求时可先购置基础容量后续扩容。\n\n针对并网峰谷套利场景，明确了电池选型的参考依据，同时补充了离网系统搭配备用发电机可压缩电池配置、节省成本的要点，接下来将按清晰逻辑分点整理相关内容。\n\n我发现不同电池的充放电效率存在差异，这一参数需要纳入电池容量核算，同时确认安全系数可覆盖效率、温度、线损等损耗，无需额外单独计算。低温环境下锂电池容量会下降，寒冷地区需额外留余量；已装太阳能板的场景要按每日富余电量匹配电池容量，新装系统则需结合当地峰值日照小时数核算。\n\n我已梳理出家用太阳能+储能系统的配置逻辑：首先要明确核心目标，不同目标的配置逻辑差异明显，电网备用需匹配停电时长与带载设备，自发自用需对接日间发电量与夜间/高峰用电需求，离网自给则要覆盖最坏场景。配置时需先计算两类核心电力需求：一是总日耗电容量，需统计设备清单、单设备日耗，还要预留20-30%的扩容空间；二是峰值功率，需覆盖同时运行设备总功率、电机类设备的启动峰值。另外也明确了两类主流电池的可用深度放电比例与特性，以及不同场景下的自主天数参考标准。\n\n第四步明确了电池额定容量的计算公式，给出了安全系数取值建议，还通过两个不同场景的实例演示了计算逻辑。第五步梳理了太阳能系统与电池容量的匹配规则，并网、离网等不同场景下的配置要求均有明确说明。最后给出了2026年主流锂电池方案的典型配置参考，覆盖基础应急备用、日常自用短时间停电备用、全宅备用/离网三类核心场景。\n\n我补充了家用太阳能电池选型的5项避坑提示，同时明确无需向普通用户过多讲解电池电压这类DIY相关的专业细节，仅需在经济性维度补充并网系统需结合当地净计量政策判断电池配置。\n\n我补充了三类典型家庭的储能配置参考值，明确了电池容量计算示例无需过细，逆变器功率匹配要求已纳入功率考量范畴。\n\n我已核对所有搜索信息均已纳入对应模块，离网电池容量、磷酸铁锂电池DoD参数均确认无误，接下来会着重强调功率与容量的区别，避免用户混淆。\n\n峰谷套利的计算规则、电动汽车充电需额外预留容量这两项补充要点已经明确，接下来会将所有内容整理为带清晰步骤和实例的易懂教程。"
+          }
+        ],
+        "status": "completed"
+      },
+      {
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "Sizing a home solar battery requires balancing your energy needs, system goals, battery specifications, and solar generation capacity—there’s no one-size-fits-all answer, but you can calculate the right size with these structured steps, whether you’re building a grid-tied backup system, a self-consumption setup, or a fully off-grid home.\n---\n### Step 1: Define Your Core Goal First\nYour use case dictates the entire sizing logic (typical 2026 lithium-ion battery ranges for reference):\n- **Grid outage backup**: The most common use case. Size depends on how long outages last in your area and which devices you need to power:\n  - Critical loads only (fridge, lights, Wi-Fi, phone charging, medical devices): 5–10 kWh for 4–24 hours of backup.\n  - Partial home backup (add small AC, TV, microwave): 10–20 kWh for 1–2 days.\n  - Whole-home backup: 20 kWh+, with higher power output for large appliances.\n- **Self-consumption/peak arbitrage**: Store excess solar for nighttime use, or store cheap off-peak grid electricity for high-price peak hours. Size to match your daily excess solar generation or peak-hour electricity use (typically 8–15 kWh for most urban homes).\n- **Full off-grid living**: No grid backup, so you’ll need to cover multi-day cloudy spells and seasonal low sunlight. Battery banks usually range from 30–80 kWh, paired with larger solar arrays and optional backup generators.\n---\n### Step 2: Calculate Your Actual Power Needs (2 Key Metrics)\nMost people only look at total energy storage (kWh), but you also need enough power (kW) to run your devices at the same time.\n#### 2.1 Calculate daily energy usage (capacity, kWh)\nThis is how much total electricity you need the battery to supply per day:\n1. List all devices you want the battery to power (stick to critical loads for backup; all devices for off-grid/whole-home use).\n2. For each device, calculate daily consumption:  \n   `Device daily kWh = (Rated power in W × Daily use hours) ÷ 1000`\n   - For cycling devices (fridges, ACs, heat pumps) that turn on/off automatically, don’t use 24 hours as runtime—use a plug-in meter (e.g., Kill-A-Watt, $20–$30) for 1–2 days to get accurate real-world usage, or check the device’s annual energy label to estimate daily use.\n3. Add up all device kWh to get your total daily target load. Add a 20–30% buffer if you plan to add future loads (e.g., EV charger, new AC).\n  Example critical load list:\n  | Device       | Power (W) | Daily hours | Daily kWh |\n  |--------------|-----------|-------------|-----------|\n  | Fridge       | 150       | 8 (cycling) | 1.2       |\n  | LED lights   | 200       | 5           | 1.0       |\n  | Wi-Fi/phones | 50        | 24          | 1.2       |\n  | Small AC     | 1200      | 4           | 4.8       |\n  | **Total**    | —         | —           | **8.2**   |\n#### 2.2 Calculate peak power demand (output, kW)\nThis determines if the battery can run all your devices at once (even with enough stored energy, an undersized power output will trip when you turn on too many appliances):\n1. Add up the rated power of all devices you might run simultaneously.\n2. Add a 2–3x surge buffer for motor-driven devices (fridges, ACs, well pumps), which draw 2–3x their rated power for 1–2 seconds when starting.\n3. Choose a battery (and matching inverter) with a continuous output rating higher than your total simultaneous load, and a peak output rating that covers the largest surge from your devices.\n  Example: If you run the fridge (150W), lights (200W), AC (1200W), and Wi-Fi (50W) at the same time, your total continuous load is 1.6kW, and the AC surge is ~2.4kW—pick a battery with at least 3kW continuous / 5kW peak output.\n---\n### Step 3: Account for Battery Real-World Limits\nYou can’t use 100% of a battery’s rated capacity without damaging it or shortening its life:\n- **Depth of Discharge (DoD)**: The percentage of the battery you can safely use:\n  - Lithium iron phosphate (LiFePO4, the 2026 home standard): 80–90% usable (use 0.85–0.9 for calculations; a 10kWh LiFePO4 battery gives ~8.5–9kWh of usable power).\n  - Lead-acid (AGM/flooded, budget/older systems): Only 50% usable (use 0.5 for calculations; you’ll need twice the rated capacity for the same usable power as lithium).\n- **Autonomy days**: How many days you need the battery to last without solar/grid charging:\n  - Grid backup: 0.5–2 days (0.5 for short outages, 2 for areas with frequent storm-related multi-day outages).\n  - Off-grid: 2–5 days (3 days minimum for most areas, 5 for cloudy/cold climates; reduce by 1–2 days if you have a backup generator).\n---\n### Step 4: Calculate Required Battery Capacity\nUse this standard formula to get your minimum rated battery size:\n```\nRequired battery rated capacity (kWh) = (Daily target load kWh × Autonomy days) ÷ Battery DoD × Safety factor\n```\n- **Safety factor (1.2–1.5)**: Accounts for real-world losses:\n  - 1.2: If you measured loads with a meter, live in a mild climate, and have no plans to add devices (covers 90–95% lithium charge/discharge efficiency, small line losses).\n  - 1.5: If you estimated loads, live in a cold climate (batteries lose 10–20% capacity below freezing), or want extra buffer.\n#### Calculation Examples\n1. **Basic backup for a suburban home**:\n   Daily load = 8.2kWh, 1 day autonomy, LiFePO4 (90% DoD), 1.2 safety factor:\n   `Capacity = (8.2 × 1) ÷ 0.9 × 1.2 ≈ 10.9kWh` → Choose a 10–12kWh lithium battery.\n2. **Off-grid small cabin**:\n   Daily load = 10kWh, 3 days autonomy, LiFePO4 (85% DoD), 1.3 safety factor:\n   `Capacity = (10 × 3) ÷ 0.85 × 1.3 ≈ 45.9kWh` → Choose a 45–50kWh modular battery bank.\n---\n### Step 5: Match to Your Solar Array (Avoid “Empty Big Batteries”)\nAn oversized battery will never fully charge if your solar panels don’t produce enough excess power:\n- **Existing grid-tied solar**: Check 12 months of generation data to find your average daily excess solar (power generated minus power used instantly during the day). Size your battery to 1–1.2x this excess (e.g., if you export 6kWh/day on average, a 6–8kWh battery will fully charge on most sunny days). For peak arbitrage (charging from cheap grid power at night), size to match your peak-hour usage instead.\n- **New hybrid/grid-tied + battery systems**: Over-size your solar array by 20–40% compared to a no-battery grid-tied system, to generate enough power for both immediate use and battery charging.\n- **Off-grid systems**: Over-size solar panels by 1.5–2x compared to grid-tied setups. As a rule of thumb, your array should generate enough power to cover daily usage *and* fully recharge the battery in 1–2 sunny days, even in winter. Use local peak sun hours (PSH, average daily hours of full-intensity sunlight) to calculate panel size:\n  `Solar array kW = (Daily load kWh + Daily battery charge kWh) ÷ Local PSH ÷ 0.8 (system efficiency)`\n---\n### 2026 Typical Home Configurations (Lithium-Ion)\n| Home Type               | Battery Size | Power Output | Use Case                                  |\n|-------------------------|--------------|--------------|-------------------------------------------|\n| Apartment/small home    | 5–10kWh      | 3–5kW        | Critical load backup for <24h outages     |\n| 120–150㎡ suburban home | 10–15kWh     | 5–8kW        | Nighttime solar use + 24h partial backup  |\n| Large home/villa        | 15–25kWh     | 8–12kW       | Whole-home backup + near-total self-use   |\n| Off-grid cabin/home     | 30–80kWh     | 10–15kW+     | Full energy independence (with 8–20kW solar + optional generator) |\n---\n### Common Sizing Mistakes to Avoid\n1. **Only looking at rated capacity**: A 10kWh lead-acid battery only gives 5kWh of usable power—always calculate based on DoD.\n2. **Ignoring power output**: A 10kWh battery with 2kW continuous output cannot run a 3kW AC, even if it has plenty of stored energy.\n3. **Overbuying for no reason**: If you only have 5kWh of daily excess solar, a 20kWh battery will rarely charge past 25%, wasting money. Start with a modular battery system (most 2026 models let you add extra packs later) if you’re unsure.\n4. **Forgetting temperature**: Lithium batteries lose capacity in freezing weather—install them in a insulated space or add 20% extra capacity if you live in a cold climate.",
+            "annotations": [
+              {
+                "type": "url_citation",
+                "title": "Off-Grid Solar System Sizing: Step-by-Step Calculator Guide for Cabins and Homes",
+                "url": "https://www.howtogosolar.org/off-grid-solar-sizing/",
+                "logo_url": "",
+                "site_name": "HowToGoSolar.org",
+                "publish_time": "2026年04月13日 20:02:00(CST) 星期一",
+                "summary": "Always round up to the next standard panel configuration. Add a 20–30% oversizing buffer if you expect to expand your load later.Step 4: Size Your Battery BankFormula: Battery capacity (Wh) = Daily load (Wh) × Days of autonomy ÷ Usable DoDDays of autonomy: 3 days minimum, 5 days recommended for year-round homesteads, 7+ days for critical applicationsUsable DoD: LiFePO4 = 0.85, AGM lead-acid = 0.50, flooded lead-acid = 0.50"
+              },
+              {
+                "type": "url_citation",
+                "title": "How many lithium batteries to power a house?",
+                "url": "https://oupes.com/blogs/blogs/oupes-how-many-lithium-batteries-to-power-a-house",
+                "logo_url": "https://p26-volcsearch-sign.byteimg.com/isp-i18n-media/image/dabd41df77ca3cb6cb44c5d2bfbf23ca~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726560&x-signature=tWRmkN%2Ba5QJZSY097Af59bUatrw%3D",
+                "site_name": "OUPES",
+                "publish_time": "2026年05月12日 14:08:00(CST) 星期二",
+                "summary": " design goals, and they lead to three very different battery counts.\nTable of Contents\nThe short answer\nStart with your home’s energy use\nCapacity vs. power: the two numbers that matter\nThe battery-sizing formula\nExample battery counts for different backup goals\nWhy “whole-home backup” is harder than \nit sounds\nHow solar changes the battery count\nHow OUPES systems fit different home backup needs\nCommon sizing mistakes\nReferences\nFAQ\nThe short answer\nFor many households, one lithium battery is enough for essential backup, two to three batteries can support more of the home, and whole-home or off-gri\nd operation usually requires far more storage. [2] A consumer battery-sizing guide notes that a typical home battery is around 10 kWh, and that one battery is often enough for basic outage backup, while much larger systems are needed for self-sufficient or off-grid use. [2]\nBut averages can be mislead\nxpectations. [1]\nCapacity vs. power: the two numbers that matter\nWhen people ask how many lithium batteries they need, they are usually thinking about capacity. Capacity is measured in kilowatt-hours (kWh) and tells you how much energy the battery can store. But you also need to think about power, mea"
+              },
+              {
+                "type": "url_citation",
+                "title": "Off-Grid Solar System Sizing: How Many Panels & Batteries Do You Need?",
+                "url": "https://lifepo4oz.com/blogs/news/off-grid-solar-system-sizing-how-many-panels-batteries-do-you-need",
+                "logo_url": "https://p26-volcsearch-sign.byteimg.com/isp-i18n-media/image/e5fb0062ee131dd6a948eaaeb197d119~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726560&x-signature=7Q6pi%2B9rF0JAycA4jVF%2FatYIh38%3D",
+                "site_name": "LiFePO4 OZ",
+                "publish_time": "2026年06月05日 00:00:00(CST) 星期五",
+                "summary": "that changes everything about how big the system needs to be.\nThat's why off-grid solar arrays are typically 1.5 to 2 times larger than an equivalent grid-tied setup, and why battery storage in a well-designed off-grid system covers two to three days without meaningful sunshine. As of early 2026, Australia has 28.3 GW of rooftop solar across 4.3 million homes, but the vast majority of that is grid-connected. Off-grid is a different discipline, and the design rules reflect that.\nOff-Grid vs Hybrid vs Grid-Tied: Know What You're Sizing\nBefore running any numbers, it helps to be clear on which system type you're actually building. The sizing approach is genuinely different for each one.\nFeature\nGrid-Tied\nHybrid\nOff-Grid\nMains connection\nYes\nYes\nNo\nBattery needed\nOptional\nYes\nEssential\nDesign basis\nAverage use\nAverage + backup\nWorst-case day\nArray oversize factor\n1.0×\n1.2–1.4×\n1.5–2.0×\nTypical home array\n6.6 kW\n8–13 kW\n8–20 kW\nTypical battery storage\n0–13.5 kWh\n10–20 kWh\n30–80 kWh\nFor most homes already connected to the grid, going fully off-grid doesn't make financial sense , a hybrid system gets you energy independence at a fraction of the cost. Where off-grid really pays off is on r"
+              },
+              {
+                "type": "url_citation",
+                "title": "Solar Battery Sizing Calculator: How To Size Your Battery Bank (+ LiFePO4 Guide)",
+                "url": "https://www.thegreenwatt.com/solar-battery-sizing-calculator/",
+                "logo_url": "https://p26-volcsearch-sign.byteimg.com/isp-i18n-media/image/8f0a98d0b850448658d015614a4c460f~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726560&x-signature=guM8emS5R50WAA4YUTrWQd1%2FRes%3D",
+                "site_name": "",
+                "publish_time": "2026年04月12日 00:00:00(CST) 星期日",
+                "summary": "Solar Battery Sizing Calculator: How To Size Your Battery Bank (+ LiFePO4 Guide)\nBattery kWh = daily energy usage × days of autonomy ÷ depth of discharge. A home using 10 kWh per day that wants 2 days of backup with LiFePO4 batteries (80 % DoD) needs 25 kWh of battery storage. That is five 48V 100Ah s\nerver rack batteries or two 48V 200Ah units. This guide includes an interactive sizing calculator, the full LiFePO4 vs lead-acid comparison, popular battery sizes and prices, charging with solar, and the step-by-step formula with worked examples.\nI sized my own battery bank the hard way — two years of\n reading forums, watching Will Prowse teardowns, and second-guessing every decision. The formula itself is simple (three numbers multiplied and divided). The hard part is choosing between LiFePO4 and lead-acid, picking the right voltage, and understanding that \"10 kWh battery\" does not mean 10 kWh of \nPO4: 80–90 % usable. A 10 kWh LiFePO4 battery gives you 8–9 kWh before the BMS cuts off to protect cell longevity. This is the standard DoD for sizing calculations.\nLead-acid (AGM or flooded): 50 % usable. Discharging lead-acid below 50 % dramatically shortens cycle life. A 10 kWh lead-acid battery gi"
+              },
+              {
+                "type": "url_citation",
+                "title": "Assessing Your Power Needs",
+                "url": "https://offgridcollective.co/us/guides/power-systems/assessing-your-power-needs/",
+                "logo_url": "https://p11-volcsearch-sign.byteimg.com/isp-i18n-media/image/82c6563ed80dc1c541ac345ca777a72a~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726560&x-signature=YSZhIc4ZdBO089SfmWtV%2Fnj2UpQ%3D",
+                "site_name": "",
+                "publish_time": "2025年05月28日 05:57:00(CST) 星期三",
+                "summary": "Step 1List & MeasureAll AppliancesStep 2CalculateDaily kWhStep 3Size BatteryBank + DoDStep 4Size InverterPeak + SurgeStep 5Size Solar ArraykWh ÷ PSH × 1.25Steps 4 and 5 are covered in the Solar Sizing Guide and Power Conversion Guide. This guide covers Steps 1–3.Three Ways to Measure Your Load: Which to UseMethod Cost Accuracy Best ForKill-A-Watt plug-in meter $20–30 Highest — actual consumption Any 120V appliance; the only reliable method for fridges, compressors, cycling loads"
+              },
+              {
+                "type": "url_citation",
+                "title": "家庭储能电池用多大?选型指南与容量计算全解析",
+                "url": "https://www.powerrent.ch/Sun_09_Jan_34815.html",
+                "logo_url": "",
+                "site_name": "EcoVolt Solutions",
+                "publish_time": "2024年08月28日 08:16:04(CST) 星期三",
+                "summary": "家庭储能电池用多大？选型指南与容量计算全解析\n随着光伏系统普及和电价波动,家庭储能电池已成为家庭能源管理的核心装备。但面对市场上5kWh到30kWh不同规格的产品,究竟该选多大容量？本文将用通俗易懂的方式,带您掌握选型核心逻辑。\n一、家庭储能的三大典型应用场景\n就像选购汽车要看日常用途,选择电池容量也要先明确使用需求：\n日常用电优化：\n利用峰谷电价差存储低价电,建议配置\n8-15kWh\n应急备用电源：应对4-8小时停电,需 10-20kWh 容量\n光伏配套系统：存储白天发电量,容量与光伏功率按 1:1.2 比例配置\n行业案例：深圳某三口之家安装10kW光伏系统,搭配12kWh储能电池,实现日间发电存储+夜间用电覆盖,每月电费节省达75%。\n二、四步搞定容量计算\n1. 功率需求清单\n先列出需要同时运行的设备,比如：\n设备 功率(W) 使用时长\n冰箱 200 24小时\n空调 1500 8小时\n照明 300 5小时\n2. 计算公式解密\n总需求容量(kWh)=（总功率×使用时长）×安全系数（建议1.2-1.5）\n3. 电池类型影响\n铅酸电池：可用容量约50%\n锂离子电池：可用容量达90%\n三、2023年行业配置趋势\n根据中国储能联盟数据,当前家庭用户选择呈现明显分化：\n一线城市：平均配置13.5kWh （兼顾用电优化与应急）\n农村地区：8kWh基础配置占比达62%\n别墅用户：20kWh+光伏成为标配方案\n\"现在用户更关注系统的扩展性,模块化设计产品销量同比增长210%\" —— EcoVolt Solutions技术总监王工\n四、避坑指南：常见选型误区\n❌ 只看总容量,忽视放电深度\n❌ 忽略温度对电池效率的影响\n✅ 优先选择支持分时控制的智能系统\n关于EcoVolt Solutions\n作为深耕光储领域12年的方案提供商,我们已为全球3.8万家庭定制储能系统。提供从方案设计到安装维护的全周期服务,支持72小时紧急响应。需要专业咨询？立即联系：\n📞 +86 138 1658 3346  📧 ekomedsolar@gmail.com\n五、终极建议：这样选最划算\n根据我们服务上千家庭的经验,给出黄金配置建议：\n基础型（80-100㎡）：8-10kWh锂电池+3kW逆变器\n升级型（120-150㎡）：12-15kWh智能分控系统\n全能型（别墅/多设备）：20kWh以上模块化系统\n记住,合适的容量配置就像穿合脚的鞋——既能满足日常需求,又不会造成资源浪费。现在就开始规划您的家庭能源方案吧！\n"
+              },
+              {
+                "type": "url_citation",
+                "title": "Off-Grid Solar Power Systems: Complete Independence Guide",
+                "url": "https://www.weltrus.com/off-grid-solar-power-systems/",
+                "logo_url": "https://p11-volcsearch-sign.byteimg.com/isp-i18n-media/image/c85b9a6ce0d66e32546ad03fd5ba5f42~tplv-obj.jpeg?lk3s=7acb411c&scene=volc_search&x-expires=1848726560&x-signature=pGOoLPpqT77QTtn6xxskKgoG1Ns%3D",
+                "site_name": "Weltrus",
+                "publish_time": "2026年06月26日 02:42:00(CST) 星期五",
+                "summary": "uestions\nOff-Grid Solar Basics\nOff-grid solar systems operate independently from the utility grid, generating and storing all the electricity you need on-site. They are ideal for remote properties, cabins, agricultural sites, research stations, and owners seeking complete energy independence.\nUnlike grid-tied arrays, off-grid designs must cover peak load, several days of autonomy, and seasonal production swings—often requiring 30–50% more panel capacity plus substantial battery banks and backup generation.\nHow Off-Grid Systems Work\nGeneration: Solar panels convert sunlight to DC electricity\nConv\nersion: Charge controller regulates battery charging\nStorage: Batteries store excess energy for nighttime/cloudy days\nInversion: Inverter converts DC to AC for home use\nBackup: Generator provides emergency backup when needed\nOff-Grid vs. Grid-Tied\nFeature Off-Grid Grid-Tied\nGrid Dependency None Required\nBattery Storage Required Optional\nBackup Power Built-in None (unless battery added)\nSystem Cost $20K-$100K+ $10K-$40K\nMonthly Bills None $0-$200+\nEnergy Independence Complete None\nFor a detailed comparison of economics and use cases, see our grid-tied vs. off-grid solar guide. Most suburban homes"
+              }
+            ]
+          }
+        ],
+        "status": "completed",
+        "id": "msg_02178565469268900000000000000000000ffffac174ebd74781b"
+      }
+    ],
+    "service_tier": "default",
+    "status": "completed",
+    "tools": [
+      {
+        "type": "web_search"
+      }
+    ],
+    "usage": {
+      "input_tokens": 5865,
+      "output_tokens": 8538,
+      "total_tokens": 14403,
+      "input_tokens_details": {
+        "cached_tokens": 0
+      },
+      "output_tokens_details": {
+        "reasoning_tokens": 6101
+      },
+      "tool_usage": {
+        "web_search": 4
+      },
+      "tool_usage_details": {
+        "web_search": {
+          "search_engine": 4
+        }
+      }
+    },
+    "caching": {
+      "type": "disabled"
+    },
+    "store": true,
+    "expire_at": 1785913711
+  },
+  "meta": {
+    "http_status": 200,
+    "elapsed_s": 235.2,
+    "search_triggered": true,
+    "citation_url_count": 12,
+    "captured_at_note": "real live capture 2026-08-02"
+  }
+}

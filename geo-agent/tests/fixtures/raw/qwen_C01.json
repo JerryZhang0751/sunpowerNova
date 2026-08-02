@@ -1,0 +1,357 @@
+{
+  "provider": "qwen",
+  "prompt_id": "C01",
+  "prompt": "What is the best home solar panel and battery storage system in 2026?",
+  "model": "qwen3.7-plus",
+  "request": {
+    "model": "qwen3.7-plus",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "text": "What is the best home solar panel and battery storage system in 2026?"
+          }
+        ]
+      }
+    ],
+    "enable_search": true,
+    "search_options": {
+      "search_strategy": "agent",
+      "enable_source": true
+    },
+    "stream": true,
+    "incremental_output": true,
+    "_dashscope_base_http_api_url": "https://ws-sbm7h4bsls91dmh7.cn-beijing.maas.aliyuncs.com/api/v1"
+  },
+  "response": {
+    "search_info": {
+      "search_results": [
+        {
+          "title": "Best Solar Panels for Your Home in 2025: Efficiency and Cost",
+          "url": "https://www.cnet.com/home/energy-and-utilities/best-solar-panels/",
+          "index": 1
+        },
+        {
+          "title": "Best Residential Solar Panels in 2025",
+          "url": "https://palmetto.com/solar/what-are-the-best-solar-panels",
+          "index": 2
+        },
+        {
+          "title": "Solar Panels for Your Home | UK Costs & Savings 2026",
+          "url": "https://solar4good.co.uk/solar-panel-for-home/",
+          "index": 3
+        },
+        {
+          "title": "Solar Panels Archives",
+          "url": "https://www.varietysolar.com.au/category/solar-panels/",
+          "index": 4
+        },
+        {
+          "title": "Solar Panels Perth & WA",
+          "url": "https://www.synergy.net.au/Your-home/Solar-battery-and-EV/Explore-residential-solar-power/Solar-panels",
+          "index": 5
+        },
+        {
+          "title": "Best Residential solar panels",
+          "url": "https://www.youtube.com/watch?v=uSMxEZixxg0",
+          "index": 6
+        },
+        {
+          "title": "Best Solar Panels | Top Brands Ranked",
+          "url": "https://www.saveonenergy.com/solar-energy/best-solar-panels/",
+          "index": 7
+        },
+        {
+          "title": "Best Solar Panels – Find Top Rated Systems to Cut Bills",
+          "url": "https://goswitch.com.au/solar/",
+          "index": 8
+        },
+        {
+          "title": "5 Best RV Solar Panels to Make Your Camping Trip Greener",
+          "url": "https://www.solarreviews.com/blog/rv-solar-panels-buyers-guide",
+          "index": 9
+        },
+        {
+          "title": "How to Get Free Electricity with Solar Rooftop Panels in India",
+          "url": "https://solarearth.in/how-to-get-free-electricity-with-solar-rooftop-panels-in-india/",
+          "index": 10
+        },
+        {
+          "title": "Commercial Battery Storage Insights | Expert Guides",
+          "url": "https://offgrid.group/blog/",
+          "index": 11
+        },
+        {
+          "title": "Home Battery Storage System Market Research Report 2034",
+          "url": "https://dataintelo.com/report/home-battery-storage-system-market",
+          "index": 12
+        },
+        {
+          "title": "Don't Buy a Home Battery System Until You Watch This!",
+          "url": "https://www.youtube.com/watch?v=_YWMtMdGJUY",
+          "index": 13
+        },
+        {
+          "title": "10 Best Home Battery Storage Systems of 2022",
+          "url": "https://nextgpower.com/10-best-home-battery-storage-systems-of-2022/",
+          "index": 14
+        },
+        {
+          "title": "Home Battery Storage Systems: Complete 2026 Guide",
+          "url": "https://aizexia.com/home-battery-storage-systems-guide/",
+          "index": 15
+        },
+        {
+          "title": "Tesla Powerwall 2 Owners Guide – Pricing, Specs, Performance",
+          "url": "https://solarcalculator.com.au/battery-storage/tesla-powerwall-2/",
+          "index": 16
+        },
+        {
+          "title": "Solar energy storage system with backup power - LUP Microgrid",
+          "url": "https://lup.edu.pl/Sun-08-Feb-2026-8077.html",
+          "index": 17
+        },
+        {
+          "title": "8 of the Best Home Battery Storage Systems 2024",
+          "url": "https://www.bluettipower.eu/fi/blogs/news/best-home-battery-storage-systems?srsltid=AfmBOoqyK-Ys88IfzJ3wmBHhQLDq08jnEjdNowkxSTDD1EqKrbmSguaB",
+          "index": 18
+        },
+        {
+          "title": "US homeowners installed a record amount of battery ",
+          "url": "https://www.reddit.com/r/climatechange/comments/1uq5tl8/us_homeowners_installed_a_record_amount_of/",
+          "index": 19
+        },
+        {
+          "title": "Best Solar & Battery Company in Perth (2026)",
+          "url": "https://www.talkenergy.com.au/best-solar-battery-company-in-perth-2026-buyers-guide/",
+          "index": 20
+        },
+        {
+          "title": "Best Solar and Batteries Reviews",
+          "url": "https://www.solarquotes.com.au/installer-review/best-solar-and-batteries/",
+          "index": 21
+        },
+        {
+          "title": "2026 Solar + Battery Forecast: Sunshine Coast Guide",
+          "url": "https://halcolenergy.com.au/residential-case-study/2026-solar-battery-forecast-sunshine-coast-homeowners/",
+          "index": 22
+        },
+        {
+          "title": "What's the best company for solar panels with batteries ? ",
+          "url": "https://www.facebook.com/groups/IEVOA/posts/3186603578247575/",
+          "index": 23
+        },
+        {
+          "title": "We got Solar and a Battery. Thoughts after 1 year.",
+          "url": "https://www.reddit.com/r/newzealand/comments/1o0zfko/we_got_solar_and_a_battery_thoughts_after_1_year/",
+          "index": 24
+        },
+        {
+          "title": "What's the Best Solar Battery for Future Upgrades? ",
+          "url": "https://www.instagram.com/p/DQbM_YCEa0Y/",
+          "index": 25
+        },
+        {
+          "title": "Positive Energy Wins Two 2026 SunWiz Awards | Perth",
+          "url": "https://positiveenergy.com.au/pes-2026-sunwiz-award-winner-perth/?srsltid=AfmBOor7UVJIYW2ZxXYkO43HFYCRzcYIxh2r2dWOUTNz1-myJSZ-UjI_",
+          "index": 26
+        },
+        {
+          "title": "Best Solar and Battery Backup for Rural New Hampshire",
+          "url": "https://www.bostonsolar.us/solar-blog-resource-center/blog/best-solar-and-battery-backup-for-rural-new-hampshire-5-top-picks-2026/",
+          "index": 27
+        },
+        {
+          "title": "Home Solar & Battery | Energy for Life",
+          "url": "https://nectr.com.au/home-solar-and-battery/",
+          "index": 28
+        },
+        {
+          "title": "The Best Solar Battery Deal in Wollongong",
+          "url": "https://solarhub.net.au/the-best-solar-battery-deal-in-wollongong-solarhub/",
+          "index": 29
+        },
+        {
+          "title": "FranklinWH aPower Review Australia 2026 | Gridly",
+          "url": "https://www.gridly.com.au/blog/franklinwh-apower-review-australia/",
+          "index": 30
+        },
+        {
+          "title": "FranklinWH Energy Storage Inc. - Profile & Reviews - 2026",
+          "url": "https://www.energysage.com/supplier/26086/franklinwh-energy-storage-inc/",
+          "index": 31
+        },
+        {
+          "title": "Franklinwh vs Tesla Powerwall 2 Battery Comparison Review",
+          "url": "https://www.youtube.com/watch?v=cZJNLQWke8g",
+          "index": 32
+        },
+        {
+          "title": "FranklinWH aPower 2 Battery Review: Flexible Whole ",
+          "url": "https://www.virtuesolar.com/2025/04/25/franklinwh-apower-2-battery-review/",
+          "index": 33
+        },
+        {
+          "title": "FranklinWH aPower Solar Battery Review 2026",
+          "url": "https://sunsuppv.com/franklinwh-apower-solar-battery-review-2026/?srsltid=AfmBOooeTvI90lnQoFHvrny0XL3rN3DI5iEB0OUz3DMpVoWHMyjiKncu",
+          "index": 34
+        },
+        {
+          "title": "FranklinWH | Battery Review: Pros, Cons & Final Verdict",
+          "url": "https://www.solarquotes.com.au/battery-storage/reviews/franklinwh-review.html",
+          "index": 35
+        },
+        {
+          "title": "FranklinWH aPower 2 Review 2026 - Suncipher",
+          "url": "https://www.suncipherenergy.com/reviews/franklinwh-apower-2",
+          "index": 36
+        },
+        {
+          "title": "FranklinWH - Apps on Google Play",
+          "url": "https://play.google.com/store/apps/details?id=com.Franklinwh.FamilyEnergy",
+          "index": 37
+        },
+        {
+          "title": "The aHub Review: Unlock Advanced Features of ",
+          "url": "https://www.franklinwh.com/blog/the-ahub-review-unlock-advanced-features-of-the-franklinwh-system",
+          "index": 38
+        },
+        {
+          "title": "FranklinWH aPower Review (2026): Is the Franklin Home ",
+          "url": "https://nrgcleanpower.com/learning-center/franklinwh-apowers-review/",
+          "index": 39
+        },
+        {
+          "title": "IQ Battery 5P | Enphase Store",
+          "url": "https://enphase.com/store/storage/gen3/iq-battery-5p",
+          "index": 40
+        },
+        {
+          "title": "Enphase Battery: IQ Battery Models, Prices & Installation ",
+          "url": "https://switchtogether.co.uk/resource-hub/blog/enphase-batteries",
+          "index": 41
+        },
+        {
+          "title": "IQ Battery emergency response",
+          "url": "https://enphase.com/download/iq-battery-emergency-response-tech-brief",
+          "index": 42
+        },
+        {
+          "title": "Enphase IQ Battery 10C Review 2026",
+          "url": "https://nuwattenergy.com/en/equipment/enphase-iq10c-battery-review",
+          "index": 43
+        },
+        {
+          "title": "Enphase IQ Battery 5P Review: Is It a Good Choice in 2026?",
+          "url": "https://aussiesolartech.com.au/enphase-iq-battery-5p-review/",
+          "index": 44
+        },
+        {
+          "title": "Enphase IQ Battery vs Tesla Powerwall 3: MA 2026 Guide",
+          "url": "https://www.bostonsolar.us/solar-blog-resource-center/blog/best-solar-battery-for-massachusetts-homeowners-2-top-picks-2026/",
+          "index": 45
+        },
+        {
+          "title": "Enphase Energy posted on the topic - IQ Battery G5",
+          "url": "https://www.linkedin.com/posts/enphase-energy_enphase-iq-battery-g5-activity-7486085723155148800-VdK2",
+          "index": 46
+        },
+        {
+          "title": "IQ Battery 10C",
+          "url": "https://enphase.com/store/storage/gen4/iq-battery-10c",
+          "index": 47
+        },
+        {
+          "title": "Enphase IQ Battery 5P FlexPhase Review | PSC Energy",
+          "url": "https://www.pscenergy.com.au/blog/enphase-iq-battery-5p-flexphase-review/",
+          "index": 48
+        },
+        {
+          "title": "Enphase Energy 2026: Solar Battery & Microinverters",
+          "url": "https://www.ecowatch.com/solar/reviews/enphase-energy",
+          "index": 49
+        },
+        {
+          "title": "Tesla Powerwall 3 datasheet - Energy Library",
+          "url": "https://energylibrary.tesla.com/docs/Public/EnergyStorage/Powerwall/3/Datasheet/en-uk/Powerwall-3-Datasheet-EN.pdf",
+          "index": 50
+        },
+        {
+          "title": "Tesla Powerwall 3 Buying Guide – [2026] Price and Specs",
+          "url": "https://solarcalculator.com.au/battery-storage/tesla-powerwall-3/",
+          "index": 51
+        },
+        {
+          "title": "Tesla Powerwall 3 Review in 2026: A Game Changer At ",
+          "url": "https://www.energysage.com/energy-storage/best-home-batteries/tesla-powerwall-battery-complete-review/",
+          "index": 52
+        },
+        {
+          "title": "Powerwall 3 Specifications - Energy Library - Tesla",
+          "url": "https://energylibrary.tesla.com/docs/Public/EnergyStorage/Powerwall/3/InstallManual/BackupSwitch/en-us/GUID-EC527BC7-4750-4425-BBC4-DB8C000339B3.html",
+          "index": 53
+        },
+        {
+          "title": "Tesla Powerwall 3 Specs: 13.5 kWh, Power & UK Price ",
+          "url": "https://www.stratfordenergy.co.uk/tesla-powerwall-3-specifications-key-features-benefits/",
+          "index": 54
+        },
+        {
+          "title": "Tesla Powerwall 3 | Specs, Performance and Pricing",
+          "url": "https://www.youtube.com/watch?v=EYNeqwruMGk",
+          "index": 55
+        },
+        {
+          "title": "Tesla Powerwall 3 | Battery Review: Pros, Cons & Final ",
+          "url": "https://www.solarquotes.com.au/battery-storage/reviews/tesla-powerwall-3-review.html",
+          "index": 56
+        },
+        {
+          "title": "Tesla Powerwall",
+          "url": "https://en.wikipedia.org/wiki/Tesla_Powerwall",
+          "index": 57
+        },
+        {
+          "title": "Tesla Powerwall 2 vs 3: Specs, Capacity, Dimensions & ",
+          "url": "https://www.elitepowergroup.com.au/news/the-difference-between-tesla-powerwall-2-and-3/",
+          "index": 58
+        }
+      ]
+    },
+    "answer": "In 2026, there is no single \"best\" system for every home, as the right choice depends on your roof type, budget, and energy goals. However, the industry has consolidated around a few top-tier ecosystems that offer the best combination of efficiency, safety, and smart management.\n\nThe current industry standard for home batteries is **LFP (Lithium Iron Phosphate)** chemistry, which is safer and lasts significantly longer than older lithium-ion models.\n\nHere are the best home solar and battery storage systems in 2026, categorized by their strengths.\n\n### 1. Best Overall System (Power & Value)\n**The Ecosystem:** Premium Panels (QCells or REC) + **Tesla Powerwall 3**\n*   **The Battery:** The **Tesla Powerwall 3** is widely considered the best all-in-one unit for most homeowners in 2026. It features **13.5 kWh of usable capacity** and a massive **11.5 kW of continuous power output**. Unlike older models, the Powerwall 3 has a built-in solar inverter, which simplifies installation and reduces costs.\n*   **The Panels:** **QCells (Q.HOME or M-G11+ series)** or **REC Solar (Alpha series)**. These panels offer an excellent balance of high efficiency (22–24%) and long-term durability without the premium price tag of ultra-luxury brands.\n*   **Best For:** Homes with simple rooflines, homeowners who want high power output for heavy appliances (HVAC, EV charging), and those looking for a streamlined installation.\n\n### 2. Best for Complex Roofs & Maximum Reliability\n**The Ecosystem:** **Enphase Microinverters** + **Enphase IQ Battery (10C or 5P)**\n*   **The Battery:** The **Enphase IQ Battery 10C** is currently rated as the top choice for reliability and modularity. It features a 15-year/6,000-cycle warranty and is designed to work seamlessly with Enphase’s microinverter technology. \n*   **The Panels:** Because Enphase uses microinverters (attached to each panel rather than a central box), you can pair them with almost any premium panel, such as **Maxeon (formerly SunPower)** or **Panasonic EverVolt**.\n*   **Best For:** Roofs with partial shading, multiple angles, or complex layouts. This system is also the \"gold standard\" for keeping the lights on during outages, as it allows for granular monitoring and management of every single panel.\n\n### 3. Best for Smart Home Energy Management\n**The Ecosystem:** Premium Panels + **FranklinWH aPower 2**\n*   **The Battery:** The **FranklinWH aPower 2** (13.6 kWh capacity, 10 kW continuous output) is a standout in 2026 for its \"smart\" capabilities. It includes a built-in inverter and manages the home’s energy flow automatically via the \"aHub.\" It can intelligently shed loads (like turning off the water heater temporarily) to ensure your critical circuits stay powered during a multi-day outage.\n*   **Best For:** Tech-savvy homeowners, those in areas with frequent grid instability, and users who want an automated \"set it and forget it\" energy management system.\n\n---\n\n### Top Solar Panel Brands in 2026\nIf you are choosing panels, these four brands consistently top the charts for efficiency, degradation rates, and warranty:\n\n1.  **Maxeon (Maxeon 7 Series):** The leader in efficiency (often exceeding 24%) and durability. They offer some of the longest warranties in the industry (up to 40 years on select lines).\n2.  **REC Solar (Alpha Series):** Known for excellent performance in high-heat environments and low degradation over time.\n3.  **Panasonic (EverVolt):** Features a unique modular design that allows for flexible sizing and industry-leading warranty coverage.\n4.  **Silfab:** A top choice for US-made panels, offering high performance and strong aesthetic appeal (all-black designs).\n\n### Key Factors to Consider in 2026\n*   **Battery Chemistry:** Ensure your battery uses **LFP (Lithium Iron Phosphate)**. It is the 2026 standard for residential storage because it is non-toxic, non-flammable, and can be cycled thousands of times without significant capacity loss.\n*   **Inverter Compatibility:** The \"best\" battery is often dictated by your inverter. If you use Enphase microinverters, you should generally use an Enphase battery. If you use a string inverter (like SolarEdge or a Tesla inverter), the Tesla Powerwall 3 or FranklinWH are better fits.\n*   **The Installer Matters More Than the Brand:** A top-tier panel installed poorly will underperform a mid-tier panel installed perfectly. In 2026, look for installers with strong local reputations, NABCEP certification (in the US), and a track record of post-installation support.\n\n**Recommendation:** For a standard suburban home, a system using **QCells panels and a Tesla Powerwall 3** offers the highest return on investment and performance. For homes with shading issues or a need for maximum outage reliability, the **Enphase ecosystem** is the superior choice.",
+    "usage": {
+      "input_tokens": 10222,
+      "output_tokens": 3880,
+      "characters": 0,
+      "total_tokens": 14102,
+      "output_tokens_details": {
+        "reasoning_tokens": 2585,
+        "text_tokens": 3880
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "plugins": {
+        "search": {
+          "count": 2,
+          "strategy": "agent"
+        }
+      },
+      "input_tokens_details": {
+        "text_tokens": 10222
+      }
+    }
+  },
+  "meta": {
+    "http_status": 200,
+    "elapsed_s": 83.6,
+    "search_triggered": true,
+    "citation_url_count": 55,
+    "captured_at_note": "real live capture 2026-08-02",
+    "qwen_search_results_count": 58,
+    "qwen_search_plugin_count": 2,
+    "qwen_stream_chunks": 1113,
+    "_note": "search_results merged across all stream chunks (deduped by url); first non-empty chunk had empty results so per-chunk merge is required."
+  }
+}

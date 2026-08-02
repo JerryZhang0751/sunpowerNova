@@ -1,0 +1,352 @@
+{
+  "provider": "qwen",
+  "prompt_id": "B02",
+  "prompt": "Is SunHestia a good brand for home solar and battery storage?",
+  "model": "qwen3.7-plus",
+  "request": {
+    "model": "qwen3.7-plus",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "text": "Is SunHestia a good brand for home solar and battery storage?"
+          }
+        ]
+      }
+    ],
+    "enable_search": true,
+    "search_options": {
+      "search_strategy": "agent",
+      "enable_source": true
+    },
+    "stream": true,
+    "incremental_output": true,
+    "_dashscope_base_http_api_url": "https://ws-sbm7h4bsls91dmh7.cn-beijing.maas.aliyuncs.com/api/v1"
+  },
+  "response": {
+    "search_info": {
+      "search_results": [
+        {
+          "title": "SunHestia — Solar Panels & Battery Storage for European ",
+          "url": "https://sunhestia.com/",
+          "index": 1
+        },
+        {
+          "title": "Solar & Battery Storage FAQ - SunHestia",
+          "url": "https://sunhestia.com/faq/",
+          "index": 2
+        },
+        {
+          "title": "About · SunHestia",
+          "url": "https://sunhestia.com/about/",
+          "index": 3
+        },
+        {
+          "title": "Terms of use - SunHestia",
+          "url": "https://sunhestia.com/legal/terms/",
+          "index": 4
+        },
+        {
+          "title": "News - SunHestia",
+          "url": "https://sunhestia.com/news/",
+          "index": 5
+        },
+        {
+          "title": "Smartbarry HT22: 8K Ultra HD Projector para tu Cine en Casa",
+          "url": "https://www.tiktok.com/@kuwaitshop2/video/7543529298964303112",
+          "index": 6
+        },
+        {
+          "title": "Protector Solar Ecran: Disponible en Bolivia",
+          "url": "https://www.tiktok.com/@marielamaldonadomakeup/video/7408136811198827782",
+          "index": 7
+        },
+        {
+          "title": "Resources - SunHestia",
+          "url": "https://sunhestia.com/resources/",
+          "index": 8
+        },
+        {
+          "title": "Dell SE2225HM Monitor: 21.5\" VA, HDMI, VGA, 100Hz",
+          "url": "https://www.tiktok.com/@nuy.docom/video/7652195675039386888",
+          "index": 9
+        },
+        {
+          "title": "Ecran Sunhestia",
+          "url": "https://www.tiktok.com/discover/ecran-sunhestia",
+          "index": 10
+        },
+        {
+          "title": "filtre solaire SPF 50+ يحمي من اكثر من 98% ",
+          "url": "https://www.facebook.com/HestiaPharma1/photos/%D8%B5%D9%8A%D9%81-%D9%85%D8%B9%D9%86%D8%A7-%D8%A3%D8%B3%D9%87%D9%84-%D9%88-%D8%A3%D9%81%D8%B6%D9%84-sunhestia-filtre-solaire-spf-50%D9%8A%D8%AD%D9%85%D9%8A-%D9%85%D9%86-%D8%A7%D9%83%D8%AB%D8%B1-%D9%85%D9%86-98-%D9%85%D9%86-%D8%A7%D9%84%D8%A3%D8%B4%D8%B9%D8%A9/1936153609873932/",
+          "index": 11
+        },
+        {
+          "title": "Revoluciona tus clases con la pantalla ecran retráctil",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7568621950663200001",
+          "index": 12
+        },
+        {
+          "title": "Descubre el ecran blanco perla con tecnología ALR",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7555630413780143376",
+          "index": 15
+        },
+        {
+          "title": "Isrearadi Cc",
+          "url": "https://www.tiktok.com/discover/isrearadi-cc",
+          "index": 16
+        },
+        {
+          "title": "SPF50 Vichy Capital Soleil UV Aqua – cât de bine miros?",
+          "url": "https://www.tiktok.com/@luminita.moldovan/video/7639678938486164758",
+          "index": 17
+        },
+        {
+          "title": "Bálsamo de Labios Meta Glow de Essence: Color ",
+          "url": "https://www.tiktok.com/@marielamaldonadomakeup/video/7626190384703556885",
+          "index": 18
+        },
+        {
+          "title": "Sunchees: Best Solar Power System For Home | Solar Power ",
+          "url": "https://www.sunchees.com/",
+          "index": 19
+        },
+        {
+          "title": "FOSHAN SUNCHEES ENERGY TECHNOLOGY CO.,LTD",
+          "url": "https://fs-sunchees.en.made-in-china.com/",
+          "index": 20
+        },
+        {
+          "title": "Sunchees: Wholesale Solar Panels Suppliers | Best Battery ",
+          "url": "https://www.suncheessolarenergy.com/",
+          "index": 21
+        },
+        {
+          "title": "7SUN - Distributor of PV Systems and Energy Storage Solutions",
+          "url": "https://7sun.eu/",
+          "index": 22
+        },
+        {
+          "title": "Solar Panel factory, Buy good quality ",
+          "url": "https://www.ssthpower.com/supplier-4755069-solar-panel",
+          "index": 23
+        },
+        {
+          "title": "ZNSHINE PV-TECH Co.,Ltd",
+          "url": "https://www.znshinesolar.com/",
+          "index": 24
+        },
+        {
+          "title": "Hestia Solar Germany | Au bei Rosenheim",
+          "url": "https://www.facebook.com/hestiasolarpanel/",
+          "index": 25
+        },
+        {
+          "title": "Sunway Solar: Solar Modules, Hybrid Solar Inverter, Solar ",
+          "url": "https://www.sunwaypv.com/",
+          "index": 26
+        },
+        {
+          "title": "Suntech - Photovoltaic Manufacturer",
+          "url": "https://www.suntech-power.com/",
+          "index": 27
+        },
+        {
+          "title": "Residential solutions - SunHestia",
+          "url": "https://sunhestia.com/residential/",
+          "index": 30
+        },
+        {
+          "title": "Privacy policy - SunHestia",
+          "url": "https://sunhestia.com/legal/privacy/",
+          "index": 34
+        },
+        {
+          "title": "Imprint - SunHestia",
+          "url": "https://sunhestia.com/legal/imprint/",
+          "index": 36
+        },
+        {
+          "title": "Why we use LiFePO4 for home batteries · SunHestia",
+          "url": "https://sunhestia.com/news/lifepo4-home-batteries/",
+          "index": 37
+        },
+        {
+          "title": "Satriko Ary Ve Iona Fona Cover",
+          "url": "https://www.tiktok.com/discover/satriko-ary-ve-iona-fona-cover",
+          "index": 40
+        },
+        {
+          "title": "Ecran eléctrico de 120” para un cine en casa",
+          "url": "https://www.tiktok.com/@sevilux/video/7623560761247354120",
+          "index": 43
+        },
+        {
+          "title": "Todo sobre el Mini Nova Pro: Tu proyector ideal",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7486304768898518327",
+          "index": 44
+        },
+        {
+          "title": "Dans cette vidéo, je vous montre comment activer l'option ",
+          "url": "https://www.tiktok.com/@khalildsg221/video/7662777220234022165",
+          "index": 45
+        },
+        {
+          "title": "Diferencias Entre Pantalla De Proyector Antirreflejante Y ",
+          "url": "https://www.tiktok.com/discover/diferencias-entre-pantalla-de-proyector-antirreflejante-y-blanca",
+          "index": 46
+        },
+        {
+          "title": "Prueba de Tela Reflectiva ALR para Proyector",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7483673533550267654",
+          "index": 47
+        },
+        {
+          "title": "El mejor proyector para cine en casa: Nova Pro HY260",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7568990236244577537",
+          "index": 53
+        },
+        {
+          "title": "What is self-consumption? · SunHestia",
+          "url": "https://sunhestia.com/news/what-is-self-consumption/",
+          "index": 57
+        },
+        {
+          "title": "Cingidin Matan Hausawa",
+          "url": "https://www.tiktok.com/discover/cingidin-matan-hausawa",
+          "index": 59
+        },
+        {
+          "title": "¿Te imaginas tener tu propio cine en casa sin gastar miles de ",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7541164694258650373",
+          "index": 60
+        },
+        {
+          "title": "Cómo proyectar durante el día con un proyector",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7488879682515930374",
+          "index": 61
+        },
+        {
+          "title": "Pantalla Ecran Gris ALR: Tu Cine en Casa",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7552641638850399505",
+          "index": 62
+        },
+        {
+          "title": "El Mejor Mini Proyector: Mini Nova Pro",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7559420085803175185",
+          "index": 63
+        },
+        {
+          "title": "Mejora tu proyector con Pantalla Retráctil Blanca Perla",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7548547222841986321",
+          "index": 64
+        },
+        {
+          "title": "Es Mejor Proyectar En Tela Gris O En Blanca",
+          "url": "https://www.tiktok.com/discover/es-mejor-proyectar-en-tela-gris-o-en-blanca",
+          "index": 65
+        },
+        {
+          "title": "tela reflectiva para proyector #cusco #proyector",
+          "url": "https://www.tiktok.com/@importaciones_el_paso/video/7659909037709954325",
+          "index": 67
+        },
+        {
+          "title": "Peloton Bike Screen Wont Turn on Red Blinking Light",
+          "url": "https://www.tiktok.com/discover/peloton-bike-screen-wont-turn-on-red-blinking-light",
+          "index": 68
+        },
+        {
+          "title": "Activador Del Bronceado De Mercadona",
+          "url": "https://www.tiktok.com/discover/activador-del-bronceado-de-mercadona",
+          "index": 70
+        },
+        {
+          "title": "Hiusten Kasvu Nopee",
+          "url": "https://www.tiktok.com/discover/hiusten-kasvu-nopee",
+          "index": 71
+        },
+        {
+          "title": "Ecran Total Avéne",
+          "url": "https://www.tiktok.com/discover/ecran-total-av%C3%A9ne",
+          "index": 72
+        },
+        {
+          "title": "Tela reflectiva para proyector ARL: cuál elegir y por qué",
+          "url": "https://www.tiktok.com/@casatextil/video/7653521665892044040",
+          "index": 76
+        },
+        {
+          "title": "Kahina. Agency",
+          "url": "https://www.instagram.com/kahina.agency/",
+          "index": 80
+        },
+        {
+          "title": "Si proyectas en pared… estás perdiendo calidad 😬 Más brillo ",
+          "url": "https://www.tiktok.com/@sevilux/video/7610957724225916167",
+          "index": 82
+        },
+        {
+          "title": "Le bronz impulse Spray visage et corps permettant de ",
+          "url": "https://www.tiktok.com/@excellence_beaute/video/7367414479094598918",
+          "index": 83
+        },
+        {
+          "title": "Muchos tienen dudas acerca de nuestro proyector Mini Nova ",
+          "url": "https://www.tiktok.com/@novashop_pe/video/7483743501058985222",
+          "index": 85
+        },
+        {
+          "title": "O Que É Melhor Pro Projetor Tela Branca Ou Preta",
+          "url": "https://www.tiktok.com/discover/o-que-%C3%A9-melhor-pro-projetor-tela-branca-ou-preta",
+          "index": 89
+        },
+        {
+          "title": "Proyector Goojodoq: ¡Brillo Asombroso de 15000 Lumens!",
+          "url": "https://www.tiktok.com/@nosoyelmati/video/7267678955606428934",
+          "index": 90
+        },
+        {
+          "title": "Radio Pantalla Retráctil: La Mejor Opción en Santa Cruz",
+          "url": "https://www.tiktok.com/@anabeltechnology/video/7325866464559287558",
+          "index": 92
+        }
+      ]
+    },
+    "answer": "Based on an analysis of the brand, **SunHestia** is a very new, low-profile company targeting European homeowners. While their stated technical specifications are good, the company currently lacks the reputation, transparency, and track record required for a 25-year investment like home solar. \n\n**You should proceed with extreme caution.**\n\nHere is a detailed breakdown of what you need to know about the brand:\n\n### The Good: Technical Specifications\nBased on their website, SunHestia focuses on \"self-consumption\" (using the energy you generate rather than sending it back to the grid). This is the most financially sound approach for residential solar in Europe.\n*   **Battery Chemistry:** They explicitly state they use **Lithium Iron Phosphate (LiFePO4 / LFP)** cells for their home batteries. This is currently the \"gold standard\" for home storage because it is highly stable (lower fire risk), cobalt-free, and offers a very long lifespan (often 6,000+ cycles).\n\n### The Red Flags: Reputation & Transparency\nThere are several significant concerns regarding the company's legitimacy and longevity:\n\n*   **Zero Independent Footprint:** There are currently **no independent reviews** for SunHestia on Trustpilot, Reddit, or major solar forums. The website copyright is \"© 2026,\" indicating the company is either brand new or recently rebranded. \n*   **Questionable Corporate Transparency:** While EU law requires companies to have a legal \"Imprint\" (Impressum), SunHestia’s listed contact email is **`jerryzhang1006@163.com`**. \"163.com\" is a free email provider based in China (NetEase). It is highly unusual for a legitimate, established European solar brand to use a generic foreign free-email address rather than a corporate domain (e.g., `support@sunhestia.com`). This suggests they may be a direct-to-consumer operation run directly from China or a very early-stage startup.\n*   **Warranty Risk:** Solar panels and batteries are long-term investments. If a company is this new and lacks a verifiable physical corporate presence in Europe, there is a high risk that they may not exist in 5 or 10 years to honor a warranty.\n*   **Name Collision:** \"SunHestia\" is already an established brand name for sunscreen products (produced by Hestia Pharma). This suggests a lack of unique brand identity or potential trademark issues.\n\n### Questions You Must Ask Before Buying\nIf you have received a quote from SunHestia or an installer using their equipment, do not sign a contract until you get the following in writing:\n\n1.  **Who is the legal entity?** Ask for the full registered company name and the physical European address where they are registered (not just an email address).\n2.  **Who actually manufactures the equipment?** SunHestia likely does not manufacture their own panels or batteries. Ask for the datasheets of the actual components. (e.g., Are the panels made by Tier-1 manufacturers like Jinko, JA Solar, or Trina? Are the batteries made by BYD or Pylontech?)\n3.  **Who backs the warranty?** If SunHestia goes out of business, who will service the system or honor the 10/25-year warranty? Is there an insurance-backed warranty guarantee?\n4.  **Who is the local installer?** Ask for the name of the local installation company. Research *that* company's reviews independently, as they will be your primary point of contact for maintenance.\n\n### Established Alternatives\nIf you want peace of mind, it is highly recommended to stick with established \"Tier 1\" brands that have a verifiable presence in Europe and a long track record of honoring warranties:\n\n*   **Solar Panels:** SunPower (Maxeon), REC, Meyer Burger, Jinko Solar, JA Solar, Trina Solar, or Longi.\n*   **Inverters & Batteries:** Enphase, SolarEdge, Fronius, SMA, Huawei, BYD, Pylontech, or E3/DC. \n\n**Summary:** While SunHestia's battery chemistry (LiFePO4) is excellent, the company itself appears to be a \"white-label\" or startup operation with no verifiable track record. For a system that will sit on your roof for decades, it is safer to choose a brand with a proven history and local support infrastructure.",
+    "usage": {
+      "input_tokens": 33222,
+      "output_tokens": 3984,
+      "characters": 0,
+      "total_tokens": 37206,
+      "output_tokens_details": {
+        "reasoning_tokens": 2760,
+        "text_tokens": 3984
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 16768
+      },
+      "plugins": {
+        "search": {
+          "count": 5,
+          "strategy": "agent"
+        }
+      },
+      "input_tokens_details": {
+        "text_tokens": 33222
+      }
+    }
+  },
+  "meta": {
+    "http_status": 200,
+    "elapsed_s": 94.7,
+    "search_triggered": true,
+    "citation_url_count": 57,
+    "captured_at_note": "real live capture 2026-08-02",
+    "qwen_search_results_count": 57,
+    "qwen_search_plugin_count": 5,
+    "qwen_stream_chunks": 1155,
+    "_note": "search_results merged across all stream chunks (deduped by url); first non-empty chunk had empty results so per-chunk merge is required."
+  }
+}

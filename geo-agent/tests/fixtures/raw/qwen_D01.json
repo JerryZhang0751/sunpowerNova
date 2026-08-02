@@ -1,0 +1,60 @@
+{
+  "provider": "qwen",
+  "prompt_id": "D01",
+  "prompt": "How to size a home solar battery",
+  "model": "qwen3.7-plus",
+  "request": {
+    "model": "qwen3.7-plus",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "text": "How to size a home solar battery"
+          }
+        ]
+      }
+    ],
+    "enable_search": true,
+    "search_options": {
+      "search_strategy": "agent",
+      "enable_source": true
+    },
+    "stream": true,
+    "incremental_output": true,
+    "_dashscope_base_http_api_url": "https://ws-sbm7h4bsls91dmh7.cn-beijing.maas.aliyuncs.com/api/v1"
+  },
+  "response": {
+    "search_info": {
+      "search_results": []
+    },
+    "answer": "Sizing a home solar battery correctly is crucial. If you size it too small, you won't have enough power when you need it; if you size it too large, you will overspend on capacity your solar panels can't even fully charge. \n\nHere is a step-by-step guide to sizing a home solar battery, from determining your goals to running the final math.\n\n---\n\n### Step 1: Determine Your Primary Goal\nHow you use the battery dictates how big it needs to be. Most homeowners fall into one of three categories:\n1. **Self-Consumption (Time-of-Use Shifting):** You want to store solar energy generated during the day to use in the evening when electricity rates are highest. *(Typically requires 5–15 kWh).*\n2. **Critical Loads Backup:** You want to keep essential appliances running during a blackout (refrigerator, lights, internet, well pump, maybe one AC unit). *(Typically requires 10–20 kWh).*\n3. **Whole-Home Backup / Off-Grid:** You want to power your entire house exactly as it runs normally, or you live off the grid. *(Typically requires 20–40+ kWh).*\n\n### Step 2: Calculate Your Daily Energy Consumption\nLook at your utility bill to find your average monthly electricity usage in kilowatt-hours (kWh). \n* **Formula:** Monthly kWh ÷ 30 = **Daily kWh usage**\n* *Example:* If you use 900 kWh a month, your daily average is **30 kWh/day**.\n\n### Step 3: Determine Your \"Usable\" Capacity Needs\nYou rarely need a battery to power your whole house for a full 24 hours. \n* If you are grid-tied, you just need enough battery to get you through the night (roughly 10–15 kWh for an average home).\n* If you want 24-hour backup, use your full daily kWh number.\n* **Pro Tip:** Create a \"Critical Loads List.\" Add up the wattage of the items you want to keep running and multiply by the hours you need them to calculate a more precise, lower kWh requirement.\n\n### Step 4: Adjust for Depth of Discharge (DoD)\nBatteries cannot be drained to 0% without damaging them. The percentage of the battery you *can* use is the Depth of Discharge (DoD). Modern Lithium Iron Phosphate (LiFePO4 / LFP) batteries usually have a DoD of 90% to 100%. Older lead-acid batteries are only 50%.\n* **Formula:** Usable Capacity Needed ÷ DoD = **Total Battery Capacity**\n* *Example:* If you need 15 kWh of usable power and your battery has a 90% DoD: 15 ÷ 0.90 = **16.6 kWh total capacity.**\n\n### Step 5: Account for Round-Trip Efficiency\nNo battery is 100% efficient. You lose some energy as heat when charging and discharging. Most lithium batteries have a round-trip efficiency of about 85% to 95%. To be safe, add a 10% buffer to your total capacity.\n* *Example:* 16.6 kWh + 10% = **~18.3 kWh.** You should look for a battery system around 18–20 kWh.\n\n### Step 6: Size the Power Output (kW vs. kWh)\nIt is vital to understand the difference between capacity and power:\n* **kWh (Kilowatt-hours)** is the size of the \"gas tank\" (how much total energy is stored).\n* **kW (Kilowatts)** is the size of the \"engine\" (how much power can be delivered at one exact moment).\n\nIf you want to run high-draw appliances like a central air conditioner, electric oven, or well pump, your battery's inverter must have a high enough **continuous kW output** (and surge kW) to handle them starting up. A battery with a massive 30 kWh tank won't run your AC if the inverter is only rated for 3 kW of continuous output.\n\n### Step 7: Match the Battery to Your Solar Array\nYour solar panels act as the \"charger\" for your battery. If you buy a massive battery but only have a small solar array, the battery will never fully charge on cloudy days.\n* **Rule of Thumb:** Your solar array (in kW) should be roughly equal to or larger than your battery capacity (in kWh) to ensure it can recharge in a single sunny day. \n* *Example:* If you install a 20 kWh battery, you ideally want at least a 5kW to 10kW solar array to recharge it efficiently.\n\n---\n\n### Summary Example Calculation\nLet’s say you want **Critical Loads Backup** for your home.\n1. **Goal:** Backup the fridge, lights, router, and a few outlets for 12 hours overnight.\n2. **Load Calculation:** You calculate those items will use **12 kWh** overnight.\n3. **DoD:** You choose a modern LFP battery with **90% DoD**. (12 ÷ 0.90 = 13.3 kWh).\n4. **Efficiency:** Add a **10% buffer** for efficiency loss (13.3 + 1.33 = 14.6 kWh).\n5. **Power Output:** You want to be able to run a 1.5-ton AC unit, so you ensure the battery inverter has a continuous output of at least **5 kW**.\n6. **Result:** You need a **15 kWh battery system with a 5 kW+ inverter.**\n\n### Final Recommendations\n* **Start Small and Modular:** Many modern batteries (like the Tesla Powerwall, Franklin WH, or Enphase IQ) are modular. It is often smarter to buy one or two units to start, see how your usage patterns change, and add more later.\n* **Get a Professional Audit:** A certified solar installer will look at your specific utility rate plan (like Time-of-Use rates), your roof's solar production, and your home's electrical panel to give you a precise, code-compliant sizing recommendation.",
+    "usage": {
+      "input_tokens": 335,
+      "output_tokens": 2806,
+      "characters": 0,
+      "total_tokens": 3141,
+      "output_tokens_details": {
+        "reasoning_tokens": 1458,
+        "text_tokens": 2806
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "input_tokens_details": {
+        "text_tokens": 335
+      }
+    }
+  },
+  "meta": {
+    "http_status": 200,
+    "elapsed_s": 51.3,
+    "search_triggered": false,
+    "citation_url_count": 0,
+    "captured_at_note": "real live capture 2026-08-02",
+    "qwen_search_results_count": 0,
+    "qwen_search_plugin_count": 0,
+    "qwen_stream_chunks": 822,
+    "_note": "search_results merged across all stream chunks (deduped by url); first non-empty chunk had empty results so per-chunk merge is required."
+  }
+}
