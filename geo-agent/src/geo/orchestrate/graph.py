@@ -62,9 +62,26 @@ def build_graph():
     return g.compile(checkpointer=SqliteSaver(conn))
 
 def run_pipeline(week: int):
+    from langgraph.checkpoint.sqlite import SqliteSaver
+
+    thread_id = f"w{week}"
+    db_path = REPO/"state"/"runs.sqlite"
+
+    # Check if checkpoint already exists for this week (resume from previous run)
+    if db_path.exists():
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        checkpointer = SqliteSaver(conn)
+        checkpoint = checkpointer.get({"configurable": {"thread_id": thread_id}})
+
+        # If checkpoint exists with complete state, skip re-execution
+        if checkpoint is not None and "channel_values" in checkpoint:
+            if checkpoint["channel_values"].get("week") == week:
+                # Graph already completed for this week, skip re-run
+                return
+
     app = build_graph()
     # thread_id=w{week} → SqliteSaver checkpoint 续跑：已完成节点重跑时跳过
-    app.invoke({"week": week}, config={"configurable": {"thread_id": f"w{week}"}})
+    app.invoke({"week": week}, config={"configurable": {"thread_id": thread_id}})
 
 if __name__ == "__main__":
     run_pipeline(settings.run.week)
