@@ -1,0 +1,7 @@
+site:
+  url: https://sunhestia.com
+  pages: [/, /residential, /about, /contact, /faq, /resources, /products,
+          /news, /news/lifepo4-home-batteries, /news/what-is-self-consumption,
+          /legal/imprint, /legal/privacy, /legal/terms]
+brand_terms: [SunHestia, sunhestia.com]
+proxy: null           # GSC 中国访问代理 url，如 http://127.0.0.1:7890；null=直连
