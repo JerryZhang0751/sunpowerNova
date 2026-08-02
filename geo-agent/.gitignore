@@ -9,3 +9,6 @@ __pycache__/
 # GSC service account private key（机密，等价密码）
 gsc-nova-*.json
 *-service-account*.json
+
+# Virtual environment
+.venv/

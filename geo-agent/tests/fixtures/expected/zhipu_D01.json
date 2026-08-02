@@ -2,5 +2,6 @@
   "cited_sources_extract_method": "structured",
   "mentioned": false,
   "cited_with_link": false,
+  "sentiment": "neu",
   "competitors_mentioned_contains": ["Tesla", "Enphase", "Franklin", "LG"]
 }

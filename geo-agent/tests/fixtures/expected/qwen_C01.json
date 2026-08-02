@@ -3,5 +3,6 @@
   "cited_urls_subset": ["https://www.consumerreports.org", "https://www.energysage.com"],
   "mentioned": false,
   "cited_with_link": false,
+  "sentiment": "neu",
   "competitors_mentioned_contains": ["Tesla"]
 }

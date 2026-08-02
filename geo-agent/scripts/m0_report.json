@@ -1,0 +1,162 @@
+{
+  "Qwen": {
+    "channel": "DashScope MultiModal (enable_source)",
+    "model": "qwen3.7-plus",
+    "base_url": "https://ws-sbm7h4bsls91dmh7.cn-beijing.maas.aliyuncs.com/api/v1",
+    "elapsed_s": 39.4,
+    "http_status": 200,
+    "search_count": 29,
+    "search_urls": [
+      "https://www.solar.com/learn/best-solar-panels/",
+      "https://www.youtube.com/watch?v=8iAUqpq5CuA",
+      "https://www.consumerreports.org/home-garden/solar-panels/best-solar-panels-a1766184661/",
+      "https://www.solarreviews.com/solar-panel-reviews",
+      "https://www.fmb.org.uk/homepicks/solar-panels/best-solar-panels/",
+      "https://www.energysage.com/solar/best-solar-panels-complete-ranking/",
+      "https://www.forbes.com/home-improvement/solar/best-solar-panels/",
+      "https://www.ecowatch.com/solar/best-companies/panels-for-homes"
+    ],
+    "search_field_paths": [
+      "output.search_info.search_results"
+    ],
+    "answer_snippet": "# Best Home Solar Panel & Battery Storage Systems in 2026  Here's a breakdown of the top-rated products in both categories, based on recent expert reviews and industry rankings.  ---  ## 🏆 Best Home Solar Panels (2026)  | Rank | Brand / Pro…",
+    "usage": {
+      "input_tokens": 8271,
+      "output_tokens": 1524,
+      "characters": 0,
+      "total_tokens": 9795,
+      "output_tokens_details": {
+        "reasoning_tokens": 130,
+        "text_tokens": 1524
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 2048
+      },
+      "plugins": {
+        "search": {
+          "count": 2,
+          "strategy": "agent"
+        }
+      },
+      "input_tokens_details": {
+        "text_tokens": 8271
+      }
+    },
+    "search_triggered": true,
+    "status": "OK"
+  },
+  "豆包": {
+    "channel": "Ark Responses API",
+    "model": "doubao-seed-2-1-pro-260628",
+    "base_url": "https://ark.cn-beijing.volces.com/api/v3/responses",
+    "elapsed_s": 131.5,
+    "http_status": 200,
+    "output_types": [
+      "reasoning",
+      "web_search_call",
+      "reasoning",
+      "web_search_call",
+      "reasoning",
+      "web_search_call",
+      "message"
+    ],
+    "top_keys": [
+      "created_at",
+      "id",
+      "max_output_tokens",
+      "model",
+      "object",
+      "output",
+      "service_tier",
+      "status",
+      "tools",
+      "usage",
+      "caching",
+      "store",
+      "expire_at"
+    ],
+    "answer_snippet": "### 2026年最佳家用太阳能板+电池储能系统推荐（按场景分类，附来源） 2026年户用光储系统已全面进入一体化集成、智能化调度阶段，以下推荐均来自2026年上半年权威行业评测、专业能源平台实测及头部厂商最新产品参数，覆盖不同预算、场景需求：  --- #### 一、最佳整体高端系统（生态协同/全场景适配） ##### 1. 特斯拉Solar Roof + Powerwall 3（美系高端一体化标杆） - **组件**：特斯拉第三代太阳能瓦/特斯拉N型TOPCon组件（44…",
+    "search_urls": [
+      "http://huawei-gf.weisizhineng.com/company/news/itemid-9737.shtml",
+      "http://wap.hznet.tv/shangxun/Article-az6t-757.html",
+      "https://cj.sina.cn/article/norm_detail",
+      "https://dxp-int.generac.com/solar-battery-storage/pwrcell-product-overview/",
+      "https://dxp-int.generac.com/solar-battery-storage/pwrcell-product-overview/）。",
+      "https://energyranked.com/learn/solar/best-solar-panels/",
+      "https://energyranked.com/learn/solar/best-solar-panels/）。",
+      "https://m.ne21.com/news/show-225270.html"
+    ],
+    "search_field_paths": [
+      "output[].type=web_search_call",
+      "output[].type=web_search_call",
+      "output[].type=web_search_call"
+    ],
+    "search_triggered": true,
+    "status": "OK",
+    "_raw_excerpt": "{\"created_at\": 1785171242, \"id\": \"resp_02178517123979379e9bf0afca82c9100a3d2e8164ce29c6532ab\", \"max_output_tokens\": 32768, \"model\": \"doubao-seed-2-1-pro-260628\", \"object\": \"response\", \"output\": [{\"id\": \"rs_02178517124200300000000000000000000ffffac154c94172a41\", \"type\": \"reasoning\", \"summary\": [{\"type\": \"summary_text\", \"text\": \"用户需要2026年家用太阳能板及储能的品牌产品与来源。当前时间为2026年7月，本次需要检索的是时效性极强的家用太阳能板及储能系统相关信息，我将通过搜索获取最新的权威评测、消费推荐等内容。针对2026年7月当前时间点，我需要获取最新的家用太阳能板及配套储能系统相关信息，已敲定搜索关键词覆盖国内产品推荐、海外专业评测、行业品牌排名三类，同时选定时效性高的资讯平台和全网搜索作为信息获取渠道，优先检索2026年上半年的最新评测内容，确保信息的时效性与准确性。覆盖中英文、多维度的搜索关键词已确定，将选用toutiao_article和search_engine两类数据源，调用相关工具获取2026年最新的家用太阳能板加储能系统的相关评测与排名信息。\"}], \"status\": \"completed\"}, {\"type\": \"web_search_call\", \"action\": {\"query\": \"2026年最佳家用太阳能板及电池储能系统品牌产品评测 最新;2026 best residential solar panel and ba"
+  },
+  "智谱": {
+    "channel": "智谱 Anthropic 兼容",
+    "model": "glm-5.2",
+    "base_url": "https://open.bigmodel.cn/api/anthropic/v1/messages",
+    "elapsed_s": 38.0,
+    "http_status": 200,
+    "content_types": [
+      "server_tool_use",
+      "server_tool_use",
+      "server_tool_use",
+      "tool_result",
+      "tool_result",
+      "tool_result",
+      "server_tool_use",
+      "server_tool_use",
+      "tool_result",
+      "tool_result",
+      "server_tool_use",
+      "tool_result",
+      "server_tool_use",
+      "tool_result",
+      "text"
+    ],
+    "stop_reason": "end_turn",
+    "answer_snippet": "Based on extensive research across the most recent expert reviews and lab tests, here is a comprehensive guide to the **best home solar panel and battery storage systems available heading into 2026**, organized by category with specific bra…",
+    "search_urls": [
+      "https://allseasonsolar.net/the-best-solar-panels-in-2025/",
+      "https://goodenergysolutions.com/solar-battery-showdown-tesla-vs-enphase-vs-franklin-2/",
+      "https://manlybattery.com/best-solar-battery-backup-systems-usa/",
+      "https://nuwattenergy.com/en/equipment/rec-vs-maxeon-solar-panels",
+      "https://ocsolar.com/resources/guides/powerwall-3-vs-enphase-vs-franklinwh-2026",
+      "https://outboundpower.com/products/bluetti-ep900-home-battery-backup-9920-wh-9000w-9000w-solar-input",
+      "https://powerlutions.com/battery-storage/2026-battery-guide-comparing-powerwall-3-enphase-iq-and-franklinwh/",
+      "https://solarbuildermag.com/energy-storage/overview-of-ep900-bluettis-easy-to-install-hybrid-inverter-home-battery-system/"
+    ],
+    "search_field_paths": [
+      "content[].server_tool_use[web_search_prime]",
+      "content[].server_tool_use[web_search_prime]",
+      "content[].server_tool_use[web_search_prime]",
+      "content[].tool_result",
+      "content[].tool_result",
+      "content[].tool_result",
+      "content[].server_tool_use[web_search_prime]",
+      "content[].server_tool_use[web_search_prime]",
+      "content[].tool_result",
+      "content[].tool_result",
+      "content[].server_tool_use[web_search_prime]",
+      "content[].tool_result",
+      "content[].server_tool_use[web_search_prime]",
+      "content[].tool_result"
+    ],
+    "search_triggered": true,
+    "status": "OK",
+    "_raw_excerpt": "{\"id\": \"msg_20260728005611b146e0fe1cdc4e60\", \"type\": \"message\", \"role\": \"assistant\", \"model\": \"glm-5.2\", \"content\": [{\"type\": \"server_tool_use\", \"id\": \"call_50b61c4de3964ae3b9907f01\", \"name\": \"web_search_prime\", \"input\": {\"search_query\": \"best home solar panel and battery storage system 2025 2026\", \"search_recency_filter\": \"oneYear\", \"location\": \"us\", \"content_size\": \"high\"}}, {\"type\": \"server_tool_use\", \"id\": \"call_35a1860dccb14a929fdc2e2b\", \"name\": \"web_search_prime\", \"input\": {\"search_query\": \"best solar battery storage systems 2025 review ranking\", \"search_recency_filter\": \"oneYear\", \"location\": \"us\", \"content_size\": \"high\"}}, {\"type\": \"server_tool_use\", \"id\": \"call_2abe4131598140be99406404\", \"name\": \"web_search_prime\", \"input\": {\"search_query\": \"best home solar panels 2025 brand revie"
+  },
+  "Kimi(分析层)": {
+    "channel": "OpenAI 兼容",
+    "model": "kimi-k3",
+    "base_url": "https://api.moonshot.cn/v1",
+    "elapsed_s": 67.2,
+    "answer_snippet": "# Home Solar + Battery: Best Options (with an important caveat)  **First, honesty about my limits:** My knowledge has a cutoff in early 2025, so I can't tell you what's been ranked \"best in 2026,\" report on products released since then, or …",
+    "search_triggered": "n/a(分析层)",
+    "status": "OK"
+  }
+}

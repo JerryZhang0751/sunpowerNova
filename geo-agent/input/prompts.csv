@@ -1,0 +1,44 @@
+id,category,prompt,market,intent,core
+C01,category,What is the best home solar panel and battery storage system in 2026?,EU,product-category,1
+C02,category,Best solar panels with battery storage for a home,EU,product-category,0
+C03,category,Top residential solar plus storage systems for self-consumption,EU,product-category,0
+C04,category,Which company makes the best home battery storage system?,EU,product-category,1
+C05,category,Most efficient home solar panels for residential roofs,EU,product-category,0
+C06,category,All-in-one solar and battery system for a detached house,EU,product-category,0
+C07,category,Best home energy storage batteries 2026,EU,product-category,1
+C08,category,Recommended solar and battery brands for European homes,EU,product-category,0
+S01,scenario,How can I use more of my own solar power at home?,EU,self-consumption,0
+S02,scenario,Solar panel with battery for self-consumption — is it worth it?,EU,self-consumption,1
+S03,scenario,Run my home on solar at night,EU,self-consumption,0
+S04,scenario,How to increase self-consumption of solar energy,EU,self-consumption,1
+S05,scenario,Store solar energy during the day to use at night,EU,self-consumption,0
+S06,scenario,Can a home battery power a house overnight?,EU,self-consumption,0
+D01,decision,How to size a home solar battery,EU,decision,1
+D02,decision,How big should my home battery be?,EU,decision,0
+D03,decision,How many solar panels do I need for a detached house?,EU,decision,0
+D04,decision,How to choose a home battery storage system,EU,decision,1
+D05,decision,What to look for when buying solar panels and a battery,EU,decision,0
+D06,decision,Is a 10 kWh battery enough for a family home?,EU,decision,0
+D07,decision,Lithium iron phosphate vs other home battery types,EU,decision,1
+D08,decision,How long do home solar batteries last?,EU,decision,0
+K01,cost,How much does a home solar battery system cost in Europe?,EU,cost,1
+K02,cost,Cost of solar panels plus battery for a house in Germany,DE,cost,0
+K03,cost,Is solar plus battery storage worth it financially?,EU,cost,1
+K04,cost,How long does it take for solar and battery to pay for itself?,EU,cost,0
+K05,cost,Average price of a home battery storage system in the UK,UK,cost,0
+M01,comparison,Top residential solar companies in Europe 2026,EU,comparison,1
+M02,comparison,Best solar battery brands compared,EU,comparison,0
+M03,comparison,Alternatives to Tesla Powerwall for home storage,EU,comparison,1
+M04,comparison,Reviews of home solar and storage companies,EU,comparison,0
+M05,comparison,Which solar brands are recommended by installers?,EU,comparison,0
+M06,comparison,Most reliable home battery storage manufacturers,EU,comparison,0
+B01,brand,SunHestia solar reviews,EU,brand,1
+B02,brand,Is SunHestia a good brand for home solar and battery storage?,EU,brand,1
+B03,brand,What do people think of SunHestia solar panels?,EU,brand,0
+B04,brand,SunHestia home battery review,EU,brand,0
+G01,geo,Best solar panel and battery system for a home in Germany,DE,geo,1
+G02,geo,Solar plus battery storage for self-consumption in the UK,UK,geo,0
+G03,geo,Best residential solar storage in Italy,IT,geo,0
+G04,geo,Home battery storage options in the Netherlands,NL,geo,0
+G05,geo,Solar panels with battery for a detached house in Spain,ES,geo,0
+G06,geo,Residential solar and storage in France,FR,geo,0

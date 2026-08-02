@@ -26,6 +26,7 @@ def test_l2_all_fixtures():
                 assert all(s.extract_method in ("structured","inferred") for s in l2.cited_sources)
             assert l2.mentioned == exp["mentioned"]
             assert l2.cited_with_link == exp["cited_with_link"]
+            assert l2.sentiment == exp["sentiment"]
             # precision: 抽出的 url 里真出现在答案/来源文本里的比例 ≥ 0.9
             if l2.cited_sources:
                 text = (raw["response"].get("answer","") or json.dumps(raw["response"]))

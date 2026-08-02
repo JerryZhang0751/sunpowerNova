@@ -3,5 +3,6 @@
   "cited_urls_subset": ["https://sunhestia.com/"],
   "mentioned": true,
   "cited_with_link": true,
+  "sentiment": "neg",
   "competitors_mentioned_contains": ["BYD", "Enphase", "SolarEdge"]
 }
