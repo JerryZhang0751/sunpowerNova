@@ -16,7 +16,7 @@ def extract_semantic(text: str) -> dict:
             model="kimi-k3",
             messages=[{"role":"system","content":_SYS},
                       {"role":"user","content":text[:6000]}],
-            response_format={"type":"json_object"}, temperature=0)
+            response_format={"type":"json_object"}, temperature=1)  # kimi-k3 仅允许 temperature=1（=0 报 400）
         return json.loads(r.choices[0].message.content or "{}")
     except Exception:
         return {}     # Kimi 失败不阻断：语义缺则后续确定性代理用 structural 兜底

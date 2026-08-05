@@ -117,6 +117,28 @@ def _extract_brand_metrics(l1s: list[L1Record]) -> dict:
     }
 
 
+def competitor_domains_by_count(week: int, n: int = 10) -> list[str]:
+    """Top-N competitor domains by citation frequency (deterministic: count desc, domain asc).
+
+    Shared by fetch_node (fetches their L3 into data/sources/) and assemble
+    (reads it back) so the two agree on exactly which competitors to score.
+    Returns bare hostnames (e.g. 'energysage.com').
+    """
+    from urllib.parse import urlparse
+    from collections import Counter
+    try:
+        site_host = urlparse(settings.targets["site"]["url"]).netloc
+    except Exception:
+        site_host = ""   # settings 不可用时（如单测 mock）不排除任何域名
+    c: Counter = Counter()
+    for l in _iter_l1(week):
+        for s in l.l2.cited_sources:
+            host = urlparse(s.url).netloc
+            if host and host != site_host:
+                c[host] += 1
+    return [d for d, _ in sorted(c.items(), key=lambda x: (-x[1], x[0]))[:n]]
+
+
 def assemble(week: int) -> dict:
     """
     Assemble deterministic evaluation report from L2 records, GEO/SEO scores, and competitive benchmarks.
@@ -253,19 +275,9 @@ def assemble(week: int) -> dict:
             dims=seo_scores[0].dims  # Use first page's dimensions as representative
         )
 
-    # Extract cited competitors and load their L3 data
-    cited_competitors = set()
-    for l in l1s:
-        for source in l.l2.cited_sources:
-            # Extract domain from URL for competitor identification
-            from urllib.parse import urlparse
-            domain = urlparse(source.url).netloc
-            if domain and domain != "sunhestia.com":
-                cited_competitors.add(domain)
-
-    # Score competitors
+    # Score competitors — deterministic top-5 by citation count (matches fetch_node)
     comp_geos = []
-    for comp_domain in list(cited_competitors)[:5]:  # Limit to top 5 cited competitors
+    for comp_domain in competitor_domains_by_count(week, 5):
         comp_url = f"https://{comp_domain}"
         comp_l3 = _load_l3_source(comp_url)
         if comp_l3 and static_signals:

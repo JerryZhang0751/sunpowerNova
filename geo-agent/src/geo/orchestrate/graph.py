@@ -19,14 +19,17 @@ def collect_node(state):
     return state
 
 def fetch_node(state):
-    # 对本轮所有 cited_sources 调 fetch_source（跨周 sha1 去重；已在 Task 9 落盘的跳过）
-    import json
-    from geo.shared.models import L1Record
-    for jp in (REPO/"data"/"raw"/f"w{state['week']}").rglob("r*.json"):
-        l1 = L1Record(**json.loads(jp.read_text(encoding="utf-8")))
-        for s in l1.l2.cited_sources:
-            try: fetch_source(s.url)
-            except Exception: pass        # 失败跳过、标红不入分母
+    # 只抓 analyst 真正读取 L3 的 URL：品牌站 + 站点页 + Top 竞品域名。
+    # 全量 cited_sources 抓取对 P0 报告无用（analyst 只读这 ~20 个 URL）且会触发
+    # 上千次 Kimi 调用；P1 研究 agent 需要时再恢复全量抓取。
+    from geo.assess.analyst import competitor_domains_by_count
+    w = state["week"]
+    site = settings.targets["site"]["url"]
+    urls = [site] + [site.rstrip("/") + p for p in settings.targets["site"]["pages"]]
+    urls += [f"https://{d}" for d in competitor_domains_by_count(w, 10)]
+    for u in urls:
+        try: fetch_source(u)
+        except Exception: pass        # 失败跳过、不入分母
     return state
 
 def snapshot_node(state):
