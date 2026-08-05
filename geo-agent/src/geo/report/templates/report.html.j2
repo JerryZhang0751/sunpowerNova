@@ -65,12 +65,20 @@ h1,h2,h3{color:#212529}</style>
 </ul>
 </section>
 
+{% macro score_detail(obj) -%}
+{% if obj %}<p>总分 <strong>{{ '%.1f'|format(obj.total) }}</strong>/100</p>
+{% if obj.dims %}<table border=1><tr><th>维度</th><th>得分</th><th>权重</th><th>加权</th><th>信号</th></tr>
+{% for d in obj.dims %}<tr><td>{{ d.name }}</td><td>{{ '%.1f'|format(d.score) }}</td><td>{{ '%.0f'|format(d.weight) }}%</td><td>{{ '%.2f'|format(d.score * d.weight / 100) }}</td><td>{% if d.signals %}<ul>{% for k, v in d.signals.items()|sort %}<li><code>{{ k }}</code>= {{ v|fmt_signal }}</li>{% endfor %}</ul>{% else %}—{% endif %}</td></tr>
+{% endfor %}</table>
+{% else %}<p>（无维度明细）</p>{% endif %}
+{% else %}<p>（本期无数据）</p>{% endif %}
+{%- endmacro %}
 <section>
 <h2>⑦数据附录</h2>
 <h3>GEO详细数据</h3>
-<pre>{{ report.self_geo | tojson }}</pre>
+{{ score_detail(report.self_geo) }}
 <h3>SEO详细数据</h3>
-<pre>{{ report.self_seo | tojson }}</pre>
+{{ score_detail(report.self_seo) }}
 </section>
 
 <footer>SunHestia GEO/SEO platform · P0</footer>

@@ -4,6 +4,7 @@ Generates byte-level deterministic HTML reports from eval_report.json
 """
 
 from __future__ import annotations
+import json
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
@@ -44,6 +45,14 @@ def render(report: dict, out: Path) -> Path:
         "ensure_ascii": False,
         "sort_keys": True
     }
+
+    # Render a score signal readably inside the data-appendix table.
+    def _fmt_signal(v):
+        if v is None: return "—"
+        if isinstance(v, bool): return "✓" if v else "✗"          # bool 必须先于 int 判断
+        if isinstance(v, (int, float, str)): return str(v)
+        return json.dumps(v, ensure_ascii=False, sort_keys=True)  # list/dict → 紧凑 JSON
+    env.filters["fmt_signal"] = _fmt_signal
 
     # Load template and render with vendored echarts
     template = env.get_template("report.html.j2")
