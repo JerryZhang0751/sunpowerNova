@@ -11,8 +11,8 @@ def test_run_research_deterministic_path_writes_files(tmp_path):
         src = FIX / sub
         if src.exists():
             shutil.copytree(src, tmp_path / sub, dirs_exist_ok=True)
-    # Kimi disabled + source already mirrored → select_topn returns [] (no fetch/network)
-    res = run_research(1, kimi_enabled=False, repo=tmp_path)
+    # fetch_n=0 → select_topn returns [] → no fetch/network
+    res = run_research(1, kimi_enabled=False, fetch_n=0, repo=tmp_path)
     assert (tmp_path/"knowledge"/"playbook.md").exists()
     assert (tmp_path/"knowledge"/"platform-profiles.md").exists()
     assert (tmp_path/"data"/"analysis"/"w1"/"research_aggregates.json").exists()
