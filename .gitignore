@@ -6,3 +6,7 @@
 
 # IDE
 .idea/
+
+# Virtual environments & dependencies（防 git add -A 误纳；untracked 本就不推送）
+.venv/
+node_modules/
