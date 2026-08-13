@@ -29,7 +29,7 @@ def _load_l3(url: str, repo: Path) -> L3Source | None:
     mp = d / "meta.json"
     if not mp.exists(): return None
     l3 = L3Source(**json.loads(mp.read_text(encoding="utf-8")))
-    return None if l3.js_only else l3
+    return l3
 
 def _load_gsc_queries(week: int, repo: Path) -> list[str]:
     gp = repo / "data" / "snapshots" / f"w{week}" / "gsc.json"
@@ -50,6 +50,7 @@ def build_corpus(week: int, repo: Path = REPO) -> ResearchCorpus:
                 missing += 1
             elif l3.js_only:
                 js += 1
+                l3 = None          # pair as None so features (Task 4) skips it
             else:
                 resolved += 1
             src_pairs.append((cited, l3))
