@@ -31,3 +31,19 @@ def test_synthesize_preserves_sample_n_no_invent():
     out = synthesize(_agg(), examples=[], chat_fn=fake)
     # synthesize MUST clamp sample_n to the aggregate's resolved sample_n, refusing invented 999
     assert out[0].sample_n == 1
+
+from geo.research.kimi import web_search_verify
+
+def test_web_search_verify_parses_answer_block():
+    raw = ("根据联网搜索，Qwen 的网页检索后端为阿里云搜索，公开爬虫名文档较少。\n"
+           "来源：https://help.aliyun.com/x\n置信度：mid")
+    fake = lambda messages, tools=None, timeout=120: raw
+    out = web_search_verify([{"platform":"Qwen","fact":"crawler_and_inclusion"}], chat_fn=fake)
+    assert "Qwen" in out
+    assert out["Qwen"]["confidence"] == "mid"
+    assert any("aliyun" in s for s in out["Qwen"]["sources"])
+
+def test_web_search_verify_no_sources_marks_unverified():
+    fake = lambda messages, tools=None, timeout=120: "无法确认。"
+    out = web_search_verify([{"platform":"X","fact":"crawler"}], chat_fn=fake)
+    assert out["X"]["confidence"] == "外部未验证"

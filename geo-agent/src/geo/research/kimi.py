@@ -1,6 +1,6 @@
 # src/geo/research/kimi.py
 from __future__ import annotations
-import json, logging
+import json, logging, re
 from geo.shared.config import settings
 from geo.research.models import FeatureAggregates, PlaybookConclusion
 
@@ -49,3 +49,33 @@ def _agg_to_dict(a: FeatureAggregates) -> dict:
     return {"week":a.week,"coverage":a.coverage.__dict__,
             "formats":[b.__dict__ for b in a.formats],"sources":a.sources,
             "platforms":a.platforms,"problem_space":a.problem_space}
+
+_SYS_WEB = (
+    "联网搜索查证 AI 平台的爬虫名/收录机制等外部事实。"
+    "回答格式：先给结论，再列「来源：<url>」（至少一个），最后「置信度：high|mid|low」。"
+    "查不到就如实说无法确认，禁止杜撰 URL。"
+)
+
+def _parse_web_answer(text: str) -> dict:
+    sources = re.findall(r"https?://\S+", text or "")
+    conf = "外部未验证"
+    m = re.search(r"置信度[:：]\s*(high|mid|low|外部未验证)", text or "", re.I)
+    if m: conf = m.group(1).lower()
+    if not sources and "无法确认" in (text or ""): conf = "外部未验证"
+    return {"answer": (text or "").strip(), "sources": sources, "confidence": conf}
+
+def web_search_verify(items: list[dict], *, chat_fn=_kimi_chat) -> dict:
+    # IMPL-TIME: confirm tools schema; default to builtin_tools web_search.
+    tools = [{"type":"builtin_tools","tools":[{"type":"web_search"}]}]
+    out = {}
+    for it in items:
+        plat, fact = it["platform"], it.get("fact","crawler_and_inclusion")
+        user = f"平台：{plat}\n查证：{fact}（爬虫 User-agent / 收录机制）"
+        try:
+            raw = chat_fn([{"role":"system","content":_SYS_WEB},{"role":"user","content":user}],
+                          tools=tools, timeout=180)
+            out[plat] = _parse_web_answer(raw)
+        except Exception as e:
+            log.warning("web_search_verify %s failed: %s", plat, e)
+            out[plat] = {"answer":"", "sources":[], "confidence":"外部未验证"}
+    return out
