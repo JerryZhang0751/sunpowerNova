@@ -9,13 +9,17 @@ def _corpus():
     return build_corpus(1, repo=FIX)
 
 def test_select_topn_ranks_external_excludes_brand(tmp_path):
-    # tmp_path has no sources dir → url not yet fetched → returned
+    # tmp_path has no sources dir → urls not yet fetched → returned
     urls = select_topn(_corpus(), n=40, brand_host="sunhestia.com", repo=tmp_path)
-    assert urls == ["https://www.cnet.com/x"]
+    # With 3 external sources (cnet, missing, jsonly), all should be returned when none are fetched
+    # Order is by frequency: all have frequency 1, so order matches appearance order
+    assert set(urls) == {"https://www.cnet.com/x", "https://example.com/missing", "https://example.com/jsonly"}
 
 def test_select_topn_caps_at_n(tmp_path):
     assert len(select_topn(_corpus(), n=40, brand_host="sunhestia.com", repo=tmp_path)) <= 40
 
 def test_select_topn_excludes_already_fetched():
-    # FIX has the source meta.json → already fetched → excluded
-    assert select_topn(_corpus(), n=40, brand_host="sunhestia.com", repo=FIX) == []
+    # FIX has cnet and jsonly source meta.json → already fetched → excluded
+    # But example.com/missing has no meta.json → not fetched → included
+    urls = select_topn(_corpus(), n=40, brand_host="sunhestia.com", repo=FIX)
+    assert urls == ["https://example.com/missing"]

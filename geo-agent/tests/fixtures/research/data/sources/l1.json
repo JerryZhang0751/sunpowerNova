@@ -1,0 +1,19 @@
+{
+  "sources": [
+    {
+      "url": "https://www.cnet.com/x",
+      "sha1": "0a7bc036ed0a633981653657c1db6bfc54a78325",
+      "exists": true
+    },
+    {
+      "url": "https://example.com/missing",
+      "sha1": "ce2f77f1adf02a0bc80f261df2243cc665354172",
+      "exists": false
+    },
+    {
+      "url": "https://example.com/jsonly",
+      "sha1": "3c2b2e0fc21416ac6a5df5c8233b2ebbd16575ce",
+      "exists": true
+    }
+  ]
+}
