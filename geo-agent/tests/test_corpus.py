@@ -34,5 +34,5 @@ def test_build_corpus_joins_and_counts():
     assert corpus.coverage.total_cited_sources == 3
     assert corpus.coverage.l3_resolved == 1  # only cnet.com
     assert corpus.coverage.l3_missing == 1  # only example.com/missing
-    assert corpus.coverage.l3_js_only == 1  # only example.com/jsonly (BUG: currently 0)
+    assert corpus.coverage.l3_js_only == 1  # only example.com/jsonly
     assert corpus.gsc_queries == ["hestia solar"]
