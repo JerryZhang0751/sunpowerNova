@@ -1,6 +1,7 @@
 # src/geo/research/features.py
 from __future__ import annotations
 from collections import Counter, defaultdict
+from urllib.parse import urlparse
 from geo.research.models import ResearchCorpus, FeatureAggregates, FeatureBucket
 
 LOW_CONF_THRESHOLD = 5
@@ -42,8 +43,11 @@ def aggregate(corpus: ResearchCorpus) -> FeatureAggregates:
             if se.get("has_definition_segment"): fmt["definition"]["cited"]+=1; fmt["definition"]["plats"].add(m)
             if se.get("page_type")=="product" or se.get("datapoint_count",0)>=8:
                 fmt["spec_card"]["cited"]+=1; fmt["spec_card"]["plats"].add(m)
-            from urllib.parse import urlparse
-            src_dim["domain_type"][_domain_type(urlparse(cited.url).hostname)] += 1
+            parsed_host = urlparse(cited.url).hostname
+            domain_type = _domain_type(parsed_host)
+            src_dim["domain_type"][domain_type] += 1
+            if domain_type == "ugc_forum":
+                src_dim["ugc"] += 1
             src_dim["page_type"][se.get("page_type","unknown")] += 1
             for s in st.get("schema_types",[]): src_dim["schema"][s] += 1
             if se.get("has_publish_date"): src_dim["has_publish_date"] += 1
