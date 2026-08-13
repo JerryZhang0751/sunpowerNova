@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from geo.shared.config import REPO
-from geo.shared.models import L1Record, L2Record, CitedSource, L3Source, PromptRow
+from geo.shared.models import L1Record, CitedSource, L3Source, PromptRow
 from geo.shared.storage import sha1_url
 from geo.research.models import ResearchItem, ResearchCorpus, Coverage
 

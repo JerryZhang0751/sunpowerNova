@@ -30,4 +30,5 @@ def fetch_topn(urls: list[str]) -> FetchStats:
             fetched += 1
         except Exception:
             failed += 1
+    # v1 does not detect js_only from fetch_source; field reserved for future use
     return FetchStats(requested=len(urls), fetched=fetched, failed=failed, js_only=js)

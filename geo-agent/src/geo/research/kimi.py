@@ -8,8 +8,9 @@ log = logging.getLogger("research.kimi")
 _SYS_SYNTH = (
     "你是 GEO 研究 agent。只能依据所给的 FeatureAggregates（JSON）与少量真实回答片段归纳结论。"
     "输出 JSON {conclusions:[{id,category(format|source|platform|problem_space),conclusion,"
-    "sample_n,cited_n,platforms,confidence(high|mid|low),action,examples[]}]}。"
+    "sample_n,cited_n,platforms,confidence(high|mid|low),action,examples[],bucket_key}]}。"
     "纪律：sample_n 必须等于所给数据，不得改写或杜撰；不得编造 URL；低样本标 low。"
+    "若 category 为 format，bucket_key 必须设为以下之一：comparison_table|qa|list|definition|spec_card。"
 )
 
 def _kimi_chat(messages: list[dict], tools: list | None = None, timeout: int = 120) -> str:
@@ -40,7 +41,7 @@ def synthesize(aggregates: FeatureAggregates, examples: list[dict], *, chat_fn=_
                 id=c["id"], category=c.get("category",""), conclusion=c.get("conclusion",""),
                 sample_n=sn, cited_n=c.get("cited_n"), platforms=c.get("platforms",[]),
                 confidence=c.get("confidence","low"), action=c.get("action",""),
-                examples=c.get("examples",[])))
+                examples=c.get("examples",[]), bucket_key=c.get("bucket_key","")))
         except Exception as e:
             log.warning("skip malformed conclusion %r: %s", c, e)
     return out

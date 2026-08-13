@@ -14,10 +14,10 @@ def _agg():
 def test_synthesize_parses_good_json():
     good = json.dumps({"conclusions":[
         {"id":"F01","category":"format","conclusion":"对比表常见","sample_n":1,"cited_n":1,
-         "platforms":["qwen"],"confidence":"low","action":"多用对比表","examples":["https://a.com"]}]})
+         "platforms":["qwen"],"confidence":"low","action":"多用对比表","examples":["https://a.com"],"bucket_key":"comparison_table"}]})
     fake = lambda messages, tools=None, timeout=120: good
     out = synthesize(_agg(), examples=[], chat_fn=fake)
-    assert len(out)==1 and out[0].id=="F01" and out[0].confidence=="low"
+    assert len(out)==1 and out[0].id=="F01" and out[0].confidence=="low" and out[0].bucket_key=="comparison_table"
 
 def test_synthesize_bad_json_returns_empty():
     fake = lambda messages, tools=None, timeout=120: "not json{"

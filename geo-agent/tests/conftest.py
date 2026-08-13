@@ -6,10 +6,9 @@ def pytest_configure(config):
 
 def pytest_collection_modifyitems(config, items):
     """Automatically skip live tests unless -m live is used."""
-    if not config.getoption("-m", default=""):
-        marker_expr = config.getoption("-m", default="")
-        # Only skip live tests if the marker expression doesn't include "live"
-        if "live" not in marker_expr:
-            for item in items:
-                if "live" in item.keywords:
-                    item.add_marker(pytest.mark.skip(reason="live tests require -m live flag"))
+    marker_expr = config.getoption("-m", default="")
+    # Only skip live tests if the marker expression doesn't include "live"
+    if "live" not in marker_expr:
+        for item in items:
+            if "live" in item.keywords:
+                item.add_marker(pytest.mark.skip(reason="live tests require -m live flag"))

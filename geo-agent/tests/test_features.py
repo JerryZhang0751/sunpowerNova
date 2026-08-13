@@ -29,9 +29,6 @@ def test_aggregate_problem_space_has_intents():
 
 def test_aggregate_sources_counts_ugc():
     # Test UGC counting with in-memory corpus (no shared fixture modification)
-    from geo.research.models import ResearchItem, CitedSource, L3Source, L1Record, PromptRow
-    from geo.shared.models import L2Record
-    from geo.research.corpus import ResearchCorpus, Coverage
 
     # Create UGC L3 source with forum structure
     ugc_l3 = L3Source(

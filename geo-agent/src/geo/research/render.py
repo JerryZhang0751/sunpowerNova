@@ -16,7 +16,7 @@ def render_playbook(conclusions: list[PlaybookConclusion], aggregates: FeatureAg
         label = _FMT_LABEL.get(b.key, b.key)
         L.append(f"### {b.key}（{label}）")
         L.append(f"- cited_n={b.cited_n} sample_n={b.sample_n} confidence={'low' if b.low_confidence else 'ok'} platforms={b.platforms}")
-        match = next((x for x in fmt_concl if x.id.lower().startswith('f') ), None)
+        match = next((x for x in fmt_concl if x.bucket_key == b.key), None)
         if match: L.append(f"- 结论：{match.conclusion}｜行动：{match.action}")
     L += ["\n## 2. 被引来源特征",
           f"```json\n{json.dumps(aggregates.sources, ensure_ascii=False, indent=2)}\n```",

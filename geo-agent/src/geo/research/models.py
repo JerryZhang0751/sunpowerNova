@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from geo.shared.models import L1Record, PromptRow, CitedSource, L3Source
 
 @dataclass
@@ -51,6 +51,7 @@ class PlaybookConclusion:
     confidence: str      # high|mid|low
     action: str
     examples: list[str]
+    bucket_key: str = ""  # for format conclusions: must match FeatureBucket.key
 
 @dataclass
 class FetchStats:

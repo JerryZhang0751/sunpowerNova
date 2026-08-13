@@ -36,6 +36,7 @@ def aggregate(corpus: ResearchCorpus) -> FeatureAggregates:
         for cited, l3 in it.sources:
             if l3 is None: continue
             resolved_n += 1
+            src_dim["resolved"] += 1
             st, se = l3.structural or {}, l3.semantic or {}
             if st.get("table_count",0)>0: fmt["comparison_table"]["cited"]+=1; fmt["comparison_table"]["plats"].add(m)
             if se.get("has_faq_block"): fmt["qa"]["cited"]+=1; fmt["qa"]["plats"].add(m)
