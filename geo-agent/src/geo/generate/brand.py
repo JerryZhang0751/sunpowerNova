@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 import re
 import yaml
 from pathlib import Path
@@ -100,3 +101,85 @@ def validate_brand(brand: dict, sources_text: str) -> list[str]:
         if g.get("term") and g["term"].lower() not in sources_text.lower():
             violations.append(f"术语未在源页字面出现: {g['term']}")
     return violations
+
+# --- bootstrap（一次性引导，低频重跑保险）---
+import logging
+from collections import Counter
+from geo.shared.config import settings, REPO
+
+log = logging.getLogger("generate.brand")
+
+_SYS_BOOT = (
+    "你是品牌事实抽取器。只准从所给的站点页面文本抽取事实，禁止推断或编造。"
+    "输出 JSON：{entity:{brand,domain,positioning,legal_name?,locations?},"
+    "products:[{id,name,specs:{...}}],faqs:[{q,a}],glossary:[{term,definition}]}。"
+    "specs 的键名带单位（如 capacity_kwh/warranty_years/power_w）；抽不到的键省略，不要编。"
+)
+
+def _kimi_chat(messages: list[dict], tools=None, timeout: int = 120) -> str:
+    from openai import OpenAI
+    c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url, timeout=timeout)
+    r = c.chat.completions.create(model="kimi-k3", messages=messages, temperature=1,
+                                  response_format={"type": "json_object"})
+    return r.choices[0].message.content or ""
+
+def read_site_pages(site_root: Path) -> dict[str, str]:
+    site_root = Path(site_root)
+    return {str(p.relative_to(site_root)): p.read_text(encoding="utf-8")
+            for p in sorted(site_root.rglob("*.astro"))}
+
+def bootstrap_draft(pages: dict[str, str], *, chat_fn=None) -> dict:
+    chat = chat_fn or _kimi_chat
+    user = "\n\n".join(f"=== 页面 {name} ===\n{text}" for name, text in pages.items())
+    try:
+        data = json.loads(chat([{"role": "system", "content": _SYS_BOOT},
+                                {"role": "user", "content": user}]))
+    except Exception as e:
+        raise BrandError(f"Kimi 抽取失败（非法 JSON）: {e}") from e
+    for k in ("entity", "products", "faqs", "glossary"):
+        if k not in data:
+            raise BrandError(f"Kimi 抽取结果缺键: {k}")
+    return data
+
+def competitors_from_raw(raw_root: Path) -> list[str]:
+    raw_root = Path(raw_root)
+    counter: Counter[str] = Counter()
+    for f in raw_root.rglob("r*.json"):
+        try:
+            rec = json.loads(f.read_text(encoding="utf-8"))
+            counter.update((rec.get("l2") or {}).get("competitors_mentioned", []))
+        except Exception as e:
+            log.warning("skip unreadable raw %s: %s", f, e)
+    return [name for name, _ in counter.most_common()]
+
+DEFAULT_BANNED = ["no_pricing", "no_savings_percentages"]
+
+def assemble_brand(draft: dict, competitors: list[str], *, updated: str = "1970-01-01") -> dict:
+    return {"version": 1, "updated": updated,
+            "entity": draft.get("entity", {}), "products": draft.get("products", []),
+            "faqs": draft.get("faqs", []), "glossary": draft.get("glossary", []),
+            "banned": list(DEFAULT_BANNED), "competitors": competitors, "i18n": {}}
+
+def run_bootstrap(*, repo: Path = REPO, chat_fn=None, updated: str = None) -> dict:
+    from datetime import date
+    repo = Path(repo)
+    site_root = repo / "site" / "src" / "pages"          # mini-repo 约定：repo 下有 site/
+    if not site_root.exists():                            # 真仓库：site/ 是 geo-agent 的兄弟
+        site_root = repo.parent / "site" / "src" / "pages"
+    pages = read_site_pages(site_root)
+    draft = bootstrap_draft(pages, chat_fn=chat_fn)
+    competitors = competitors_from_raw(repo / "data" / "raw")
+    brand = assemble_brand(draft, competitors, updated=updated or date.today().isoformat())
+    sources_text = "\n\n".join(pages.values())
+    violations = validate_brand(brand, sources_text)
+    (repo / "knowledge").mkdir(parents=True, exist_ok=True)
+    if violations:
+        out = repo / "knowledge" / "brand.yaml.draft"
+        out.write_text(yaml.safe_dump(brand, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        log.warning("brand 校验 %d 项违规，写入 %s（人修/删后重跑）", len(violations), out)
+    else:
+        out = repo / "knowledge" / "brand.yaml"
+        out.write_text(yaml.safe_dump(brand, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        log.info("brand.yaml 写入 %s（待人审定稿）", out)
+    return {"wrote": str(out), "violations": violations,
+            "hint": "人审定稿后 git commit knowledge/brand.yaml"}

@@ -1,0 +1,11 @@
+{
+  "week": 1, "model": "qwen", "prompt_id": "C01", "run": 1,
+  "answer": "Tesla and Enphase make home batteries.",
+  "l2": {
+    "cited_sources": [{"position": 1, "url": "https://example.com/a", "title": "A", "snippet": "", "extract_method": "structured"}],
+    "mentioned": false, "cited_with_link": false, "citation_position": null,
+    "sentiment": null, "competitors_mentioned": ["Tesla", "Enphase", "Tesla"], "low_confidence": false
+  },
+  "usage": {}, "elapsed_s": 1.0, "search_triggered": true,
+  "ts_iso": "2026-08-13T00:00:00Z", "prompt_set_version": "prompts-v1"
+}
