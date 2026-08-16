@@ -93,3 +93,19 @@ def test_validate_partial_anchor_not_matched():
     r = validate_draft(d, BRAND)
     assert not r.ok, f"Expected validation failure but got ok. Issues: {r.issues}"
     assert any("缺 anchor" in i for i in r.issues), f"Expected '缺 anchor' issue but got: {r.issues}"
+
+def test_validate_flags_unattributed_percent_claims():
+    """Final review finding F1 end-to-end: percent claims in draft body must be validated.
+    When brand has no % facts but draft claims '96% efficient', validation should flag it."""
+    d = _draft(
+        body_md="# How to size a home battery\n\nRound-trip efficiency is 96% and modular from 5–15 kWh.",
+        fact_anchors=[
+            # Valid anchor for kWh range
+            {"claim": "5–15 kWh", "path": "products[home-battery].specs.capacity_kwh", "value": "5–15"},
+        ]
+        # NO anchor for "96%" - this should be flagged as unattributed claim
+    )
+    r = validate_draft(d, BRAND)
+    assert not r.ok, f"Expected validation failure for unattributed % claim but got ok. Issues: {r.issues}"
+    assert any("96" in i and ("%" in i or "percent" in i.lower()) for i in r.issues), \
+        f"Expected issue about unattributed '96%' claim but got: {r.issues}"

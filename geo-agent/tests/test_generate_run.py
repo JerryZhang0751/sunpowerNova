@@ -85,3 +85,28 @@ def test_run_review_unknown_slug_lists_existing(tmp_path, capsys):
     with pytest.raises(SystemExit):
         run_review("nope", "pass", repo=repo, now="2026-08-16T12:00:00")
     assert "battery-sizing" in capsys.readouterr().out
+
+def test_run_mark_published_rejects_rejected_drafts(tmp_path, capsys):
+    """Final review finding F2: run_mark_published must NOT publish rejected drafts.
+    When status=rejected, should raise SystemExit with honest message and leave draft unchanged."""
+    repo = _mini_repo(tmp_path)
+    run_generate("battery sizing", chat_fn=_chat_ok, repo=repo, today="2026-08-16")
+    slug = "battery-sizing"
+
+    # Reject the draft
+    run_review(slug, "reject", notes="Factual errors found", repo=repo, now="2026-08-16T12:00:00")
+
+    # Attempt to publish rejected draft - should fail
+    with pytest.raises(SystemExit):
+        run_mark_published(slug, repo=repo)
+
+    # Verify draft still exists with rejected status
+    draft_path = repo / "content" / "drafts" / f"{slug}.md"
+    assert draft_path.exists(), "Draft file should still exist after rejected publish attempt"
+    fm = yaml.safe_load(draft_path.read_text(encoding="utf-8").split("---")[1])
+    assert fm["status"] == "rejected", "Draft status should remain rejected"
+
+    # Verify honest error message was printed
+    stderr = capsys.readouterr().err
+    assert "rejected" in stderr.lower(), "Error message should mention rejected status"
+    assert "草稿" in stderr or "draft" in stderr.lower(), "Error message should mention draft"

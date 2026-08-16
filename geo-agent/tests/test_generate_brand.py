@@ -101,3 +101,18 @@ def test_validate_brand_captures_both_prose_and_keyval_claims_in_same_leaf():
     # At minimum, must catch the keyval claim '5–15 kWh' which is NOT in sources
     assert any("5" in v and "15" in v and "kwh" in v for v in violations), \
         "Should catch keyval claim '5–15 kWh' missing from sources"
+
+def test_parse_claims_captures_percent_sign():
+    """Final review finding F1: % sign must be detected after numbers.
+    The regex \b after % never matches (both % and next char are non-word).
+    This test ensures parse_clains('Round-trip efficiency is 96%') extracts the percent claim."""
+    claims = parse_claims("Round-trip efficiency is 96%")
+    assert (frozenset({"96"}), "%") in claims, \
+        "Should extract '96%' claim - % is a valid unit that must be detected"
+
+def test_parse_claims_guards_against_kwhz_false_positive():
+    """Final review finding F1: negative test - 'kwhz' must NOT produce a kwh claim.
+    After fixing the % bug with (?![a-z0-9]), verify it still blocks 'kwhz' false positives."""
+    claims = parse_claims("3 kwhz units")
+    assert (frozenset({"3"}), "kwh") not in claims, \
+        "Should NOT extract 'kwh' from 'kwhz' - lookahead must block alphanumeric after unit"

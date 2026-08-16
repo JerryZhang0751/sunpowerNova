@@ -33,9 +33,11 @@ _UNITS = r"(kwh|kw|wh|watts|watt|w|years|year|percent|volts|volt|v|%|°c|°f)"
 _UNIT_NORM = {"watts": "w", "watt": "w", "years": "year", "percent": "%", "volts": "v", "volt": "v"}
 _NUM = r"(\d+(?:\s*[-–—]\s*\d+)?)"
 # 文本体：数字在前，单位紧随（含 "10-year" 连字符形）
-_CLAIM_RE = re.compile(rf"{_NUM}\s*[-\s]*{_UNITS}\b", re.I)
+# 使用 (?![a-z0-9]) 替代 \b 以匹配 % 等非字母单位（% 后的字符都是非单词字符，\b 无法匹配）
+_CLAIM_RE = re.compile(rf"{_NUM}\s*[-\s]*{_UNITS}(?![a-z0-9])", re.I)
 # 键值体：键名含单位在前、值在后（"capacity kwh: 5–15"；下划线先归一为空格）
-_KEYVAL_RE = re.compile(rf"\b{_UNITS}\b[^0-9\n]{{0,25}}{_NUM}", re.I)
+# 同样使用 (?![a-z0-9]) 替代 \b 以一致处理非字母单位
+_KEYVAL_RE = re.compile(rf"\b{_UNITS}(?![a-z0-9])[^0-9\n]{{0,25}}{_NUM}", re.I)
 
 def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s.replace("_", " ").replace("–", "-").replace("—", "-")).strip().lower()
@@ -172,13 +174,27 @@ def run_bootstrap(*, repo: Path = REPO, chat_fn=None, updated: str = None) -> di
     sources_text = "\n\n".join(pages.values())
     violations = validate_brand(brand, sources_text)
     (repo / "knowledge").mkdir(parents=True, exist_ok=True)
+
+    brand_yaml = repo / "knowledge" / "brand.yaml"
+    brand_draft = repo / "knowledge" / "brand.yaml.draft"
+
     if violations:
-        out = repo / "knowledge" / "brand.yaml.draft"
+        out = brand_draft
         out.write_text(yaml.safe_dump(brand, allow_unicode=True, sort_keys=False), encoding="utf-8")
         log.warning("brand 校验 %d 项违规，写入 %s（人修/删后重跑）", len(violations), out)
+        return {"wrote": str(out), "violations": violations,
+                "hint": "人审定稿后 git commit knowledge/brand.yaml"}
     else:
-        out = repo / "knowledge" / "brand.yaml"
-        out.write_text(yaml.safe_dump(brand, allow_unicode=True, sort_keys=False), encoding="utf-8")
-        log.info("brand.yaml 写入 %s（待人审定稿）", out)
-    return {"wrote": str(out), "violations": violations,
-            "hint": "人审定稿后 git commit knowledge/brand.yaml"}
+        # 无违规，但若 brand.yaml 已存在（人审定稿），则写入 .draft 避免覆盖
+        if brand_yaml.exists():
+            out = brand_draft
+            out.write_text(yaml.safe_dump(brand, allow_unicode=True, sort_keys=False), encoding="utf-8")
+            log.info("knowledge/brand.yaml 已存在（人审定稿），新抽取结果写入 %s（人对比后决定是否替换）", out)
+            return {"wrote": str(out), "violations": violations,
+                    "hint": "brand.yaml 已存在（人审定稿）；新结果在 .draft 中，需人工 diff 后决定是否替换"}
+        else:
+            out = brand_yaml
+            out.write_text(yaml.safe_dump(brand, allow_unicode=True, sort_keys=False), encoding="utf-8")
+            log.info("brand.yaml 写入 %s（待人审定稿）", out)
+            return {"wrote": str(out), "violations": violations,
+                    "hint": "人审定稿后 git commit knowledge/brand.yaml"}

@@ -92,9 +92,14 @@ def run_mark_published(slug: str, *, repo: Path = REPO) -> dict:
     draft = repo / "content" / "drafts" / f"{slug}.md"
     if not draft.exists():
         raise SystemExit(f"草稿不存在: {slug}")
+    text = draft.read_text(encoding="utf-8")
+    fm = yaml.safe_load(text.split("---")[1])
+    if fm.get("status") == "rejected":
+        import sys
+        print(f"草稿 {slug} 状态为 rejected，不予归档发布（人审三档见 content/reviews.jsonl）", file=sys.stderr)
+        raise SystemExit(1)
     pub_dir = repo / "content" / "published"
     pub_dir.mkdir(parents=True, exist_ok=True)
-    text = draft.read_text(encoding="utf-8")
     (pub_dir / f"{slug}.md").write_text(_fm_update(text, {"status": "published"}), encoding="utf-8")
     draft.unlink()
     log.info("归档发布: %s", slug)

@@ -74,9 +74,38 @@ def test_run_bootstrap_violations_write_draft_only(tmp_path):
         src = FIX / d
         if src.exists():
             shutil.copytree(src, tmp_path / d)
-    
+
     bad_payload = json.loads(json.dumps(_GOOD))
     bad_payload["products"][0]["specs"]["capacity_kwh"] = "5–20"
     res = run_bootstrap(repo=tmp_path, chat_fn=_mock_chat(bad_payload))
     assert res["violations"] and "20" in res["violations"][0]
     assert res["wrote"] == str(tmp_path / "knowledge" / "brand.yaml.draft")
+
+def test_run_bootstrap_existing_brand_writes_draft_not_overwrite(tmp_path):
+    """Final review finding F3: run_bootstrap must NOT overwrite existing brand.yaml.
+    When brand.yaml already exists (human-finalized), should write brand.yaml.draft instead."""
+    import shutil
+    for d in ["site", "data", "knowledge"]:
+        src = FIX / d
+        if src.exists():
+            shutil.copytree(src, tmp_path / d)
+
+    # Pre-create an existing brand.yaml (simulating human-finalized version)
+    existing_brand = tmp_path / "knowledge" / "brand.yaml"
+    original_content = yaml.safe_load(existing_brand.read_text(encoding="utf-8"))
+    original_mtime = existing_brand.stat().st_mtime
+
+    res = run_bootstrap(repo=tmp_path, chat_fn=_mock_chat(_GOOD))
+    assert res["violations"] == [], "Should have no violations"
+
+    # Verify brand.yaml was NOT overwritten
+    assert existing_brand.exists(), "brand.yaml should still exist"
+    reloaded_content = yaml.safe_load(existing_brand.read_text(encoding="utf-8"))
+    assert reloaded_content == original_content, "brand.yaml content should remain unchanged"
+
+    # Verify brand.yaml.draft was written instead
+    draft_path = tmp_path / "knowledge" / "brand.yaml.draft"
+    assert draft_path.exists(), "brand.yaml.draft should be created"
+    assert res["wrote"] == str(draft_path), "Result should indicate brand.yaml.draft was written"
+    assert "diff" in res.get("hint", "").lower() or "human" in res.get("hint", "").lower(), \
+        "Hint should mention human review/diff"
