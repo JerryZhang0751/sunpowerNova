@@ -74,3 +74,30 @@ def test_validate_brand_flags_invented_number_and_name():
     violations = validate_brand(brand, _sources_text())
     assert any("20" in v and "kwh" in v for v in violations)
     assert any("EV Charger" in v for v in violations)
+
+def test_validate_brand_captures_both_prose_and_keyval_claims_in_same_leaf():
+    """Covering test for review finding R1: leaf with BOTH prose and keyval claims.
+    When a leaf contains '10-year warranty' (prose) AND 'capacity_kwh: 5–15' (keyval),
+    BOTH must be extracted and validated. The 'or' short-circuit bug misses keyval claims."""
+    # Source text contains "10-year" but NOT "5–15 kWh"
+    sources = "The system has a 10-year warranty on all components."
+    # Brand contains BOTH prose claim ("10-year warranty") AND keyval claim ("capacity_kwh: 5–15")
+    brand_dict = {
+        "version": 1,
+        "entity": {"brand": "TestBrand"},
+        "products": [{
+            "id": "battery",
+            "name": "Test Battery",
+            "specs": {
+                "description": "The 10-year warranty covers modular expansion; see capacity_kwh: 5–15"
+            }
+        }],
+        "faqs": [],
+        "glossary": [],
+        "banned": []
+    }
+    violations = validate_brand(brand_dict, sources)
+    # Should flag BOTH the missing 5–15 kWh claim (keyval) AND potentially the 10-year if not found
+    # At minimum, must catch the keyval claim '5–15 kWh' which is NOT in sources
+    assert any("5" in v and "15" in v and "kwh" in v for v in violations), \
+        "Should catch keyval claim '5–15 kWh' missing from sources"

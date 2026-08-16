@@ -89,7 +89,7 @@ def validate_brand(brand: dict, sources_text: str) -> list[str]:
     src_claims = parse_claims(sources_text)
     violations = []
     for leaf in _iter_fact_leaves(brand):
-        for claim in parse_claims(leaf) or _leaf_keyval_claims(leaf):
+        for claim in parse_claims(leaf) + _leaf_keyval_claims(leaf):
             if not claims_match(claim, src_claims):
                 nums, unit = claim
                 violations.append(f"数字 claim {sorted(nums)} {unit} 未在源页出现（来自: {leaf[:60]}）")
