@@ -83,10 +83,20 @@ def generate_draft(topic: str, page_type: str, brand: dict, digest: dict, *, cha
 
 def skeleton_draft(topic: str, page_type: str, brand: dict) -> dict:
     body = _SKELETONS.get(page_type, _SKELETONS["guide"]).format(topic=topic)
-    facts_tbl = ["| 产品 | 规格 |", "|---|---|"]
+    # Generate readable specs that claim extractor can parse (e.g., "5–15 kWh", "10-year warranty")
+    specs_lines = []
     for p in brand.get("products", []):
-        specs = "；".join(f"{k}={v}" for k, v in p.get("specs", {}).items())
-        facts_tbl.append(f"| {p.get('name','')} | {specs} |")
-    body_md = f"{body}\n\n" + "\n".join(facts_tbl)
+        name = p.get("name", "")
+        for k, v in p.get("specs", {}).items():
+            # Convert underscore keys to readable format with units
+            if "capacity" in k and "kwh" in k:
+                specs_lines.append(f"{name} capacity is {v} kWh")
+            elif "warranty" in k and "year" in k:
+                specs_lines.append(f"{name} includes a {v}-year warranty")
+            elif "power" in k and "w" in k:
+                specs_lines.append(f"{name} power output is {v} W")
+            else:
+                specs_lines.append(f"{name} {k}: {v}")
+    body_md = f"{body}\n\n" + "\n".join(specs_lines) if specs_lines else body
     return {"frontmatter": {"topic": topic, "page_type": page_type, "slug": ""},
             "title": topic, "body_md": body_md, "json_ld": [], "fact_anchors": []}
