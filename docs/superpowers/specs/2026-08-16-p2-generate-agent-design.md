@@ -125,7 +125,7 @@ content/drafts/{slug}.md  (正文 + Suggested JSON-LD + 事实核对清单附录
 - system：SunHestia 官网内容写手；纪律：只能用 BRAND FACTS 中的数字与规格，不得编造数字/型号/承诺。
 - `temperature=1`（kimi-k3 强制）、`response_format={"type":"json_object"}`、`chat_fn` 可注入（mock 测试）。
 - 输出 JSON：`{frontmatter, body_md, json_ld[], fact_anchors[]}`。
-  - **fact_anchors** = Kimi 自报草稿中每个数字对应的 brand.yaml 字段路径（如 `products[0].specs.warranty_years`）→ 供确定性交叉验证（§5 第 2 项）。
+  - **fact_anchors** = Kimi 自报草稿中每个数字对应的 brand.yaml 字段路径，**统一 id 式**（如 `products[home-battery].specs.warranty_years`，对 product 重排序稳健）→ 供确定性交叉验证（§5 第 2 项）。
 - 一次调用产一篇；不做多候选重排（§1 不做项）。
 
 ---
@@ -199,6 +199,8 @@ python3.11 -m geo.generate.run --bootstrap-brand                         # 一�
 ```
 
 `--topic` 是生成主通道（人显式触发，与「发布永远人确认」同哲学）；`--suggest` 只读打印、不自动生成。
+
+**参数语义**：`--week N` 只作用于 `--suggest` 的数据源定位（`data/analysis/w{N}/eval_report.json` + `data/snapshots/w{N}/gsc.json`）。playbook 不按周存放（P1 产单份 `knowledge/playbook.md`），草稿 frontmatter 的 `playbook_week` 从 playbook 文件头（P1 render 的「生成自 w{N}」行）确定性解析；`--allow-no-playbook` 时为 null。
 
 ---
 
