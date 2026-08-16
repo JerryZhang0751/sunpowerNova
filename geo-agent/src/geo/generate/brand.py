@@ -1,8 +1,11 @@
 from __future__ import annotations
 import json
+import logging
 import re
 import yaml
+from collections import Counter
 from pathlib import Path
+from geo.shared.config import REPO, settings
 
 REQUIRED_KEYS = ("entity", "products", "faqs", "glossary", "banned")
 
@@ -103,10 +106,6 @@ def validate_brand(brand: dict, sources_text: str) -> list[str]:
     return violations
 
 # --- bootstrap（一次性引导，低频重跑保险）---
-import logging
-from collections import Counter
-from geo.shared.config import settings, REPO
-
 log = logging.getLogger("generate.brand")
 
 _SYS_BOOT = (
