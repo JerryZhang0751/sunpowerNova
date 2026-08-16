@@ -1,8 +1,8 @@
 # P2 生成 Agent 设计（Generate Agent）
 
 - **日期**：2026-08-16
-- **状态**：已 brainstorm 定稿，待实现计划
-- **分支**：`p2-generate-agent`（off `main` @ `b571699`）
+- **状态**：✅ **已实现**（2026-08-16，subagent-driven 9 任务 + 最终 opus 全分支评审 + 1 fix wave 全闭环；237 tests + 2 skipped）。分支 `worktree-p2-generate-agent`（off `main` @ `26819da`）已推 origin，**PR 待建**；合并后真跑六步见 §8.2。
+- **分支**：`worktree-p2-generate-agent`（实际分支名，EnterWorktree 工具命名；计划文档中写作 `p2-generate-agent`；off `main` @ `26819da`）
 - **权威依据**：整合 spec §6（生成 agent）、§9.2（brand.yaml）、§10（人工关口）、§11 P2 行（`docs/superpowers/specs/2026-07-29-sunpower-nova-integration-design.md`）。本文件细化 P2 的实现口径，冲突以整合 spec 为准。
 - **前置**：✅ P0 评测地基已交付（165 tests）；✅ P1 研究 agent 已合入 main@4fa000f（186 tests + 1 live）；✅ site/ 15 页在线（brand.yaml 抽取源）；✅ eval w1 报告与 GSC 快照在库。
 - **⚠️ 已知欠账**：P1 的 live run（`python3.11 -m geo.research.run --week 1`）尚未执行 → `knowledge/playbook.md` 尚不存在。**不阻塞 P2 实现**（fixture 驱动先行），但 P2 人审验收真跑前须先补跑 P1 live（见 §8 验收路径）。
@@ -77,6 +77,8 @@ i18n: {}              # 多语言预留（本期空）
    - 产品名 / 术语必须字面出现；
    - 未命中项输出清单标红，**人决定修/删**（校验器不静默丢弃）。
 4. 人审定稿 → 写入 `knowledge/brand.yaml`。
+
+**防覆写规则**（2026-08-16 实现定稿，最终评审修复）：`knowledge/brand.yaml` 已存在（= 人审定稿在库）时，重跑 bootstrap **一律写 `knowledge/brand.yaml.draft`**（即使零违规），由人对比后决定是否替换——保护 `version` 溯源链（草稿 frontmatter / reviews.jsonl 依赖 `brand_version`）；仅首建（文件不存在且零违规）才直接写 `brand.yaml`。
 
 **校验器核心**（数字清单提取 `numeric_claims_inventory(text)` + 字面归属判定 `claim_in_sources(claim, text)`）与生成环节草稿核验（§5）**复用同一实现**。
 
@@ -185,7 +187,7 @@ validation: passed      # passed | flagged
 ```
 
 - `content/reviews.jsonl` 追加 `{slug, verdict, notes, ts, brand_version, playbook_week}` → 喂 §8 报告「生成人审通过率」观察项（P2 只记数据；报告集成属 P3）。
-- `--mark-published`：draft → `content/published/{slug}.md` + frontmatter `status: published`（供评估环节对照已发布内容，spec §6）。
+- `--mark-published`：draft → `content/published/{slug}.md` + frontmatter `status: published`（供评估环节对照已发布内容，spec §6）。**守卫**（2026-08-16 实现定稿）：`status: rejected` 的草稿拒绝归档（stderr 说明 + 退出码 1，草稿原样保留）——发布归档仅属 pass/minor 分支。
 
 ### 6.2 CLI 总览
 
@@ -251,8 +253,8 @@ python3.11 -m geo.generate.run --bootstrap-brand                         # 一�
 
 ---
 
-## 10. 实现期待核实项
+## 10. 实现期待核实项（已全部定稿，2026-08-16 实现期落定）
 
-1. **数字抽取的正则边界**：单位上下文（kWh/W/年/%）与排版数字（列表序号/年份引用）的豁免清单——首轮以 fixture 实测定，宁可多标红不漏检。
-2. **playbook.md 结构化字段的解析规则**：依赖 P1 render 的既有格式（`cited_n/sample_n` 标签），P1 live 产出真 playbook 后核对一次。
-3. **JSON-LD 类型必填键清单**：Article/FAQPage/HowTo/Product 四类起步，遇到新 page_type 再扩。
+1. **数字抽取的正则边界** ✅ 已定稿：单位边界用 `(?![a-z0-9])` 替代 `\b`（`%` 符号形式可匹配、`kwhz` 类误报已挡，负测在库）；范围（5–15）/连字符形（10-year）/排版序号与年份豁免均 fixture 实测。已知 minor：小数 claim（4.5 kWh）丢整数位——归 P1-live 后校准。
+2. **playbook.md 结构化字段的解析规则** ✅ 已核验：`playbook_digest` 三正则与 `research/render.py` 的 `render_playbook` 实际输出逐行一致（最终评审员比对源码确认）；真 playbook 产出后无需再对（格式由 render 端保证）。
+3. **JSON-LD 类型必填键清单** ✅ 已落地：Article(headline)/FAQPage(mainEntity)/HowTo(name+step)/Product(name+brand) 四类在 `validate.py` 白名单；已知 minor：空 `json_ld: []` 目前过验（延后校准）。
