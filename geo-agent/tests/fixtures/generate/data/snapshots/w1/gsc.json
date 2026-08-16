@@ -1,0 +1,8 @@
+{
+  "week": 1, "rule_version": "geo-seo-v1", "site": "https://sunhestia.com", "degraded": false,
+  "rows": [
+    {"keys": ["hestia solar"], "clicks": 0, "impressions": 3, "ctr": 0, "position": 47},
+    {"keys": ["photovoltaic self consumption"], "clicks": 0, "impressions": 5, "ctr": 0, "position": 77},
+    {"keys": ["lifepo4 battery"], "clicks": 1, "impressions": 9, "ctr": 0.1, "position": 21}
+  ]
+}

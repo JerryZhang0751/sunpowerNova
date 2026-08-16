@@ -1,0 +1,10 @@
+{
+  "week": 1, "rule_version": "geo-seo-v1",
+  "self_geo": {"dims": [
+    {"name": "citability", "score": 32.0, "weight": 25.0},
+    {"name": "brand", "score": 100.0, "weight": 20.0},
+    {"name": "eeat", "score": 25.0, "weight": 20.0}]},
+  "self_seo": {"dims": [
+    {"name": "crawlability_index", "score": 100.0, "weight": 20.0},
+    {"name": "content_eeat", "score": 1.4, "weight": 25.0}]}
+}
