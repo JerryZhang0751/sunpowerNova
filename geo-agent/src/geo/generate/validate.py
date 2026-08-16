@@ -39,9 +39,6 @@ def resolve_path(brand: dict, path: str):
             return _MISSING
     return cur
 
-def _claim_key(claim) -> tuple:
-    return frozenset(n for n in claim[0]), claim[1]
-
 def validate_draft(draft: dict, brand: dict) -> ValidationResult:
     issues: list[str] = []
     rows: list[tuple[str, str, bool]] = []      # (claim 文本, anchor 展示, ok)
@@ -70,29 +67,37 @@ def validate_draft(draft: dict, brand: dict) -> ValidationResult:
         # Use original unit from body text if available, otherwise normalized unit
         display_unit = original_units.get(nums, unit)
         claim_txt = f"{'–'.join(nums_sorted)} {display_unit}"
+
+        # Check attribution FIRST - a claim must be in brand inventory before checking anchors
+        if not claims_match(claim, inventory):
+            issues.append(f"数字 claim 未归属 brand.yaml: {claim_txt}")
+            rows.append((claim_txt, "—(编造)", False))
+            continue
+
+        # Find exact-match anchor: both claim AND value must exactly match nums (not subset)
         anchor = next((a for a in anchors
-                       if set(parse_nums_from(a.get("claim", ""))) <= nums or
+                       if set(parse_nums_from(a.get("claim", ""))) == nums or
                           set(parse_nums_from(str(a.get("value", "")))) == nums), None)
-        anchored = False
-        if anchor is not None:
-            resolved = resolve_path(brand, anchor.get("path", ""))
-            if resolved is _MISSING:
-                issues.append(f"anchor 路径不可解析: {anchor.get('path')!r}（claim {claim_txt}）")
-                rows.append((claim_txt, anchor.get("path", ""), False))
-            elif not claims_match(claim, inventory):
-                issues.append(f"数字 claim 未归属 brand.yaml: {claim_txt}")
-                rows.append((claim_txt, anchor.get("path", ""), False))
-            else:
-                anchored = True
-                rows.append((claim_txt, anchor.get("path", ""), True))
+
+        if anchor is None:
+            issues.append(f"数字 claim 缺 anchor: {claim_txt}")
+            rows.append((claim_txt, "—(缺)", False))
+            continue
+
+        # Anchor exists - now verify path resolves and value matches
+        resolved = resolve_path(brand, anchor.get("path", ""))
+        if resolved is _MISSING:
+            issues.append(f"anchor 路径不可解析: {anchor.get('path')!r}（claim {claim_txt}）")
+            rows.append((claim_txt, anchor.get("path", ""), False))
+            continue
+
+        # Verify resolved value covers the claim numbers
+        resolved_nums = set(parse_nums_from(str(resolved)))
+        if resolved_nums >= nums:
+            rows.append((claim_txt, anchor.get("path", ""), True))
         else:
-            if claims_match(claim, inventory):
-                issues.append(f"数字 claim 缺 anchor: {claim_txt}")
-                rows.append((claim_txt, "—(缺)", False))
-            else:
-                issues.append(f"数字 claim 未归属 brand.yaml: {claim_txt}")
-                rows.append((claim_txt, "—(编造)", False))
-        _ = anchored
+            issues.append(f"anchor 值不吻合: claim {claim_txt} vs brand 值 {resolved!r}（path {anchor.get('path')}）")
+            rows.append((claim_txt, anchor.get("path", ""), False))
 
     for i, obj in enumerate(draft.get("json_ld", []) or []):
         t = obj.get("@type", "") if isinstance(obj, dict) else ""

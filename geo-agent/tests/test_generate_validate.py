@@ -68,3 +68,28 @@ def test_validate_flags_frontmatter():
     d["frontmatter"] = {"topic": "x"}                    # 缺 page_type/slug/created/brand_version
     r = validate_draft(d, BRAND)
     assert not r.ok and any("frontmatter" in i for i in r.issues)
+
+def test_validate_flags_wrong_anchor_value():
+    """Tests that resolved brand values are verified against claim numbers.
+       Branch: after resolve_path succeeds, check resolved value covers claim."""
+    d = _draft(fact_anchors=[
+        {"claim": "5–15 kWh", "path": "products[home-battery].specs.capacity_kwh", "value": "5–15"},
+        {"claim": "10-year warranty", "path": "products[pv-module].specs.performance_guarantee_years", "value": "25"}])
+    r = validate_draft(d, BRAND)
+    assert not r.ok, f"Expected validation failure but got ok. Issues: {r.issues}"
+    assert any("值不吻合" in i for i in r.issues), f"Expected '值不吻合' issue but got: {r.issues}"
+
+def test_validate_partial_anchor_not_matched():
+    """Tests that partial anchor claims are NOT accepted (exact match only required).
+       Branch: anchor selection uses exact match (claim OR value, both must be == nums)."""
+    d = _draft(
+        body_md="# How to size a home battery\n\nStart at 5–15 kWh; the battery carries a 10-year warranty.",
+        fact_anchors=[
+            # Partial claim "5 kWh" should NOT match body claim {5,15} - neither claim nor value exact matches
+            {"claim": "5 kWh", "path": "products[home-battery].specs.capacity_kwh", "value": "5"},
+            # Valid anchor for 10-year warranty
+            {"claim": "10-year warranty", "path": "products[home-battery].specs.warranty_years", "value": "10"}]
+    )
+    r = validate_draft(d, BRAND)
+    assert not r.ok, f"Expected validation failure but got ok. Issues: {r.issues}"
+    assert any("缺 anchor" in i for i in r.issues), f"Expected '缺 anchor' issue but got: {r.issues}"
