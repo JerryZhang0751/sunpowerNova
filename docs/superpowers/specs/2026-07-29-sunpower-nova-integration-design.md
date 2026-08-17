@@ -5,7 +5,7 @@
 > 本文是以上三份的**整合定稿**，取代三者中冲突的部分；冲突以本文为准。
 >
 > **v1.1 变更（2026-07-30）**：全流程自动化，**唯一阻塞式人工关口 = 内容发布**（研究/规则迭代改自动）；GSC + 抓取静态信号**快照化**为版本化输入；GEO/SEO 改为**两套独立评分**；L3 扩展 meta 拆 **P0 / P2+ 两档**并改**强提示词驱动 LLM 解析**（不设硬性字段清单）；`qwen-plus → qwen3.7-plus`；成本改为**记录呈现、不考核**；核心 **15 题**固化到 `prompts.csv`（`core` 列）。
-> **✅ 点 1 已定（2026-07-30 补）**：新增 **§4-bis 智能体性能评估（B）**，与 §4 业务评估正交；**本期仅「工具调用评估（BFCL 式 AST 匹配）」**，评 Collector/Parser 工具调用正确性；LLM Judge / Win Rate / GAIA 均不做。§4 的语义维度（E-E-A-T/文案友好度）改**确定性代理**打分（不引入 LLM 裁判，保 golden test）。源：Datawhale Hello-Agents 第 12 章（`docs/refs_ch12.txt`）。
+> **✅ 点 1 已定（2026-07-30 补）**：新增 **§4-bis 智能体性能评估（B）**，与 §4 业务评估正交；**本期仅「工具调用评估（BFCL 式 AST 匹配）」**，评 Collector/Parser 工具调用正确性；LLM Judge / Win Rate / GAIA 均不做。§4 的语义维度（E-E-A-T/文案友好度）改**确定性代理**打分（不引入 LLM 裁判，保 golden test）。源：Datawhale Hello-Agents 第 12 章（原文未存档，BFCL 要点已完整并入 §4-bis；2026-08-17 自洽检查确认 `docs/refs_ch12.txt` 从未入库）。
 
 ---
 
@@ -420,3 +420,4 @@ Mention rate / Citation rate / Avg position / Share of Voice / Sentiment；分�
 ---
 
 *整合设计 v1.1，2026-07-29（修订 2026-07-30）｜ 已通审 2026-07-30（点 1 已补入 §4-bis：智能体性能评估 = BFCL 式工具调用）｜ P0 实现计划已生成 2026-08-02：`docs/superpowers/plans/2026-08-02-p0-evaluation-foundation.md`*
+*分期进度（2026-08-17 更新）：P0 ✅ 交付 2026-08-02（165 tests，w1 基线 self_geo 47.6 / self_seo 49.8）；P1 ✅ 合入 main 2026-08-13 @4fa000f（186 tests；live run 待补）；P2 ✅ 合入 main 2026-08-16/17（PR #1 `a84ada3` + spec-sync `129ead2`，237 tests；真跑六步未启动）；P3 未起。下一里程碑 = 真跑六步恢复实验（P2 spec §8.2）*

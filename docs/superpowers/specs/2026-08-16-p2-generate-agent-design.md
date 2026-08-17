@@ -1,10 +1,10 @@
 # P2 生成 Agent 设计（Generate Agent）
 
 - **日期**：2026-08-16
-- **状态**：✅ **已实现**（2026-08-16，subagent-driven 9 任务 + 最终 opus 全分支评审 + 1 fix wave 全闭环；237 tests + 2 skipped）。分支 `worktree-p2-generate-agent`（off `main` @ `26819da`）已推 origin，**PR 待建**；合并后真跑六步见 §8.2。
+- **状态**：✅ **已实现并合入 main**（实现 2026-08-16，subagent-driven 9 任务 + 最终 opus 全分支评审 + 1 fix wave 全闭环；237 tests + 2 skipped。合并 2026-08-16/17：PR #1 用户建并合并 `a84ada3`，遗留 spec-sync `dff7451` 由 `129ead2` 补齐推送，分支 fully merged）；合并后真跑六步见 §8.2。
 - **分支**：`worktree-p2-generate-agent`（实际分支名，EnterWorktree 工具命名；计划文档中写作 `p2-generate-agent`；off `main` @ `26819da`）
 - **权威依据**：整合 spec §6（生成 agent）、§9.2（brand.yaml）、§10（人工关口）、§11 P2 行（`docs/superpowers/specs/2026-07-29-sunpower-nova-integration-design.md`）。本文件细化 P2 的实现口径，冲突以整合 spec 为准。
-- **前置**：✅ P0 评测地基已交付（165 tests）；✅ P1 研究 agent 已合入 main@4fa000f（186 tests + 1 live）；✅ site/ 15 页在线（brand.yaml 抽取源）；✅ eval w1 报告与 GSC 快照在库。
+- **前置**：✅ P0 评测地基已交付（165 tests）；✅ P1 研究 agent 已合入 main@4fa000f（186 tests + 1 live）；✅ site/ 14 页在线（brand.yaml 抽取源）；✅ eval w1 报告与 GSC 快照在库。
 - **⚠️ 已知欠账**：P1 的 live run（`python3.11 -m geo.research.run --week 1`）尚未执行 → `knowledge/playbook.md` 尚不存在。**不阻塞 P2 实现**（fixture 驱动先行），但 P2 人审验收真跑前须先补跑 P1 live（见 §8 验收路径）。
 
 ---
@@ -70,7 +70,7 @@ i18n: {}              # 多语言预留（本期空）
 
 ### 2.3 引导（bootstrap）流程 `--bootstrap-brand`
 
-1. 直读本地 `site/src/pages/**/*.astro` 15 页原文（repo 内文件，**不抓线上**）。
+1. 直读本地 `site/src/pages/**/*.astro` 14 页原文（repo 内文件，**不抓线上**）。
 2. Kimi K3 提示词：只准从所给页面文本抽取事实 → JSON 输出（`json_object`，比 YAML 文本稳）→ 落 YAML。
 3. **确定性校验器** `validate_brand(brand, sources)`：
    - 所有数字字面量（含单位上下文）必须字面出现在源页文本（`version`/`updated` 等元数据字段豁免）；
@@ -238,7 +238,7 @@ python3.11 -m geo.generate.run --bootstrap-brand                         # 一�
 
 ### 8.3 验收标准
 
-1. ✅ brand.yaml 与 site 15 页事实一致（校验器通过 + 人审）。
+1. ✅ brand.yaml 与 site 14 页事实一致（校验器通过 + 人审）。
 2. ✅ 产出一篇**通过人审、事实无误**（`validation: passed`）的可发布官网内容（含 Schema JSON-LD 建议）。
 3. ✅ 确定性测试全绿；Kimi 报错 / 降级路径被测。
 4. ✅ 人审三档 + 发布归档数据落盘（供 P3 报告观察项）。

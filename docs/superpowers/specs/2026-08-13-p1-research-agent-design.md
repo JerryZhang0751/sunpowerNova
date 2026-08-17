@@ -1,8 +1,8 @@
 # P1 研究 Agent 设计（Research Agent）
 
 - **日期**：2026-08-13
-- **状态**：已 brainstorm 定稿，待实现计划
-- **分支**：`p1-research-agent`（off `main`/`p0-eval-foundation` @ `d1573fb`）
+- **状态**：✅ 已实现并合入 main（2026-08-13 @ `4fa000f`；subagent-driven 9 任务 + 最终评审 1 fix wave，186 tests + 1 live。**遗留**：live run 与 playbook 人审验收未做，归真跑六步第①步）
+- **分支**：`p1-research-agent`（off `main`/`p0-eval-foundation` @ `d1573fb`；已合并并删除）
 - **权威依据**：整合 spec §5（研究 agent）、§3.2（L3 来源特征维度）、§11 P1 行（`docs/superpowers/specs/2026-07-29-sunpower-nova-integration-design.md`）。本文件细化 P1 的实现口径，冲突以整合 spec 为准。
 - **前置**：✅ P0 评测地基已交付；✅ w1 基线 100% 完整（三家各 15 / 核心 45/45；self_geo 47.6 / self_seo 49.8）。
 
