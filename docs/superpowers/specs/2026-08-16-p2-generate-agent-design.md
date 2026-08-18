@@ -1,7 +1,7 @@
 # P2 生成 Agent 设计（Generate Agent）
 
 - **日期**：2026-08-16
-- **状态**：✅ **已实现并合入 main**（实现 2026-08-16，subagent-driven 9 任务 + 最终 opus 全分支评审 + 1 fix wave 全闭环；237 tests + 2 skipped。合并 2026-08-16/17：PR #1 用户建并合并 `a84ada3`，遗留 spec-sync `dff7451` 由 `129ead2` 补齐推送，分支 fully merged）；合并后真跑六步见 §8.2。
+- **状态**：✅ **已实现并合入 main**（实现 2026-08-16，subagent-driven 9 任务 + 最终 opus 全分支评审 + 1 fix wave 全闭环；237 tests + 2 skipped。合并 2026-08-16/17：PR #1 用户建并合并 `a84ada3`，遗留 spec-sync `dff7451` 由 `129ead2` 补齐推送，分支 fully merged）；**✅ 真跑六步已于 2026-08-18 完成（§8.2 四步全过，验收标准 §8.3 达标）**：P1 live 补齐 + brand 定稿（EN 权威 + zh 对照）+ self-consumption guide `validation: passed` + 人审 pass + 部署 https://sunhestia.com/news/self-consumption-guide/ + mark-published 归档；live 跑校准 6 修复（$web_search 协议、校验器×2、brand ids、白名单），247 tests。
 - **分支**：`worktree-p2-generate-agent`（实际分支名，EnterWorktree 工具命名；计划文档中写作 `p2-generate-agent`；off `main` @ `26819da`）
 - **权威依据**：整合 spec §6（生成 agent）、§9.2（brand.yaml）、§10（人工关口）、§11 P2 行（`docs/superpowers/specs/2026-07-29-sunpower-nova-integration-design.md`）。本文件细化 P2 的实现口径，冲突以整合 spec 为准。
 - **前置**：✅ P0 评测地基已交付（165 tests）；✅ P1 研究 agent 已合入 main@4fa000f（186 tests + 1 live）；✅ site/ 14 页在线（brand.yaml 抽取源）；✅ eval w1 报告与 GSC 快照在库。

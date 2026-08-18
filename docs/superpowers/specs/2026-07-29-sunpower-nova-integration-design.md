@@ -420,4 +420,4 @@ Mention rate / Citation rate / Avg position / Share of Voice / Sentiment；分�
 ---
 
 *整合设计 v1.1，2026-07-29（修订 2026-07-30）｜ 已通审 2026-07-30（点 1 已补入 §4-bis：智能体性能评估 = BFCL 式工具调用）｜ P0 实现计划已生成 2026-08-02：`docs/superpowers/plans/2026-08-02-p0-evaluation-foundation.md`*
-*分期进度（2026-08-17 更新）：P0 ✅ 交付 2026-08-02（165 tests，w1 基线 self_geo 47.6 / self_seo 49.8）；P1 ✅ 合入 main 2026-08-13 @4fa000f（186 tests；live run 待补）；P2 ✅ 合入 main 2026-08-16/17（PR #1 `a84ada3` + spec-sync `129ead2`，237 tests；真跑六步未启动）；P3 未起。下一里程碑 = 真跑六步恢复实验（P2 spec §8.2）*
+*分期进度（2026-08-18 更新）：P0 ✅ 交付 2026-08-02（165 tests，w1 基线 self_geo 47.6 / self_seo 49.8）；P1 ✅ 合入 main 2026-08-13 @4fa000f（186 tests；live run 已于 08-18 补齐）；P2 ✅ 合入 main 2026-08-16/17（PR #1 `a84ada3` + spec-sync `129ead2`，237 tests）；**真跑六步 ✅ 2026-08-18 完成（P2 验收闭环）**——P1 live 产 playbook（6/7 平台联网查证）+ brand.yaml 人审定稿 + self-consumption guide 生成 validation=passed + 人审 pass + 部署 https://sunhestia.com/news/self-consumption-guide/ + 归档；live 校准 6 修复（Moonshot $web_search 协议 ×2 / 校验器假阳性 ×2 / brand ids + JSON-LD 白名单），247 tests，main@09e22bd。P3 未起 = 下一里程碑（RulesKeeper，输入已就绪）。*
