@@ -55,8 +55,10 @@ _SYS_GEN = (
     "型号或承诺；写不出的事实就略过。输出 JSON："
     "{frontmatter:{topic,page_type,slug},title,body_md,json_ld:[schema.org 对象],"
     "fact_anchors:[{claim,path,value}]}。"
-    "纪律：body_md 里每个数字都必须有一条 fact_anchors，path 用 id 式"
-    "（如 products[home-battery].specs.warranty_years）；json_ld 至少一个对象且与页面类型匹配"
+    "纪律：body_md 里每个数字都必须有一条 fact_anchors，path 语法只有三种："
+    "products[<id>].specs.<键>、faqs[<id>].a、glossary[<id>].definition，"
+    "<id> 必须原样使用 BRAND FACTS 里各条目的 id 字段值（不得自造下标或缩写）；"
+    "json_ld 至少一个对象且与页面类型匹配"
     "（guide→Article、faq→FAQPage、spec→Product、comparison→Article）；body_md 用英文写、"
     "markdown 结构（H1/H2/表格/FAQ 块按 PLAYBOOK DIGEST 的高被引格式优先）。"
 )

@@ -18,12 +18,15 @@ products:
       power_w: "400–450"
       performance_guarantee_years: 25
 faqs:
-  - q: "What does a residential solar and storage system include?"
+  - id: faq-system-includes
+    q: "What does a residential solar and storage system include?"
     a: "Typically rooftop solar panels, a hybrid inverter, and a home battery."
 glossary:
-  - term: self-consumption
+  - id: self-consumption
+    term: self-consumption
     definition: "The share of your electricity use that is covered by solar produced on your own property."
-  - term: LiFePO4
+  - id: lifepo4
+    term: LiFePO4
     definition: "Lithium iron phosphate battery chemistry — stable, long-lasting, cobalt-free."
 banned: [no_pricing, no_savings_percentages]
 competitors: [Tesla, Enphase, SolarEdge]

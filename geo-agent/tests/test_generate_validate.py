@@ -41,6 +41,18 @@ def test_validate_flags_missing_anchor():
     r = validate_draft(d, BRAND)     # 10-year 无 anchor
     assert not r.ok and any("anchor" in i for i in r.issues)
 
+def test_resolve_path_numeric_index_fallback():
+    """live 校准：Kimi 偶用数字下标路径（faqs[1].a）；id 匹配优先，失配且为纯数字时按下标回退。"""
+    from geo.generate.validate import resolve_path
+    brand = BRAND
+    by_id = resolve_path(brand, f"faqs[{brand['faqs'][0].get('id', 'faq-system-includes')}].a")
+    assert by_id is not None and isinstance(by_id, str)
+    by_idx = resolve_path(brand, "faqs[0].a")
+    assert by_idx == by_id
+    from geo.generate.validate import _MISSING
+    assert resolve_path(brand, "faqs[99].a") is _MISSING        # 越界安全
+    assert resolve_path(brand, "faqs[no-such-id].a") is _MISSING
+
 def test_validate_flags_bad_anchor_path():
     d = _draft(fact_anchors=[
         {"claim": "5–15 kWh", "path": "products[home-battery].specs.nonexistent", "value": "5–15"},
@@ -52,6 +64,18 @@ def test_validate_flags_bad_jsonld():
     d = _draft(json_ld=[{"@type": "FAQPage"}])          # 缺 mainEntity
     r = validate_draft(d, BRAND)
     assert not r.ok and any("FAQPage" in i for i in r.issues)
+
+def test_validate_allows_breadcrumblist():
+    """live 校准：BreadcrumbList 是 w1 被引源 schema 第一名（26/134），白名单纳入；
+       缺 itemListElement 仍须拒。"""
+    ok = _draft(json_ld=[{"@type": "Article", "headline": "h"},
+                         {"@type": "BreadcrumbList",
+                          "itemListElement": [{"@type": "ListItem", "position": 1, "name": "n"}]}])
+    r = validate_draft(ok, BRAND)
+    assert not any("BreadcrumbList" in i for i in r.issues), r.issues
+    bad = _draft(json_ld=[{"@type": "Article", "headline": "h"}, {"@type": "BreadcrumbList"}])
+    r2 = validate_draft(bad, BRAND)
+    assert not r2.ok and any("BreadcrumbList" in i for i in r2.issues)
 
 def test_validate_flags_pricing():
     d = _draft(body_md="# t\n\nThe system costs $9999.")

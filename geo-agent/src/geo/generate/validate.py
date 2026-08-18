@@ -6,7 +6,9 @@ from geo.generate.brand import parse_claims, brand_claims, claims_match
 
 _MISSING = object()
 JSONLD_REQUIRED = {"FAQPage": ["mainEntity"], "Article": ["headline"],
-                   "HowTo": ["name", "step"], "Product": ["name", "brand"]}
+                   "HowTo": ["name", "step"], "Product": ["name", "brand"],
+                   # BreadcrumbList：w1 被引源 schema 第一名（26/134），live 校准纳入
+                   "BreadcrumbList": ["itemListElement"]}
 FRONTMATTER_REQUIRED = ("topic", "page_type", "slug", "created", "brand_version")
 PAGE_TYPES = ("faq", "spec", "comparison", "guide")
 BANNED_PATTERNS = {
@@ -30,7 +32,11 @@ def resolve_path(brand: dict, path: str):
             cur = cur.get(key) if isinstance(cur, dict) else None
             if not isinstance(cur, list):
                 return _MISSING
+            items = cur
             cur = next((it for it in cur if isinstance(it, dict) and it.get("id") == ident), None)
+            if cur is None and ident.isdigit():          # 数字下标回退（2026-08-18 live：
+                idx = int(ident)                          # Kimi 偶用 faqs[1].a 下标式路径）
+                cur = items[idx] if idx < len(items) else None
             if cur is None:
                 return _MISSING
         elif isinstance(cur, dict) and seg in cur:
