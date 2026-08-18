@@ -74,10 +74,12 @@ def validate_draft(draft: dict, brand: dict) -> ValidationResult:
             rows.append((claim_txt, "—(编造)", False))
             continue
 
-        # Find exact-match anchor: both claim AND value must exactly match nums (not subset)
+        # Find covering anchor: anchor 的数字集合必须 ⊇ claim（不足=拒；超出=可，
+        # 如 range 锚 5–15 kWh 覆盖正文中独立的 5 kWh——2026-08-18 live 校准，
+        # 原 exact-equality 会把被覆盖的真 claim 误报"缺 anchor"）。值吻合仍由下方 resolve 校验兜底
         anchor = next((a for a in anchors
-                       if set(parse_nums_from(a.get("claim", ""))) == nums or
-                          set(parse_nums_from(str(a.get("value", "")))) == nums), None)
+                       if set(parse_nums_from(a.get("claim", ""))) >= nums or
+                          set(parse_nums_from(str(a.get("value", "")))) >= nums), None)
 
         if anchor is None:
             issues.append(f"数字 claim 缺 anchor: {claim_txt}")

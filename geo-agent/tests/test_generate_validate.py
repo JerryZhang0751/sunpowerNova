@@ -80,19 +80,31 @@ def test_validate_flags_wrong_anchor_value():
     assert any("值不吻合" in i for i in r.issues), f"Expected '值不吻合' issue but got: {r.issues}"
 
 def test_validate_partial_anchor_not_matched():
-    """Tests that partial anchor claims are NOT accepted (exact match only required).
-       Branch: anchor selection uses exact match (claim OR value, both must be == nums)."""
+    """Anchor 数字不足以覆盖 claim 时必须拒（{5} 锚 ≠ claim {5,15}）。
+       语义（2026-08-18 live 校准）：anchor 集合须 ⊇ claim；不足=拒，超出=可（见 covering 测试）。"""
     d = _draft(
         body_md="# How to size a home battery\n\nStart at 5–15 kWh; the battery carries a 10-year warranty.",
         fact_anchors=[
-            # Partial claim "5 kWh" should NOT match body claim {5,15} - neither claim nor value exact matches
+            # Partial claim "5 kWh" does NOT cover body claim {5,15} - must be rejected
             {"claim": "5 kWh", "path": "products[home-battery].specs.capacity_kwh", "value": "5"},
             # Valid anchor for 10-year warranty
             {"claim": "10-year warranty", "path": "products[home-battery].specs.warranty_years", "value": "10"}]
     )
     r = validate_draft(d, BRAND)
     assert not r.ok, f"Expected validation failure but got ok. Issues: {r.issues}"
-    assert any("缺 anchor" in i for i in r.issues), f"Expected '缺 anchor' issue but got: {r.issues}"
+
+def test_validate_covering_range_anchor_satisfies_endpoint_claim():
+    """Range 锚（5–15 kWh）覆盖正文中独立的端点 claim（5 kWh）——live 校准：
+       原 exact-equality 把被 range 覆盖的真 claim 误报"缺 anchor"（w1 首篇真草稿 6 处假阳性中的 4 处）。"""
+    d = _draft(
+        body_md="# Stackable\n\nModular from 5 kWh, the battery carries a 10-year warranty.",
+        fact_anchors=[
+            {"claim": "5–15 kWh", "path": "products[home-battery].specs.capacity_kwh", "value": "5–15"},
+            {"claim": "10-year warranty", "path": "products[home-battery].specs.warranty_years", "value": "10"}]
+    )
+    r = validate_draft(d, BRAND)
+    assert r.ok, f"Expected ok but got issues: {r.issues}"
+    assert "| 5 kWh | products[home-battery].specs.capacity_kwh | ✅ |" in r.appendix_md
 
 def test_validate_flags_unattributed_percent_claims():
     """Final review finding F1 end-to-end: percent claims in draft body must be validated.

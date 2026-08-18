@@ -55,6 +55,15 @@ def test_brand_claims_from_key_names():
     assert (frozenset({"25"}), "year") in inv          # performance_guarantee_years: 25
     assert (frozenset({"400", "450"}), "w") in inv
 
+def test_brand_claims_from_free_text_numbers():
+    """live 校准（2026-08-18）：FAQ/modularity 自由文本"数字在前单位在后"的 claim
+       也须进库存，否则 w1 真草稿的 "5–10 kWh"（brand FAQ 原文）被误判"编造"。"""
+    brand = {"entity": {}, "products": [], "glossary": [],
+             "faqs": [{"q": "size?", "a": "A common starting point is 5–10 kWh, stackable to around 15 kWh."}]}
+    inv = brand_claims(brand)
+    assert (frozenset({"5", "10"}), "kwh") in inv
+    assert (frozenset({"15"}), "kwh") in inv
+
 def test_claims_match_subset_semantics():
     inv = [(frozenset({"5", "15"}), "kwh")]
     assert claims_match((frozenset({"15"}), "kwh"), inv)      # 单值是范围的子集

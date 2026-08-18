@@ -78,6 +78,10 @@ def brand_claims(brand: dict) -> list[tuple[frozenset[str], str]]:
         # _KEYVAL_RE matches unit first, then number - need to swap the order
         for unit, nums_raw in _KEYVAL_RE.findall(t):
             out.append((_norm_nums(nums_raw), _norm_unit(unit)))
+        # _CLAIM_RE：数字在前、单位紧随（FAQ/modularity 等自由文本，2026-08-18 live 校准：
+        # 仅 keyval 体抽库存会把 "5–10 kWh" 类 FAQ 事实漏成"编造"假阳性）
+        for nums_raw, unit in _CLAIM_RE.findall(t):
+            out.append((_norm_nums(nums_raw), _norm_unit(unit)))
     return out
 
 def claims_match(claim: tuple[frozenset[str], str],
