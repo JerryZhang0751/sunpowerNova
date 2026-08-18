@@ -1,0 +1,93 @@
+version: 1
+updated: '2026-08-18'
+entity:
+  brand: SunHestia
+  domain: sunhestia.com
+  positioning: 'Residential solar photovoltaic and battery storage systems for European
+    homeowners, focused on self-consumption: helping homeowners generate clean electricity,
+    store it, and use it themselves. Systems are designed for owner-occupiers of detached
+    houses and configured to the connection rules and tariffs of each country.'
+products:
+- id: battery
+  name: SunHestia Home Battery
+  specs:
+    chemistry: LiFePO4 (lithium iron phosphate), cobalt-free
+    capacity_kwh: 5–15
+    modularity: Modular from 5 kWh, stackable to 15 kWh
+    warranty_years: 10
+    mounting: Wall or floor mounted, indoor or covered outdoor
+    inverter_compatibility: Built-in hybrid inverter compatibility
+    cycle_life: Designed for thousands of charge cycles
+- id: pv
+  name: SunHestia Solar PV Modules
+  specs:
+    cell_type: High-efficiency monocrystalline
+    power_w: 400–450
+    color: Black, low-profile aesthetic for pitched roofs
+    performance_guarantee_years: 25
+    environmental_resistance: Resistant to salt mist and ammonia — suited to coastal
+      and rural sites
+- id: inverter
+  name: Hybrid Inverter & Energy Manager
+  specs:
+    type: Smart hybrid inverter
+    function: Converts solar DC power for the home, routes power between panels, battery,
+      home and grid, and only draws from the grid when needed
+    monitoring: Real-time app monitoring of production, storage and consumption
+    backup: Backup-capable for short outages
+    scheduling: Supports time-of-use scheduling
+faqs:
+- q: What does a residential solar and storage system include?
+  a: Typically rooftop solar panels, a hybrid inverter, and a home battery. The panels
+    produce electricity, the inverter routes it to your home or the battery, and the
+    battery stores surplus for use after dark.
+- q: How big should my battery be?
+  a: Battery size should match your evening electricity use. A common starting point
+    for a detached home is 5–10 kWh, stackable to around 15 kWh. We size it based
+    on your actual consumption, not a one-size-fits-all figure.
+- q: Do I need a battery with solar panels?
+  a: Solar works without a battery, but without storage most daytime surplus is exported
+    to the grid. A battery lets you keep and use that energy yourself, which is usually
+    better value than selling low and buying back high.
+- q: What roof types are suitable?
+  a: Pitched tile and metal roofs, flat roofs on garages, and ground-mounted frames
+    where the main roof is shaded. Orientation and shading affect yield, so we assess
+    each roof individually.
+- q: How long does installation take?
+  a: For a typical detached home, the physical installation is often completed within
+    a day once the system is designed and the hardware is on site.
+- q: What warranty do you offer?
+  a: PV modules carry a 25-year linear performance guarantee, and the LiFePO4 home
+    battery carries a 10-year warranty.
+glossary:
+- term: Self-consumption
+  definition: The share of the electricity your solar panels produce that you use
+    in your own home, rather than exporting to the grid. It is the single number that
+    most influences the value of a residential solar system; storage shifts surplus
+    to when it is needed, sharply increasing self-consumption.
+- term: LiFePO4
+  definition: Lithium iron phosphate battery chemistry used for SunHestia home batteries.
+    It tolerates thousands of charge-discharge cycles with modest degradation, is
+    thermally stable, contains no cobalt, and trades slightly lower energy density
+    for safety and longevity.
+- term: Hybrid inverter
+  definition: 'The control component of the system: it converts solar DC power into
+    the alternating current the home uses, directs surplus into the battery, and only
+    draws from the grid when needed.'
+banned:
+- no_pricing
+- no_savings_percentages
+competitors:
+- Tesla
+- Enphase
+- Franklin
+- BYD
+- sonnen
+- LG
+- Huawei
+- SolarEdge
+- Bluetti
+- Panasonic
+- Canadian Solar
+- Generac
+i18n: {}

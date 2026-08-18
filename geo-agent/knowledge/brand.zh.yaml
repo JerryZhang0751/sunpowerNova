@@ -1,0 +1,70 @@
+version: 1
+updated: '2026-08-18'
+entity:
+  brand: SunHestia
+  domain: sunhestia.com
+  positioning: '面向欧洲住宅业主的家用太阳能光伏与电池储能系统，聚焦自发自用（self-consumption）：帮助业主生产清洁电力、加以储存并自行使用。系统专为独栋住宅的自住业主设计，并按各国的并网规则与电价进行配置。'
+products:
+- id: battery
+  name: 'SunHestia 家用电池'
+  specs:
+    chemistry: 'LiFePO4（磷酸铁锂），不含钴'
+    capacity_kwh: 5–15
+    modularity: '从 5 kWh 起模块化，可堆叠至 15 kWh'
+    warranty_years: 10
+    mounting: '可壁挂或落地安装，适用于室内或有遮蔽的户外'
+    inverter_compatibility: '内置混合逆变器兼容性'
+    cycle_life: '为数千次充放电循环而设计'
+- id: pv
+  name: 'SunHestia 太阳能光伏组件'
+  specs:
+    cell_type: '高效单晶硅'
+    power_w: 400–450
+    color: '黑色，低轮廓外观，适合坡屋顶'
+    performance_guarantee_years: 25
+    environmental_resistance: '耐盐雾与氨气——适用于沿海及乡村场地'
+- id: inverter
+  name: '混合逆变器与能源管理器'
+  specs:
+    type: '智能混合逆变器'
+    function: '将太阳能直流电转换为家庭可用电力，在光伏组件、电池、家庭与电网之间调度电力，且仅在需要时才从电网取电'
+    monitoring: '通过 App 实时监控发电、储电与用电'
+    backup: '支持短时断电备份'
+    scheduling: '支持分时电价调度'
+faqs:
+- q: '一套住宅太阳能加储能系统包含哪些部分？'
+  a: '通常包括屋顶太阳能电池板、一台混合逆变器以及一块家用电池。电池板负责发电，逆变器将电力输送至家庭或电池，电池则将富余电力储存起来，供天黑后使用。'
+- q: '我的电池应该选多大？'
+  a: '电池容量应与您的晚间用电量相匹配。独栋住宅的常见起点是 5–10 kWh，可堆叠至约 15 kWh。我们根据您的实际用电量来确定容量，而不是给出一刀切的数字。'
+- q: '太阳能板需要搭配电池吗？'
+  a: '没有电池太阳能系统也能运行，但缺少储能时，大部分日间富余电力会被输送到电网。电池让您把这部分电力留着自己使用，通常比低价卖出、高价买回更划算。'
+- q: '哪些屋顶类型适合安装？'
+  a: '坡面瓦屋顶与金属屋顶、车库平屋顶，以及主屋顶受遮挡时使用的地面支架。朝向与遮挡会影响发电量，因此我们会对每个屋顶单独评估。'
+- q: '安装需要多长时间？'
+  a: '对于典型的独栋住宅，在系统设计完成、设备到场之后，现场施工通常一天之内即可完成。'
+- q: '你们提供什么质保？'
+  a: '光伏组件提供 25 年线性功率质保，LiFePO4 家用电池提供 10 年质保。'
+glossary:
+- term: '自发自用（self-consumption）'
+  definition: '指您的太阳能电池板所发电力中，在自己家中使用而非输出至电网的比例。这是对住宅太阳能系统价值影响最大的单一数值；储能将富余电力转移到需要之时使用，可显著提升自发自用水平。'
+- term: LiFePO4
+  definition: 'SunHestia 家用电池采用的磷酸铁锂电池化学体系。它可承受数千次充放电循环且衰减温和，热稳定性好，不含钴，并以略低的能量密度换取安全性与长寿命。'
+- term: '混合逆变器'
+  definition: '系统的控制部件：将太阳能直流电转换为家庭所用的交流电，把富余电力送入电池，且仅在需要时才从电网取电。'
+banned:
+- no_pricing
+- no_savings_percentages
+competitors:
+- Tesla
+- Enphase
+- Franklin
+- BYD
+- sonnen
+- LG
+- Huawei
+- SolarEdge
+- Bluetti
+- Panasonic
+- Canadian Solar
+- Generac
+i18n: {}
