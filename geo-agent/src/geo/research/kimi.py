@@ -60,21 +60,59 @@ _SYS_WEB = (
 def _parse_web_answer(text: str) -> dict:
     sources = re.findall(r"https?://\S+", text or "")
     conf = "外部未验证"
-    m = re.search(r"置信度[:：]\s*(high|mid|low|外部未验证)", text or "", re.I)
+    m = re.search(r"置信度[*_]*[:：]\s*(high|mid|low|外部未验证)", text or "", re.I)
     if m: conf = m.group(1).lower()
     if not sources and "无法确认" in (text or ""): conf = "外部未验证"
     return {"answer": (text or "").strip(), "sources": sources, "confidence": conf}
 
-def web_search_verify(items: list[dict], *, chat_fn=_kimi_chat) -> dict:
-    # IMPL-TIME: confirm tools schema; default to builtin_tools web_search.
-    tools = [{"type":"builtin_tools","tools":[{"type":"web_search"}]}]
+_WEB_TOOLS = [{"type": "builtin_function", "function": {"name": "$web_search"}}]
+
+_NUDGE = ("请继续完成查证：如需可再调用搜索，最终按格式给出结论+来源URL+置信度。")
+
+def _drive_web_search(create, messages: list[dict], *, max_rounds: int = 10) -> str:
+    """kimi-k3 $web_search 工具循环：模型发起 tool_call → arguments 原封不动回传(role=tool)
+    → 服务端执行联网搜索 → finish_reason=stop 终答。
+    偶发缺陷（2026-08-18 探针实测）：模型想续搜/搜索无果时 API 返 stop+空 content，
+    此时注入催答消息（保留 tools 让它可继续搜）直至出实质终答；超 max_rounds 轮返空。"""
+    msgs = list(messages)
+    for _ in range(max_rounds):
+        r = create(model="kimi-k3", messages=msgs, temperature=1, tools=_WEB_TOOLS)
+        ch = r.choices[0]
+        m = ch.message
+        tcs = getattr(m, "tool_calls", None)
+        if ch.finish_reason == "tool_calls" and tcs:
+            msgs.append({"role": "assistant", "content": m.content or "", "tool_calls": [
+                {"id": t.id, "type": "function",
+                 "function": {"name": t.function.name, "arguments": t.function.arguments}}
+                for t in tcs]})
+            for t in tcs:
+                msgs.append({"role": "tool", "tool_call_id": t.id, "name": t.function.name,
+                             "content": t.function.arguments})   # 原样回传，服务端执行
+            continue
+        if (m.content or "").strip():
+            return m.content
+        msgs.append({"role": "user", "content": _NUDGE})   # 空终答 → 催答（可继续搜）
+    log.warning("web_search loop exceeded %d rounds; giving up", max_rounds)
+    return ""
+
+def _web_search_chat(messages: list[dict], tools=None, timeout: int = 180) -> str:
+    from openai import OpenAI
+    c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url, timeout=timeout)
+    return _drive_web_search(c.chat.completions.create, messages)
+
+def web_search_verify(items: list[dict], *, chat_fn=None) -> dict:
+    # 官方协议（platform.kimi.com/docs/guide/use-web-search，2026-08-18 探针实测）：
+    # builtin_function/$web_search → 模型返 tool_calls → arguments 原样回传(role=tool)
+    # → 服务端执行搜索 → 终答。旧 builtin_tools schema 被 API 400 拒。
+    tools = _WEB_TOOLS
     out = {}
     for it in items:
         plat, fact = it["platform"], it.get("fact","crawler_and_inclusion")
         user = f"平台：{plat}\n查证：{fact}（爬虫 User-agent / 收录机制）"
         try:
-            raw = chat_fn([{"role":"system","content":_SYS_WEB},{"role":"user","content":user}],
-                          tools=tools, timeout=180)
+            raw = (chat_fn or _web_search_chat)(
+                [{"role":"system","content":_SYS_WEB},{"role":"user","content":user}],
+                tools=tools, timeout=180)
             out[plat] = _parse_web_answer(raw)
         except Exception as e:
             log.warning("web_search_verify %s failed: %s", plat, e)
