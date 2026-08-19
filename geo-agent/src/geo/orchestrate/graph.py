@@ -44,8 +44,40 @@ def report_node(state):
     import json
     w = state["week"]
     rep = json.loads((REPO/"data"/"analysis"/f"w{w}"/"eval_report.json").read_text(encoding="utf-8"))
+    # Merge rules_iteration if present
+    ri = REPO / "data" / "analysis" / f"w{w}" / "rules_iteration.json"
+    if ri.exists():
+        rep["rules_iteration"] = json.loads(ri.read_text(encoding="utf-8"))
     out = REPO/"reports"/f"w{w}"/"report.html"; out.parent.mkdir(parents=True, exist_ok=True)
     render(rep, out); return state
+
+def research_node(state):
+    from geo.research.run import run_research
+    run_research(state["week"])
+    return state
+
+def generate_node(state):
+    # Only produces drafts, never publishes (publishing is manual outside DAG)
+    # Queue discipline: skip if unreviewed drafts exist (only backlog one at a time)
+    from geo.generate.run import run_suggest, run_generate
+    w = state["week"]
+    drafts_dir = REPO / "content" / "drafts"
+    pending = list(drafts_dir.glob("*.md")) if drafts_dir.exists() else []
+    if pending:
+        print(f"[generate] Skipped: unreviewed drafts exist {[p.stem for p in pending]} (resume after manual --review)")
+        return state
+    sugg = run_suggest(w).get("suggestions") or []
+    if not sugg:
+        print("[generate] Skipped: no candidates (check gsc/playbook data sources)")
+        return state
+    top = sugg[0]
+    run_generate(top["topic"], top.get("page_type", "guide"), w)
+    return state
+
+def rules_node(state):
+    from geo.rules.keeper import iterate
+    iterate(state["week"])
+    return state
 
 def build_graph():
     g = StateGraph(S)
@@ -53,25 +85,37 @@ def build_graph():
     g.add_node("fetch", fetch_node)
     g.add_node("snapshot", snapshot_node)
     g.add_node("assess", assess_node)
+    g.add_node("research", research_node)
+    g.add_node("generate", generate_node)
+    g.add_node("rules", rules_node)
     g.add_node("report", report_node)
     g.add_edge(START, "collect")
     g.add_edge("collect", "fetch")
     g.add_edge("fetch", "snapshot")
-    g.add_edge("snapshot", "assess")
-    g.add_edge("assess", "report")
+    g.add_edge("snapshot", "assess")  # v1.1: assess before generate (generate needs this week's eval_report)
+    g.add_edge("assess", "research")
+    g.add_edge("research", "generate")
+    g.add_edge("generate", "rules")
+    g.add_edge("rules", "report")
     g.add_edge("report", END)
     (REPO/"state").mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(REPO/"state"/"runs.sqlite", check_same_thread=False)
     return g.compile(checkpointer=SqliteSaver(conn))
 
-def run_pipeline(week: int):
+def run_pipeline(week: int, next_week: bool = False, force_new_run: bool = False):
     from langgraph.checkpoint.sqlite import SqliteSaver
+    from datetime import datetime
 
-    thread_id = f"w{week}"
+    if force_new_run:
+        # Timestamped thread ID: w{week}-{YYYYMMDD-HHMMSS}
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        thread_id = f"w{week}-{timestamp}"
+    else:
+        thread_id = f"w{week}"
     db_path = REPO/"state"/"runs.sqlite"
 
     # Check if checkpoint already exists for this week (resume from previous run)
-    if db_path.exists():
+    if not force_new_run and db_path.exists():
         conn = sqlite3.connect(db_path, check_same_thread=False)
         checkpointer = SqliteSaver(conn)
         checkpoint = checkpointer.get({"configurable": {"thread_id": thread_id}})
@@ -86,5 +130,20 @@ def run_pipeline(week: int):
     # thread_id=w{week} → SqliteSaver checkpoint 续跑：已完成节点重跑时跳过
     app.invoke({"week": week}, config={"configurable": {"thread_id": thread_id}})
 
+    if next_week:
+        import yaml as _y
+        run_raw = _y.safe_load((REPO / "run.yaml").read_text(encoding="utf-8"))
+        run_raw["week"] = week + 1
+        (REPO / "run.yaml").write_text(
+            _y.safe_dump(run_raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        print(f"run.yaml week → {week + 1}")
+
 if __name__ == "__main__":
-    run_pipeline(settings.run.week)
+    import argparse
+    ap = argparse.ArgumentParser(prog="geo.orchestrate.graph")
+    ap.add_argument("--week", type=int, default=None)
+    ap.add_argument("--next-week", action="store_true", help="Increment run.yaml week after run")
+    ap.add_argument("--force-new-run", action="store_true",
+                    help="Ignore existing checkpoint, use timestamped thread for fresh run")
+    a = ap.parse_args()
+    run_pipeline(a.week or settings.run.week, next_week=a.next_week, force_new_run=a.force_new_run)

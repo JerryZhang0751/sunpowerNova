@@ -386,3 +386,61 @@ def test_error_handling_graceful_degradation(tmp_path):
     # After failure, checkpoint may exist but should be in a consistent state
     # The key assertion: we didn't silently continue to snapshot/assess/report
     assert checkpoint is None or checkpoint.get("channel_values", {}).get("week") == 303
+
+
+def test_full_chain_order_and_generate_skip(tmp_path, monkeypatch):
+    """Test full chain order including new nodes and generate skip behavior."""
+    import geo.orchestrate.graph as G
+    calls = []
+    monkeypatch.setattr(G, "REPO", tmp_path)  # Isolate real drafts/eval_report paths
+    monkeypatch.setattr(G, "collect_node", lambda s: (calls.append("collect"), s)[1])
+    monkeypatch.setattr(G, "fetch_node", lambda s: (calls.append("fetch"), s)[1])
+    monkeypatch.setattr(G, "snapshot_node", lambda s: (calls.append("snapshot"), s)[1])
+    import geo.research.run as RR
+    monkeypatch.setattr(RR, "run_research", lambda w, **k: (calls.append("research"), {})[1])
+    import geo.generate.run as GR
+    monkeypatch.setattr(GR, "run_suggest", lambda w, **k: (calls.append("suggest"),
+                                                          {"suggestions": [{"topic": "t", "page_type": "guide"}]})[1])
+    monkeypatch.setattr(GR, "run_generate", lambda *a, **k: (calls.append("generate"), {})[1])
+    monkeypatch.setattr(G, "assess_node", lambda s: (calls.append("assess"), s)[1])
+    import geo.rules.keeper as KP
+    monkeypatch.setattr(KP, "iterate", lambda w, **k: (calls.append("rules"), {})[1])
+    monkeypatch.setattr(G, "report_node", lambda s: (calls.append("report"), s)[1])
+    g = G.build_graph()
+    g.invoke({"week": 9}, config={"configurable": {"thread_id": "test-full"}})
+    # v1.1: assess before generate (generate needs this week's eval_report)
+    assert calls == ["collect", "fetch", "snapshot", "assess", "research", "suggest",
+                     "generate", "rules", "report"]
+
+
+def test_force_new_run_uses_fresh_thread(tmp_path, monkeypatch):
+    """Test that --force-new-run creates timestamped thread ID."""
+    import geo.orchestrate.graph as G
+    seen = {}
+    class FakeApp:
+        def invoke(self, state, config=None):
+            seen["thread"] = config["configurable"]["thread_id"]
+    monkeypatch.setattr(G, "build_graph", lambda: FakeApp())
+    G.run_pipeline(9, force_new_run=True)
+    assert seen["thread"].startswith("w9-")  # Timestamped new thread, bypasses old checkpoint
+
+
+def test_generate_node_skips_when_unreviewed_draft(tmp_path, monkeypatch):
+    """Test that generate_node skips when unreviewed drafts exist."""
+    import geo.orchestrate.graph as G
+    from geo.shared.config import REPO
+    drafts = tmp_path / "content" / "drafts"
+    had = drafts.exists() and list(drafts.glob("*.md"))
+    if had:  # Backup real drafts if they exist locally
+        for f in drafts.glob("*.md"): f.rename(f.with_suffix(".md.bak"))
+    try:
+        drafts.mkdir(parents=True, exist_ok=True)
+        (drafts / "pending.md").write_text("---\nslug: pending\n---\nbody", encoding="utf-8")
+        import geo.generate.run as GR
+        boom = lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not generate"))
+        monkeypatch.setattr(GR, "run_generate", boom)
+        G.generate_node({"week": 9})  # Should not raise = skip succeeded
+    finally:
+        (drafts / "pending.md").unlink(missing_ok=True)
+        if had:
+            for f in drafts.glob("*.md.bak"): f.rename(f.with_suffix(".md"))
