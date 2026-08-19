@@ -27,6 +27,9 @@ def aggregate(corpus: ResearchCorpus) -> FeatureAggregates:
                "has_publish_date":0,"ugc":0,"resolved":0}
     resolved_n = 0
 
+    # —— v1.1:唯一 URL(页-周)口径聚合(RulesKeeper 证据用)——
+    uniq = {}                                   # url -> {"plats": set(), "l3": L3Source}
+
     for it in corpus.items:
         m = it.l1.model
         platforms[m]["n"] += 1
@@ -37,6 +40,11 @@ def aggregate(corpus: ResearchCorpus) -> FeatureAggregates:
             if l3 is None: continue
             resolved_n += 1
             src_dim["resolved"] += 1
+
+            # v1.1: 唯一 URL 归集
+            e = uniq.setdefault(cited.url, {"plats": set(), "l3": l3})
+            e["plats"].add(m)
+
             st, se = l3.structural or {}, l3.semantic or {}
             if st.get("table_count",0)>0: fmt["comparison_table"]["cited"]+=1; fmt["comparison_table"]["plats"].add(m)
             if se.get("has_faq_block"): fmt["qa"]["cited"]+=1; fmt["qa"]["plats"].add(m)
@@ -53,7 +61,32 @@ def aggregate(corpus: ResearchCorpus) -> FeatureAggregates:
             for s in st.get("schema_types",[]): src_dim["schema"][s] += 1
             if se.get("has_publish_date"): src_dim["has_publish_date"] += 1
 
-    formats = [FeatureBucket(k, v["cited"], resolved_n, sorted(v["plats"]), _low(resolved_n))
+    # v1.1: 唯一 URL 聚合统计
+    src_dim["unique_n"] = len(uniq)
+    schema_u, schema_u_plats = Counter(), {}
+    fmt_u = {k: {"with": 0, "plats": set()} for k in fmt}
+    for url, e in uniq.items():
+        st, se = (e["l3"].structural or {}), (e["l3"].semantic or {})
+        for s in st.get("schema_types", []):
+            schema_u[s] += 1
+            schema_u_plats.setdefault(s, set()).update(e["plats"])
+        if st.get("table_count", 0) > 0:
+            fmt_u["comparison_table"]["with"] += 1; fmt_u["comparison_table"]["plats"].update(e["plats"])
+        if se.get("has_faq_block"):
+            fmt_u["qa"]["with"] += 1; fmt_u["qa"]["plats"].update(e["plats"])
+        if st.get("ul_count", 0) > 0:
+            fmt_u["list"]["with"] += 1; fmt_u["list"]["plats"].update(e["plats"])
+        if se.get("has_definition_segment"):
+            fmt_u["definition"]["with"] += 1; fmt_u["definition"]["plats"].update(e["plats"])
+        if se.get("page_type") == "product" or se.get("datapoint_count", 0) >= 8:
+            fmt_u["spec_card"]["with"] += 1; fmt_u["spec_card"]["plats"].update(e["plats"])
+
+    src_dim["schema_unique"] = dict(schema_u)
+    src_dim["schema_unique_platforms"] = {k: sorted(v) for k, v in schema_u_plats.items()}
+
+    formats = [FeatureBucket(k, v["cited"], resolved_n, sorted(v["plats"]), _low(resolved_n),
+                            unique_cited_n=fmt_u[k]["with"], unique_n=len(uniq),
+                            unique_platforms=sorted(fmt_u[k]["plats"]))
                for k,v in fmt.items()]
     # convert Counters to plain dict for JSON stability
     src_dim = {k:(dict(v) if isinstance(v,Counter) else v) for k,v in src_dim.items()}

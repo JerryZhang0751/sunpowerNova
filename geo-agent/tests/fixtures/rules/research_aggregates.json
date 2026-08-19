@@ -17,14 +17,24 @@
         "qwen",
         "zhipu"
       ],
-      "low_confidence": false
+      "low_confidence": false,
+      "unique_cited_n": 13,
+      "unique_n": 34,
+      "unique_platforms": [
+        "doubao",
+        "qwen",
+        "zhipu"
+      ]
     },
     {
       "key": "qa",
       "cited_n": 0,
       "sample_n": 134,
       "platforms": [],
-      "low_confidence": false
+      "low_confidence": false,
+      "unique_cited_n": 0,
+      "unique_n": 34,
+      "unique_platforms": []
     },
     {
       "key": "list",
@@ -35,7 +45,14 @@
         "qwen",
         "zhipu"
       ],
-      "low_confidence": false
+      "low_confidence": false,
+      "unique_cited_n": 23,
+      "unique_n": 34,
+      "unique_platforms": [
+        "doubao",
+        "qwen",
+        "zhipu"
+      ]
     },
     {
       "key": "definition",
@@ -46,7 +63,14 @@
         "qwen",
         "zhipu"
       ],
-      "low_confidence": false
+      "low_confidence": false,
+      "unique_cited_n": 12,
+      "unique_n": 34,
+      "unique_platforms": [
+        "doubao",
+        "qwen",
+        "zhipu"
+      ]
     },
     {
       "key": "spec_card",
@@ -57,7 +81,14 @@
         "qwen",
         "zhipu"
       ],
-      "low_confidence": false
+      "low_confidence": false,
+      "unique_cited_n": 19,
+      "unique_n": 34,
+      "unique_platforms": [
+        "doubao",
+        "qwen",
+        "zhipu"
+      ]
     }
   ],
   "sources": {
@@ -90,7 +121,71 @@
     },
     "has_publish_date": 20,
     "ugc": 0,
-    "resolved": 134
+    "resolved": 134,
+    "unique_n": 34,
+    "schema_unique": {
+      "TechArticle": 1,
+      "BreadcrumbList": 7,
+      "FAQPage": 3,
+      "Organization": 2,
+      "": 10,
+      "NewsArticle": 1,
+      "WebSite": 2,
+      "LocalBusiness": 1,
+      "Article": 4,
+      "BlogPosting": 2,
+      "VideoObject": 1
+    },
+    "schema_unique_platforms": {
+      "TechArticle": [
+        "doubao",
+        "qwen"
+      ],
+      "BreadcrumbList": [
+        "doubao",
+        "qwen",
+        "zhipu"
+      ],
+      "FAQPage": [
+        "doubao",
+        "qwen",
+        "zhipu"
+      ],
+      "Organization": [
+        "doubao",
+        "qwen",
+        "zhipu"
+      ],
+      "": [
+        "doubao",
+        "qwen",
+        "zhipu"
+      ],
+      "NewsArticle": [
+        "doubao",
+        "qwen"
+      ],
+      "WebSite": [
+        "qwen",
+        "zhipu"
+      ],
+      "LocalBusiness": [
+        "qwen",
+        "zhipu"
+      ],
+      "Article": [
+        "qwen",
+        "zhipu"
+      ],
+      "BlogPosting": [
+        "qwen",
+        "zhipu"
+      ],
+      "VideoObject": [
+        "qwen",
+        "zhipu"
+      ]
+    }
   },
   "platforms": {
     "doubao": {

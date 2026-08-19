@@ -30,6 +30,9 @@ class FeatureBucket:
     sample_n: int
     platforms: list[str]
     low_confidence: bool
+    unique_cited_n: int = 0                      # v1.1: 唯一 URL(页-周)口径
+    unique_n: int = 0                            # v1.1: 唯一 URL(页-周)口径
+    unique_platforms: list[str] | None = None    # v1.1: 唯一 URL(页-周)口径平台归因
 
 @dataclass
 class FeatureAggregates:
