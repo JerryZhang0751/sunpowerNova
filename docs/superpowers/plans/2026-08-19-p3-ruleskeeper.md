@@ -785,6 +785,7 @@ git commit -m "test(rules): real w1 fixtures + v1-semantics golden lock (47.6/49
 
 Run: `python3.11 -m geo.research.run --week 1 --no-kimi`(磁盘重算零网络;sample 已抓全不补抓)
 Expected: 重生成 `data/analysis/w1/research_aggregates.json` 含 `unique_n=34`、`schema_unique.BreadcrumbList=7`、`schema_unique_platforms.BreadcrumbList=["doubao","qwen","zhipu"]`(实测预期;不符则停下以脚本重算核对,勿改断言凑数)。
+⚠️ `run_research` 会**无条件重渲染** `knowledge/playbook.md` + `knowledge/platform-profiles.md`(run.py:39-40)——`--no-kimi` 下 conclusions 为空会把含 Kimi 综合的 live playbook 覆写掉。两文件 git 已追踪且本任务不改它们 → 重跑后立即 `git restore geo-agent/knowledge/playbook.md geo-agent/knowledge/platform-profiles.md` 还原(若 git status 显示它们被改)。本任务只保留 features.py 代码变更 + fixture 刷新。
 随后 `python3.11 scripts/capture_w1_fixtures.py` **刷新 fixture**(Task 4 脚本复用,供本任务与 Task 8 测试)。
 
 - [ ] **Step 1: 写失败测试**
@@ -1993,13 +1994,15 @@ git commit -m "feat(report): section 5 rules-iteration summary (deterministic re
 def test_full_chain_order_and_generate_skip(tmp_path, monkeypatch):
     import geo.orchestrate.graph as G
     calls = []
+    monkeypatch.setattr(G, "REPO", tmp_path)              # 隔离真实 drafts/eval_report 路径
     monkeypatch.setattr(G, "collect_node", lambda s: (calls.append("collect"), s)[1])
     monkeypatch.setattr(G, "fetch_node", lambda s: (calls.append("fetch"), s)[1])
     monkeypatch.setattr(G, "snapshot_node", lambda s: (calls.append("snapshot"), s)[1])
     import geo.research.run as RR
     monkeypatch.setattr(RR, "run_research", lambda w, **k: calls.append("research") or {})
     import geo.generate.run as GR
-    monkeypatch.setattr(GR, "run_suggest", lambda w, **k: calls.append("suggest") or {"suggestions": []})
+    monkeypatch.setattr(GR, "run_suggest", lambda w, **k: calls.append("suggest")
+                        or {"suggestions": [{"topic": "t", "page_type": "guide"}]})
     monkeypatch.setattr(GR, "run_generate", lambda *a, **k: calls.append("generate") or {})
     monkeypatch.setattr(G, "assess_node", lambda s: (calls.append("assess"), s)[1])
     import geo.rules.keeper as KP
