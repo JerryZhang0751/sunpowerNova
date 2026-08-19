@@ -146,14 +146,22 @@ def test_assemble_render_seam_real_l3(tmp_path):
 
         # --- Important-1 assertions: SEO on_page/content_eeat fed REAL signals ---
         seo_dims = {d["name"]: d for d in report["self_seo"]["dims"]}
-        assert seo_dims["on_page"]["signals"]["title"] == brand_l3.structural["title"], \
-            "SEO title must be the real extracted <title>, not fabricated"
+        # New payload shape uses registered signal IDs (e.g., unique_title, title_len_ok)
+        assert "unique_title" in seo_dims["on_page"]["signals"], \
+            "SEO on_page must contain unique_title signal (registered ID)"
+        assert "title_len_ok" in seo_dims["on_page"]["signals"], \
+            "SEO on_page must contain title_len_ok signal (registered ID)"
+        # Check that title_len_ok computed from real extracted title
+        real_title = brand_l3.structural.get("title", "")
+        expected_len_ok = 40 <= len(real_title) <= 60
+        assert seo_dims["on_page"]["signals"]["title_len_ok"] == (100.0 if expected_len_ok else 0.0), \
+            "SEO title_len_ok must be computed from the real extracted <title>"
+        # content_eeat uses registered signal IDs (word_count_band, not word_count)
         ceat = seo_dims["content_eeat"]["signals"]
-        assert ceat["word_count"] == len(brand_l3.text.split()), \
-            "SEO word_count must come from the real L3 extracted text"
-        assert ceat["has_author_byline"] is True, \
-            "SEO E-E-A-T must come from the real L3 semantic (Kimi), not hardcoded"
-        assert ceat["content_signals_source"] == "l3"
+        assert "word_count_band" in ceat, "SEO content_eeat must use word_count_band signal (registered ID)"
+        assert "has_author_byline" in ceat, "SEO content_eeat must use has_author_byline signal (registered ID)"
+        assert ceat["has_author_byline"] == 100.0, \
+            "SEO E-E-A-T must come from the real L3 semantic (Kimi), not hardcoded (100.0 = True)"
 
         # 5. REAL reporter render — must not raise on the real assembled report.
         out = tmp_path / "report.html"
