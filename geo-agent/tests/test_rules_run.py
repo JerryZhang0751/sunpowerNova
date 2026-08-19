@@ -49,6 +49,9 @@ def test_recalc_writes_separate_file_never_overwrites(repo, monkeypatch):
         return result
     import geo.rules.run as R
     monkeypatch.setattr(R, "assemble", fake_assemble)
+    # Patch RULES_DIR to tmp repo's rules/ dir (fixture creates rules/history/geo-seo-v1/ there)
+    import geo.rules.loader
+    monkeypatch.setattr(geo.rules.loader, "RULES_DIR", repo / "rules")
     out = do_recalc(repo, week=1, rule_version="geo-seo-v1", render=False)
     assert called["rule_version"] == "geo-seo-v1" and called["out_name"] == "eval_report.recalc-geo-seo-v1.json"
     assert out["rule_version"] == "geo-seo-v1"

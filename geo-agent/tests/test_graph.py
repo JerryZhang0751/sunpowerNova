@@ -467,19 +467,13 @@ def test_force_new_run_uses_fresh_thread(tmp_path, monkeypatch):
 def test_generate_node_skips_when_unreviewed_draft(tmp_path, monkeypatch):
     """Test that generate_node skips when unreviewed drafts exist."""
     import geo.orchestrate.graph as G
-    from geo.shared.config import REPO
+    import geo.generate.run as GR
+    # Patch REPO first so draft paths resolve to tmp_path, not real repo
+    monkeypatch.setattr(G, "REPO", tmp_path)
     drafts = tmp_path / "content" / "drafts"
-    had = drafts.exists() and list(drafts.glob("*.md"))
-    if had:  # Backup real drafts if they exist locally
-        for f in drafts.glob("*.md"): f.rename(f.with_suffix(".md.bak"))
-    try:
-        drafts.mkdir(parents=True, exist_ok=True)
-        (drafts / "pending.md").write_text("---\nslug: pending\n---\nbody", encoding="utf-8")
-        import geo.generate.run as GR
-        boom = lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not generate"))
-        monkeypatch.setattr(GR, "run_generate", boom)
-        G.generate_node({"week": 9})  # Should not raise = skip succeeded
-    finally:
-        (drafts / "pending.md").unlink(missing_ok=True)
-        if had:
-            for f in drafts.glob("*.md.bak"): f.rename(f.with_suffix(".md"))
+    drafts.mkdir(parents=True, exist_ok=True)
+    (drafts / "pending.md").write_text("---\nslug: pending\n---\nbody", encoding="utf-8")
+    # Mock run_suggest to fail if called (only skip path should succeed)
+    boom = lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not call run_suggest when draft exists"))
+    monkeypatch.setattr(GR, "run_suggest", boom)
+    G.generate_node({"week": 9})  # Should not raise = skip succeeded

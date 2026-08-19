@@ -10,12 +10,10 @@ from geo.assess.analyst import assemble
 
 
 def do_recalc(repo: Path, week: int, rule_version: str, render: bool = False) -> dict:
-    from geo.rules.loader import _load
-    # Load rules from passed repo (not global REPO)
-    rg_path = repo / "rules" / "history" / rule_version / "geo-rules.yaml"
-    rs_path = repo / "rules" / "history" / rule_version / "seo-rules.yaml"
-    rg = _load(rg_path)
-    rs = _load(rs_path)
+    from geo.rules.loader import load_rules
+    # Load rules via public loader (repo param only for render output path)
+    rg = load_rules("geo", version=rule_version)
+    rs = load_rules("seo", version=rule_version)
     rep = assemble(week, rules_geo=rg, rules_seo=rs,
                    out_name=f"eval_report.recalc-{rule_version}.json",
                    rule_version=rule_version)

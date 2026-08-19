@@ -10,6 +10,7 @@ sys.path.insert(0, str(src_path))
 
 from geo.shared.config import REPO
 from geo.assess.analyst import assemble
+from geo.rules.loader import _load
 
 
 @pytest.mark.skipif(
@@ -25,13 +26,19 @@ def test_v1_semantics_unchanged_on_real_w1():
     - assemble(1) 会覆写 eval_report.json，故必须先读归档版本再调用 assemble
     - 新引擎 DimScore.signals 携带 {signal_id: value}(4 keys for eeat incl. org_or_person_schema)
       而归档仅 3 keys——本测试仅比对 name/score/weight，不比对 signals payload
+    - 测试加载提交的 v1 fixture 规则（tests/fixtures/rules/），而非当前规则，防止版本漂移
     """
     # Step 1: Read archived report BEFORE assemble overwrites it
     archived_path = REPO / "data" / "analysis" / "w1" / "eval_report.json"
     archived = json.loads(archived_path.read_text(encoding="utf-8"))
 
-    # Step 2: Recompute with new engine (幂等覆写)
-    rep = assemble(1)
+    # Step 2: Load committed v1 fixture rules (version-proof against runtime advancement)
+    fix_path = Path(__file__).parent / "fixtures" / "rules"
+    rg = _load(fix_path / "geo_rules_v1.yaml")
+    rs = _load(fix_path / "seo_rules_v1.yaml")
+
+    # Step 3: Recompute with v1 rules injected (幂等覆写)
+    rep = assemble(1, rules_geo=rg, rules_seo=rs, rule_version="geo-seo-v1")
 
     # Step 3: Assert golden totals
     assert rep["self_geo"]["total"] == archived["self_geo"]["total"] == 47.6

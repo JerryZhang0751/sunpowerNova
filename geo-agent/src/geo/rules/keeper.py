@@ -20,6 +20,24 @@ def _bump(v: str) -> str:
     return f"geo-seo-v{int(v.rsplit('v', 1)[1]) + 1}"
 
 
+def _next_version(repo: Path, current: str) -> str:
+    """Compute next version monotonic: max(current, all history dir versions)+1.
+    Raises clear error if current < max known (inconsistent state)."""
+    hist = repo / "rules" / "history"
+    known = [current]
+    if hist.exists():
+        known += [d.name for d in hist.iterdir() if d.is_dir()]
+    nums = [int(v.rsplit('v', 1)[1]) for v in known if v.startswith('geo-seo-v')]
+    max_known = max(nums) if nums else 0
+    current_num = int(current.rsplit('v', 1)[1])
+    if current_num < max_known:
+        raise ValueError(
+            f"Version inconsistent: run.yaml rule_version={current} < max known in history={max_known}. "
+            f"Restore state or manually fix run.yaml before iterating."
+        )
+    return f"geo-seo-v{max_known + 1}"
+
+
 def _git_head(repo: Path) -> str:
     """归档绑定代码(v1.1):recalc 精确性 = 版本↔commit + 黄金锁。非 git 环境(测试 tmp)→ unknown。"""
     import subprocess
@@ -121,7 +139,7 @@ def iterate(week: int, *, repo: Path = REPO) -> dict:
     changed = any(d.change in ("promoted", "rejected", "retired", "draft") for d in decisions) \
         or bool(deltas)
     from_v = geo_raw["version"]
-    to_v = _bump(from_v) if changed else None
+    to_v = _next_version(repo, from_v) if changed else None
 
     observations = ["SEO 权重证据流暂缺(GSC 太薄)→ 本期休眠",
                     "证据口径 = 被检索源唯一 URL(页-周);观察性相关、无未检索对照组",
