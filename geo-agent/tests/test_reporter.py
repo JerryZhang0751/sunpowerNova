@@ -69,3 +69,34 @@ def test_7_sections_present(tmp_path):
 
     for section in required_sections:
         assert section in html, f"Section '{section}' not found in report"
+
+def test_rules_iteration_section_rendered(tmp_path):
+    """Test rules iteration section with data renders correctly"""
+    base = {"week": 1, "rule_version": "geo-seo-v1", "prompt_set_version": "x",
+            "metrics": {}, "self_geo": {"total": 47.6, "dims": []},
+            "self_seo": {"total": 49.8, "dims": []}, "gap": {}}
+    rep = {**base, "rules_iteration": {
+        "week": 1, "from_version": "geo-seo-v1", "to_version": "geo-seo-v2",
+        "entries": [{"signal": "has_breadcrumblist", "type": "signal_add", "target": "schema",
+                     "status": "active", "change": "promoted",
+                     "evidence": {"share": 0.206, "with_n": 7, "unique_n": 34,
+                                  "platforms": ["doubao", "qwen", "zhipu"], "weeks": [1]}}],
+        "weights_before": {"citability": 25}, "weights_after": {"citability": 25},
+        "observations": ["SEO 权重证据流暂缺(GSC 太薄)→ 本期休眠",
+                         "GEO 权重证据已记录,待 2 周同向后调整(v1.1 持续性门)"]}}
+    out1 = render(rep, tmp_path / "a.html")
+    out2 = render(rep, tmp_path / "b.html")
+    html = out1.read_text(encoding="utf-8")
+    assert out1.read_bytes() == out2.read_bytes()               # 字节级确定性
+    assert "geo-seo-v1</code> → <code>geo-seo-v2" in html
+    assert "has_breadcrumblist" in html and "promoted" in html
+    assert "25→26" not in html and "(无)" in html          # v1.1:首周持续性门 → 权重不变
+    assert "本期休眠" in html and "持续性" in html
+
+def test_rules_iteration_section_absent_graceful(tmp_path):
+    """Test rules iteration section without data shows graceful message"""
+    base = {"week": 1, "rule_version": "geo-seo-v1", "prompt_set_version": "x",
+            "metrics": {}, "self_geo": {"total": 47.6, "dims": []},
+            "self_seo": {"total": 49.8, "dims": []}, "gap": {}}
+    html = render(base, tmp_path / "c.html").read_text(encoding="utf-8")
+    assert "本期无规则迭代记录" in html

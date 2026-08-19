@@ -2,6 +2,7 @@
 <title>SunHestia GEO/SEO 报告 W{{ report.week }}</title>
 <style>body{font-family:system-ui,sans-serif;max-width:1100px;margin:2rem auto;padding:0 1rem}
 .gap{background:#fff3cd;padding:.6rem;border-radius:.4rem;margin:1rem 0}
+.note{font-size:0.85em;color:#6c757d;margin:0.5rem 0}
 section{margin:2rem 0;border:1px solid #dee2e6;border-radius:.4rem;padding:1.5rem}
 table{border-collapse:collapse;width:100%;margin:1rem 0}
 table td,table th{border:1px solid #dee2e6;padding:.5rem;text-align:left}
@@ -48,12 +49,32 @@ h1,h2,h3{color:#212529}</style>
 <p>本期无竞品 L3 数据，竞品差值暂缺（GEO 自审仍独立产出）。</p>
 {% endif %}
 <div class="gap">⚠️ {{ report.authority_gap_note }}</div>
+<p class="note">竞品评分为下界代理(静态信号按 0 计),gap 不可直读。</p>
 </section>
 
 <section>
 <h2>⑤规则迭代摘要</h2>
 <p>当前规则版本: <code>{{ report.rule_version }}</code></p>
-<p>规则迭代历史与变更记录</p>
+{% if report.rules_iteration %}
+{% set ri = report.rules_iteration %}
+<p>本期迭代: <code>{{ ri.from_version }}</code> → <code>{{ ri.to_version or ri.from_version }}</code>
+(本周评分用 {{ ri.from_version }},变更自下周生效)</p>
+<table border=1>
+<tr><th>signal</th><th>type</th><th>target</th><th>status</th><th>change</th><th>share</th><th>unique_n</th><th>platforms</th><th>weeks</th></tr>
+{% for e in ri.entries %}
+<tr><td>{{ e.signal }}</td><td>{{ e.type }}</td><td>{{ e.target }}</td><td>{{ e.status }}</td>
+<td>{{ e.change }}</td><td>{{ "{:.1%}".format(e.evidence.share or 0) }}</td>
+<td>{{ e.evidence.unique_n }}</td><td>{{ e.evidence.platforms | length }}</td>
+<td>{{ e.evidence.weeks | join(',') }}</td></tr>
+{% endfor %}
+</table>
+<p>权重调整:
+{% for k in ri.weights_before %}{% if ri.weights_after.get(k) != ri.weights_before[k] %}{{ k }} {{ ri.weights_before[k] }}→{{ ri.weights_after[k] }}; {% endif %}{% endfor %}
+{% if ri.weights_after == ri.weights_before %}(无){% endif %}</p>
+<ul>{% for o in ri.observations %}<li>{{ o }}</li>{% endfor %}</ul>
+{% else %}
+<p>本期无规则迭代记录。</p>
+{% endif %}
 </section>
 
 <section>
