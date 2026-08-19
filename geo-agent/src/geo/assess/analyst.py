@@ -138,6 +138,24 @@ def competitor_domains_by_count(week: int, n: int = 10) -> list[str]:
                 c[host] += 1
     return [d for d, _ in sorted(c.items(), key=lambda x: (-x[1], x[0]))[:n]]
 
+def _score_competitors(week: int, static_signals: dict | None) -> list:
+    """竞品 GEO 评分:score_geo 第三参传 {} —— 竞品无全站快照,静态类信号按 0 计(下界 proxy)。
+    不得借用目标站 static_signals(含 pages 列表):否则 about_page_present 等站点级
+    信号会让全体竞品白拿分(v1.1 修正,外部评审 item 6)。"""
+    comp_geos = []
+    for comp_domain in competitor_domains_by_count(week, 5):
+        comp_url = f"https://{comp_domain}"
+        comp_l3 = _load_l3_source(comp_url)
+        if comp_l3:
+            comp_brand_signals = {"mention": 0, "cited": 0, "sov": 0.0, "entity_known": False,
+                                  "on_youtube": False, "on_reddit": False,
+                                  "on_wikipedia": False, "on_linkedin": False}
+            try:
+                comp_geos.append(score_geo(comp_l3, comp_brand_signals, {}))
+            except (KeyError, TypeError, ValueError):
+                continue
+    return comp_geos
+
 
 def assemble(week: int) -> dict:
     """
@@ -276,20 +294,7 @@ def assemble(week: int) -> dict:
         )
 
     # Score competitors — deterministic top-5 by citation count (matches fetch_node)
-    comp_geos = []
-    for comp_domain in competitor_domains_by_count(week, 5):
-        comp_url = f"https://{comp_domain}"
-        comp_l3 = _load_l3_source(comp_url)
-        if comp_l3 and static_signals:
-            # Use minimal brand signals for competitors (P0 proxy)
-            comp_brand_signals = {"mention": 0, "cited": 0, "sov": 0.0, "entity_known": False,
-                                 "on_youtube": False, "on_reddit": False, "on_wikipedia": False, "on_linkedin": False}
-            try:
-                comp_score = score_geo(comp_l3, comp_brand_signals, static_signals)
-                comp_geos.append(comp_score)
-            except (KeyError, TypeError, ValueError):
-                # Skip competitors that can't be scored
-                continue
+    comp_geos = _score_competitors(week, static_signals)
 
     # Calculate competitive gap
     gap_result = None

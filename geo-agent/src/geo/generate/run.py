@@ -4,7 +4,7 @@ import json, logging, sys
 from datetime import date, datetime
 from pathlib import Path
 import yaml
-from geo.shared.config import REPO
+from geo.shared.config import REPO, settings
 from geo.generate.brand import load_brand, slugify, run_bootstrap
 from geo.generate.topics import suggest_topics
 from geo.generate.kimi import playbook_digest, generate_draft, skeleton_draft
@@ -18,6 +18,19 @@ def _fm_update(text: str, updates: dict) -> str:
     fm.update(updates)
     parts[1] = "\n" + yaml.safe_dump(fm, allow_unicode=True, sort_keys=False)
     return "---".join(parts)
+
+def _latest_review(repo: Path, slug: str) -> dict | None:
+    rj = repo / "content" / "reviews.jsonl"
+    if not rj.exists():
+        return None
+    latest = None
+    for line in rj.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        if rec.get("slug") == slug:
+            latest = rec                     # append-only,最后一条 = 最新
+    return latest
 
 def run_generate(topic: str, page_type: str = "guide", week: int = 1,
                  allow_no_playbook: bool = False, kimi: bool = True,
@@ -87,7 +100,8 @@ def run_review(slug: str, verdict: str, notes: str = "", *, repo: Path = REPO, n
     log.info("review 记录: %s", rec)
     return rec
 
-def run_mark_published(slug: str, *, repo: Path = REPO) -> dict:
+def run_mark_published(slug: str, *, url: str | None = None, override: bool = False,
+                       reason: str = "", repo: Path = REPO, now: str = None) -> dict:
     repo = Path(repo)
     draft = repo / "content" / "drafts" / f"{slug}.md"
     if not draft.exists():
@@ -95,14 +109,31 @@ def run_mark_published(slug: str, *, repo: Path = REPO) -> dict:
     text = draft.read_text(encoding="utf-8")
     fm = yaml.safe_load(text.split("---")[1])
     if fm.get("status") == "rejected":
-        import sys
-        print(f"草稿 {slug} 状态为 rejected，不予归档发布（人审三档见 content/reviews.jsonl）", file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(f"草稿 {slug} 状态为 rejected,不予归档发布")
+    review = _latest_review(repo, slug)
+    if review is None or review.get("verdict") not in ("pass", "minor"):
+        raise SystemExit(
+            f"草稿 {slug} 缺少 pass/minor 人审记录(最新 verdict="
+            f"{(review or {}).get('verdict', '无')})——先 --review 再归档")
+    if fm.get("validation") == "flagged" and not (override and reason):
+        raise SystemExit(f"草稿 {slug} validation=flagged:需 --override 且 --reason 显式放行")
+    updates = {"status": "published",
+               "published_at": now or datetime.now().isoformat(timespec="seconds")}
+    if url:
+        updates["published_url"] = url
+    if override:
+        updates["override_reason"] = reason
     pub_dir = repo / "content" / "published"
     pub_dir.mkdir(parents=True, exist_ok=True)
-    (pub_dir / f"{slug}.md").write_text(_fm_update(text, {"status": "published"}), encoding="utf-8")
+    (pub_dir / f"{slug}.md").write_text(_fm_update(text, updates), encoding="utf-8")
+    if url:
+        from urllib.parse import urlparse
+        path = urlparse(url).path.rstrip("/")
+        pages = (settings.targets.get("site", {}) or {}).get("pages", [])
+        if path and path not in pages:
+            print(f"⚠️ {path} 不在 targets.yaml site.pages —— 请手动追加,否则静态自审不覆盖此页")
     draft.unlink()
-    log.info("归档发布: %s", slug)
+    log.info("归档发布: %s%s", slug, f"(override: {reason})" if override else "")
     return {"slug": slug, "path": str(pub_dir / f"{slug}.md")}
 
 def run_suggest(week: int, *, repo: Path = REPO) -> dict:
@@ -129,6 +160,9 @@ def main() -> None:
     ap.add_argument("--verdict", choices=("pass", "minor", "reject"))
     ap.add_argument("--notes", default="")
     ap.add_argument("--mark-published")
+    ap.add_argument("--url")
+    ap.add_argument("--override", action="store_true")
+    ap.add_argument("--reason", default="")
     ap.add_argument("--bootstrap-brand", action="store_true")
     a = ap.parse_args()
     if a.suggest:
@@ -143,7 +177,7 @@ def main() -> None:
             ap.error("--review 需要 --verdict pass|minor|reject")
         run_review(a.review, a.verdict, a.notes)
     elif a.mark_published:
-        print(run_mark_published(a.mark_published))
+        print(run_mark_published(a.mark_published, url=a.url, override=a.override, reason=a.reason))
     elif a.topic:
         res = run_generate(a.topic, a.page_type, a.week,
                            allow_no_playbook=a.allow_no_playbook, kimi=not a.no_kimi)
