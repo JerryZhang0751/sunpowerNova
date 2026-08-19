@@ -785,6 +785,7 @@ git commit -m "test(rules): real w1 fixtures + v1-semantics golden lock (47.6/49
 
 Run: `python3.11 -m geo.research.run --week 1 --no-kimi`(磁盘重算零网络;sample 已抓全不补抓)
 Expected: 重生成 `data/analysis/w1/research_aggregates.json` 含 `unique_n=34`、`schema_unique.BreadcrumbList=7`、`schema_unique_platforms.BreadcrumbList=["doubao","qwen","zhipu"]`(实测预期;不符则停下以脚本重算核对,勿改断言凑数)。
+⚠️ `run_research` 会**无条件重渲染** `knowledge/playbook.md` + `knowledge/platform-profiles.md`(run.py:39-40)——`--no-kimi` 下 conclusions 为空会把含 Kimi 综合的 live playbook 覆写掉。两文件 git 已追踪且本任务不改它们 → 重跑后立即 `git restore geo-agent/knowledge/playbook.md geo-agent/knowledge/platform-profiles.md` 还原(若 git status 显示它们被改)。本任务只保留 features.py 代码变更 + fixture 刷新。
 随后 `python3.11 scripts/capture_w1_fixtures.py` **刷新 fixture**(Task 4 脚本复用,供本任务与 Task 8 测试)。
 
 - [ ] **Step 1: 写失败测试**
@@ -1993,13 +1994,15 @@ git commit -m "feat(report): section 5 rules-iteration summary (deterministic re
 def test_full_chain_order_and_generate_skip(tmp_path, monkeypatch):
     import geo.orchestrate.graph as G
     calls = []
+    monkeypatch.setattr(G, "REPO", tmp_path)              # 隔离真实 drafts/eval_report 路径
     monkeypatch.setattr(G, "collect_node", lambda s: (calls.append("collect"), s)[1])
     monkeypatch.setattr(G, "fetch_node", lambda s: (calls.append("fetch"), s)[1])
     monkeypatch.setattr(G, "snapshot_node", lambda s: (calls.append("snapshot"), s)[1])
     import geo.research.run as RR
     monkeypatch.setattr(RR, "run_research", lambda w, **k: calls.append("research") or {})
     import geo.generate.run as GR
-    monkeypatch.setattr(GR, "run_suggest", lambda w, **k: calls.append("suggest") or {"suggestions": []})
+    monkeypatch.setattr(GR, "run_suggest", lambda w, **k: calls.append("suggest")
+                        or {"suggestions": [{"topic": "t", "page_type": "guide"}]})
     monkeypatch.setattr(GR, "run_generate", lambda *a, **k: calls.append("generate") or {})
     monkeypatch.setattr(G, "assess_node", lambda s: (calls.append("assess"), s)[1])
     import geo.rules.keeper as KP
@@ -2236,3 +2239,4 @@ git commit -m "docs(specs): sync integration + P3 specs with implemented reality
 2. **占位符扫描**:无 TBD/TODO;所有代码块完整可写。
 3. **类型一致性**:`collect_evidence → evaluate → keeper` 的 dict 形状已对齐(v1.1 唯一口径:`{signal,kind,bucket,with_n,unique_n,platforms,share}`;EntryDecision.evidence.history 元素 `{week,with_n,unique_n,share,platforms}`);`load_rules(version=)`/`score_*(rules=)`/`assemble(rules_geo=…,out_name=…)`/`persisted_deltas(strengths,prev,weights)` 跨任务签名一致。
 4. **v1.1 修订自审**:①证据唯一口径贯穿 features→evidence→gate→keeper→报告(Task 11 模板 sample_n 列已改 unique_n);②持续性门槛的 prev strengths 存取闭环(rules_iteration.json `dimension_strengths` ↔ keeper 读取);③回滚单调性:rollback 把当前置为最大版本号,keeper `_bump` +1 恒安全,`restores` 元数据可溯;④Task 4 fixture 捕获先于 Task 5 重生成——Task 5 Step 0 末尾必须重跑 capture 脚本刷新 fixture(含 unique 字段),否则 Task 5/8 测试读不到 unique 桶;⑤w1 首轮预期改为"条目转正、权重不动"(unique 7/34=20.6%、3 家平台实测过门);⑥Task 0 与 RulesKeeper 零耦合,先行落地不依赖 Task 1-4。
+5. **实现纠偏记录**:gate 伪代码在实现中修正了 retire/reject 顺序(负证据优先+活跃条目保留);plan Task 6 原始顺序会导致测试失败——本计划作为诚实的实现过程记录保留。

@@ -284,6 +284,8 @@ Mention rate / Citation rate / Avg position / Share of Voice / Sentiment；分�
 
 **输入**：`eval_report`（命中/引用/诊断分/差值）+ `playbook`（研究结论）。
 
+**P3 落地**：v1 成员已与代码实际计算集对齐（语义无操作，changelog 2026-08-19）；条目/权重迭代详见 2026-08-19 P3 spec。
+
 **两层迭代（都版本化）**：
 1. **规则条目迭代**：从 eval 数据 + 研究结论提炼**规则候选(draft)** → 够证据门槛才 **draft→active**
 2. **权重迭代**：按研究结论调 GEO/SEO 各支柱占比——影响被引用大的维度权重↑、小的↓——**每次调整归一化到总和 100%**（自动校验，不通过则拒绝该次迭代）
@@ -328,7 +330,7 @@ Mention rate / Citation rate / Avg position / Share of Voice / Sentiment；分�
 - **全流程自动化（v1.1）**：采集→研究→生成→评估→规则→报告 由 **LangGraph 状态图**自动串跑；checkpoint 续跑，键 `(week,model,prompt_id,run)`；条件分支仅"实验/审计模式""全量/核心"。
 - **唯一阻塞式人工关口 = 内容发布**：生成产草稿后，人核对品牌事实 → 决定是否发布到 `site/`；其余环节（研究 playbook、规则 draft→active）自动执行，仅事后可在文件层复核/回滚。
 - **发布不阻断评估/报告（不变式）**：评估+报告**不 data-依赖本轮发布决策**——① 命中/引用/SOV/位次来自 L1/L2（模型当前实际引用，与我们是否发布无关，且新内容有收录延迟、当轮不生效）；② 自审 GEO/SEO 与竞品差值基于**当前线上 `site/`**，**草稿从不进评分**（§6 只评已发布）。故不发布时，全链**照常跑完、报告正常产出**，仅不含未上线的草稿；发布与否只改变"自审当轮测到的线上快照"，两者都是有效 run。一轮时序：采集→研究→生成→〔🔴发布确认〕→评估→规则→报告。
-- **触发**：第一版一键跑通全链（发布处停等人确认）；跑顺后定时复跑（launchd/cron），发布处仍停等。
+- **触发**：第一版一键跑通全链（发布处停等人确认）；跑顺后定时复跑（launchd/cron）→ 手动随时复跑（P3 落地为手动随时复跑，决策 2026-08-19，定时器不接），发布处仍停等。
 
 | 节点 | 关口 | 把关内容 |
 |---|---|---|
@@ -348,7 +350,7 @@ Mention rate / Citation rate / Avg position / Share of Voice / Sentiment；分�
 | **P0 评测地基** | 采集（Collector：3家API+L2全量引用+L3扩展meta 两档）→ 评估（Analyst：GEO6维+SEO5支柱**两套独立**复合分+穷尽特征；Benchmarker 差值；GSC 快照自审）→ HTML报告 7节 + LangGraph DAG 编排 + 续跑 + **智能体性能评估 B1（BFCL 式工具调用回归，版本更新 hook 触发）** | 全量 129 一键跑通、产首份报告、**成本记录呈现于报告**（不设阈值考核）；**工具调用 fixture AST 准确率 ≥ 95%** |
 | **P1 研究 agent** | 研究 agent：读 L1/L2/L3 + GSC查询词 → playbook.md + platform-profiles.md（穷尽来源特征；外部事实字段 Kimi 联网查证）+ 自动标注样本量 | 能从真实回答+全量引用列出被引用特征清单+内容模板；**抽样人审质量合格**（不以硬性字段清单验收）|
 | **P2 生成 agent** | brand.yaml（从 site/13页抽取）+ 生成 agent：读 playbook+brand+选题 → drafts/*（官网内容+Schema）→ 🔴人审→手动发 site/ | 产出一篇通过人审、事实无误的可发布官网内容 |
-| **P3 闭环** | RulesKeeper（规则条目 draft→active **自动证据门槛** + 权重迭代归一化100% + changelog + version）+ eval反哺 playbook + 定时复跑 | 复跑报告能对齐动作看到指标变化；规则版本可追溯、历史可重算 |
+| **P3 闭环** | RulesKeeper（规则条目 draft→active **自动证据门槛** + 权重迭代归一化100% + changelog + version）+ eval反哺 playbook + 定时复跑 → 手动随时复跑（P3 落地为手动随时复跑，决策 2026-08-19，定时器不接） | 复跑报告能对齐动作看到指标变化；规则版本可追溯、历史可重算 |
 
 > P0 ≈ PRD v4 的 M0–M4 全完成（含 SEO 复合分 + GSC 升级），是可独立交付的"评测诊断平台"；P1–P3 逐环叠加成闭环。**复用已完成的 M0 连通成果**，不重做。
 
@@ -420,4 +422,4 @@ Mention rate / Citation rate / Avg position / Share of Voice / Sentiment；分�
 ---
 
 *整合设计 v1.1，2026-07-29（修订 2026-07-30）｜ 已通审 2026-07-30（点 1 已补入 §4-bis：智能体性能评估 = BFCL 式工具调用）｜ P0 实现计划已生成 2026-08-02：`docs/superpowers/plans/2026-08-02-p0-evaluation-foundation.md`*
-*分期进度（2026-08-18 更新）：P0 ✅ 交付 2026-08-02（165 tests，w1 基线 self_geo 47.6 / self_seo 49.8）；P1 ✅ 合入 main 2026-08-13 @4fa000f（186 tests；live run 已于 08-18 补齐）；P2 ✅ 合入 main 2026-08-16/17（PR #1 `a84ada3` + spec-sync `129ead2`，237 tests）；**真跑六步 ✅ 2026-08-18 完成（P2 验收闭环）**——P1 live 产 playbook（6/7 平台联网查证）+ brand.yaml 人审定稿 + self-consumption guide 生成 validation=passed + 人审 pass + 部署 https://sunhestia.com/news/self-consumption-guide/ + 归档；live 校准 6 修复（Moonshot $web_search 协议 ×2 / 校验器假阳性 ×2 / brand ids + JSON-LD 白名单），247 tests，main@09e22bd。P3 未起 = 下一里程碑（RulesKeeper，输入已就绪）。*
+*分期进度（2026-08-18 更新）：P0 ✅ 交付 2026-08-02（165 tests，w1 基线 self_geo 47.6 / self_seo 49.8）；P1 ✅ 合入 main 2026-08-13 @4fa000f（186 tests；live run 已于 08-18 补齐）；P2 ✅ 合入 main 2026-08-16/17（PR #1 `a84ada3` + spec-sync `129ead2`，237 tests）；**真跑六步 ✅ 2026-08-18 完成（P2 验收闭环）**——P1 live 产 playbook（6/7 平台联网查证）+ brand.yaml 人审定稿 + self-consumption guide 生成 validation=passed + 人审 pass + 部署 https://sunhestia.com/news/self-consumption-guide/ + 归档；live 校准 6 修复（Moonshot $web_search 协议 ×2 / 校验器假阳性 ×2 / brand ids + JSON-LD 白名单），247 tests，main@09e22bd。**P3 ✅ 2026-08-19 完成（signal registry + RulesKeeper + 全链 DAG + 反哺；w1 首轮迭代 geo-seo-v1→v2 via has_breadcrumblist promotion 7/34=20.6% 3 平台，faq draft，权重不变（2 周持续性），recalc v1 = 47.6/49.8 零漂移，rollback 创建 v3 恢复 v1）**。*

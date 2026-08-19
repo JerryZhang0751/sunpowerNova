@@ -234,7 +234,8 @@ def test_authority_dimension_max():
     d = {x.name: x for x in result.dims}
     # Authority max should be lower due to P2+ missing signals
     assert d["authority"].score > 0.0
-    assert d["authority"].signals.get("p2plus_degraded") is True
+    # backlinks_est is 0 due to P2+ unknown degradation
+    assert d["authority"].signals.get("backlinks_est") == 0.0
 
 
 def test_authority_dimension_min():
@@ -250,12 +251,11 @@ def test_authority_dimension_min():
 
 
 def test_authority_dimension_p2plus_degraded_flag():
-    """Test that authority dimension sets p2plus_degraded flag."""
+    """Test that authority dimension shows P2+ degradation through backlinks_est=0."""
     result = score_seo(PAGE, GSC, CONTENT)
     d = {x.name: x for x in result.dims}
-    assert d["authority"].signals.get("p2plus_degraded") is True
-    assert d["authority"].signals.get("backlinks_est") == "unknown"
-    assert d["authority"].signals.get("domain_authority") == "unknown"
+    # backlinks_est is registered but returns 0 (unknown degradation)
+    assert d["authority"].signals.get("backlinks_est") == 0.0
 
 
 def test_authority_dimension_gsc_ratio():
@@ -459,33 +459,29 @@ def test_signals_in_dimensions():
     result = score_seo(PAGE, GSC, CONTENT)
     d = {x.name: x for x in result.dims}
 
-    # Check crawlability signals
+    # Check crawlability signals (new payload shape: {signal_id: value})
+    assert "http_200" in d["crawlability_index"].signals
     assert "in_sitemap" in d["crawlability_index"].signals
     assert "canonical_self" in d["crawlability_index"].signals
+    assert "https" in d["crawlability_index"].signals
 
-    # Check technical_foundation signals
+    # Check technical_foundation signals (use registered signal names)
     assert "https" in d["technical_foundation"].signals
-    assert "viewport" in d["technical_foundation"].signals
+    assert "mobile_viewport" in d["technical_foundation"].signals
 
-    # Check on_page signals
-    assert "title" in d["on_page"].signals
-    assert "h" in d["on_page"].signals
+    # Check on_page signals (new payload shape)
+    assert "unique_title" in d["on_page"].signals
+    assert "title_len_ok" in d["on_page"].signals
+    assert "single_h1" in d["on_page"].signals
 
-    # Check content_eeat signals
-    assert d["content_eeat"].signals == CONTENT
+    # Check content_eeat signals (new payload shape)
+    assert "word_count_band" in d["content_eeat"].signals
+    assert "has_author_byline" in d["content_eeat"].signals
 
-    # Check authority signals
-    assert "impressions" in d["authority"].signals
-    assert "p2plus_degraded" in d["authority"].signals
-
-
-def test_invalid_dimension_name():
-    """Test that invalid dimension names raise ValueError."""
-    from geo.assess.seo_scorer import _dim
-    import pytest
-
-    with pytest.raises(ValueError, match="Dimension 'invalid_dim' not found"):
-        _dim("invalid_dim", 50.0, {})
+    # Check authority signals (new payload shape with registered names)
+    assert "gsc_impressions" in d["authority"].signals
+    assert "gsc_clicks" in d["authority"].signals
+    assert "backlinks_est" in d["authority"].signals
 
 
 def test_seo_independent_from_geo():
@@ -504,3 +500,58 @@ def test_seo_independent_from_geo():
     # Should contain SEO-specific dimensions
     seo_dimensions = {"crawlability_index", "technical_foundation", "on_page", "content_eeat", "authority"}
     assert dim_names == seo_dimensions
+
+
+def test_membership_driven_crawlability_only():
+    """成员关系驱动:注入只含 crawlability_index 的规则 → 维度分 = 5个 checker 均值。"""
+    import types
+    # 构造测试数据: robots_not_blocked=False, 其他 4 项通过
+    custom_page = {
+        "http_status": 200,           # http_200 = 100.0
+        "https": True,                 # https = 100.0
+        "in_sitemap": True,            # in_sitemap = 100.0
+        "robots_not_blocked": False,   # robots_not_blocked = 0.0
+        "canonical_self": True,        # canonical_self = 100.0
+        "has_viewport": True,
+    }
+    custom_gsc = {}
+    custom_content = {}
+
+    # 计算 5 个 checker 的预期均值
+    expected_signals = {
+        "http_200": 100.0,
+        "in_sitemap": 100.0,
+        "robots_not_blocked": 0.0,
+        "canonical_self": 100.0,
+        "https": 100.0,
+    }
+    expected_dim_score = round(sum(expected_signals.values()) / len(expected_signals), 1)  # 400.0 / 5 = 80.0
+
+    # 注入只含 crawlability_index 的规则
+    injected_rules = types.SimpleNamespace(
+        version="geo-seo-v1", composite="seo",
+        weights={"crawlability_index": 100},
+        signals={"crawlability_index": ["http_200", "in_sitemap", "robots_not_blocked", "canonical_self", "https"]},
+        severity_bands={}, p2plus_missing=[], entries=[]
+    )
+
+    result = score_seo(custom_page, custom_gsc, custom_content, rules=injected_rules)
+
+    # 断言: 只返回一个维度,命名为 crawlability_index
+    assert [d.name for d in result.dims] == ["crawlability_index"]
+    # 断言: 维度分等于 5 个 checker 的均值
+    assert result.dims[0].score == expected_dim_score, f"Expected {expected_dim_score}, got {result.dims[0].score}"
+    # 断言: 总分等于该维度分
+    assert result.total == expected_dim_score, f"Expected total={expected_dim_score}, got {result.total}"
+    # 断言: 信号值与预期一致
+    assert result.dims[0].signals == expected_signals
+
+
+def test_unknown_signal_id_rejected():
+    import types
+    bad = types.SimpleNamespace(version="x", composite="seo",
+        weights={"crawlability_index": 100}, signals={"crawlability_index": ["no_such_signal"]},
+        severity_bands={}, p2plus_missing=[], entries=[])
+    import pytest
+    with pytest.raises(ValueError, match="no_such_signal"):
+        score_seo(PAGE, {}, {}, rules=bad)

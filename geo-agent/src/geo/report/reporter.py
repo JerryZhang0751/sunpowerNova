@@ -75,6 +75,11 @@ if __name__ == "__main__":
         (REPO/"data"/"analysis"/f"w{week}"/"eval_report.json").read_text(encoding="utf-8")
     )
 
+    # Load rules_iteration.json for §5 if it exists
+    ri_path = REPO/"data"/"analysis"/f"w{week}"/"rules_iteration.json"
+    if ri_path.exists():
+        rep["rules_iteration"] = json.loads(ri_path.read_text(encoding="utf-8"))
+
     out = REPO/"reports"/f"w{week}"/"report.html"
     out.parent.mkdir(parents=True, exist_ok=True)
 

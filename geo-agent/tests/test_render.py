@@ -58,3 +58,32 @@ def test_render_playbook_per_bucket_matching():
     assert any("对比表常见" in l for l in lines[qa_section_index-5:qa_section_index+5])
     # Check that qa conclusion appears near qa bucket
     assert any("Q&A很重要" in l for l in lines[qa_section_index:qa_section_index+5])
+
+def test_render_playbook_feedback_section():
+    from geo.research.render import render_playbook
+    from geo.research.models import FeatureAggregates
+    agg = FeatureAggregates(week=1,
+        coverage=type("C", (), {"total_l1": 45, "total_cited_sources": 1469, "l3_resolved": 134,
+                                "l3_missing": 1315, "l3_js_only": 20})(),
+        formats=[], sources={}, platforms={}, problem_space={})
+    feed = {"published": [{"slug": "self-consumption", "created": "2026-08-18"}],
+            "latest": {"week": 1, "mention_rate": 0.133, "citation_rate": 0.089,
+                       "sov": 3.78, "self_geo": 47.6, "self_seo": 49.8},
+            "prev": None, "rule_version": "geo-seo-v1"}
+    md = render_playbook([], agg, 2, feed=feed)
+    assert "## 6. 上期动作→指标对照" in md
+    assert "self-consumption" in md and "47.6" in md and "首期" in md   # prev=None → 首期基线注
+    md2 = render_playbook([], agg, 2, feed=None)
+    assert "无对照" in md2
+
+def test_render_playbook_rule_version_live():
+    from geo.research.render import render_playbook
+    from geo.research.models import FeatureAggregates
+    from geo.shared.config import settings
+    agg = FeatureAggregates(week=1,
+        coverage=type("C", (), {"total_l1": 0, "total_cited_sources": 0, "l3_resolved": 0,
+                                "l3_missing": 0, "l3_js_only": 0})(),
+        formats=[], sources={}, platforms={}, problem_space={})
+    md = render_playbook([], agg, 3, feed=None)
+    header = md.split("\n")[1]
+    assert f"rule_version {settings.run.rule_version}" in header   # 动态读,不再硬编码

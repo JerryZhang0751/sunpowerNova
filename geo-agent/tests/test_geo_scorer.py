@@ -284,7 +284,7 @@ def test_weight_application():
 
 
 def test_boundary_conditions_ratio():
-    """Test boundary conditions for _ratio function through actual scoring."""
+    """Test boundary conditions for ratio-based signals through actual scoring."""
     src = L3Source(url="https://test.com", sha1="x", text="t", structural={}, semantic={})
     brand = {}
     static = {}
@@ -308,10 +308,43 @@ def test_boundary_conditions_ratio():
     assert 0 < d["citability"].score < 100
 
 
-def test_invalid_dimension_name():
-    """Test that invalid dimension names raise ValueError."""
-    from geo.assess.geo_scorer import _dim
-    import pytest
+def test_membership_driven_and_rules_injection():
+    """成员关系驱动:注入裁剪版规则 → 只算剩余维度;权重取注入值。"""
+    from geo.rules.loader import load_rules
+    import types
+    brand = {"mention": 1, "cited": 0, "sov": 0.0, "entity_known": False}
+    static = {"robots_ai": {"GPTBot": True, "ClaudeBot": True}, "https": True}
+    full = score_geo(SRC, brand, static)
+    assert full.total == 65.0                       # 与旧硬编码一致(见 Task1 fixture 对数)
+    tiny = types.SimpleNamespace(
+        version="geo-seo-v1", composite="geo",
+        weights={"citability": 100}, signals={"citability": ["has_definition_segment"]},
+        severity_bands={}, p2plus_missing=[], entries=[])
+    one = score_geo(SRC, brand, static, rules=tiny)
+    assert [d.name for d in one.dims] == ["citability"]
+    assert one.dims[0].score == 100.0 and one.total == 100.0
+    assert one.dims[0].signals == {"has_definition_segment": 100.0}
 
-    with pytest.raises(ValueError, match="Dimension 'invalid_dim' not found"):
-        _dim("invalid_dim", 50.0, {})
+
+def test_unknown_signal_id_rejected():
+    import types
+    bad = types.SimpleNamespace(version="x", composite="geo",
+        weights={"citability": 100}, signals={"citability": ["no_such_signal"]},
+        severity_bands={}, p2plus_missing=[], entries=[])
+    import pytest
+    with pytest.raises(ValueError, match="no_such_signal"):
+        score_geo(SRC, {}, {}, rules=bad)
+
+
+def test_v1_yaml_membership_matches_registry():
+    from geo.assess.registry import GEO_SIGNALS, SEO_SIGNALS
+    from geo.rules.loader import load_rules
+    for name, reg in (("geo", GEO_SIGNALS), ("seo", SEO_SIGNALS)):
+        r = load_rules(name)
+        assert r.entries == []
+        for dim, ids in r.signals.items():
+            assert ids, f"{name}.{dim} 成员为空"
+            assert all(i in reg for i in ids), f"{name}.{dim} 含未注册信号"
+    g = load_rules("geo")
+    assert "about_page_present" not in g.signals.get("eeat", [])      # 校正点:从未生效者不得回流
+    assert "llms_txt_present" not in g.signals.get("technical_geo", [])

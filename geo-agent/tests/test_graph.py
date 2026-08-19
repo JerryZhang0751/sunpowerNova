@@ -15,10 +15,13 @@ def test_dag_order(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk("fetch")), \
          patch("geo.orchestrate.graph.snapshot_node", mk("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk("rules")), \
          patch("geo.orchestrate.graph.report_node", mk("report")):
         g = build_graph()
         g.invoke({"week":99}, config={"configurable": {"thread_id": "test_w99"}})
-    assert calls == ["collect","fetch","snapshot","assess","report"]
+    assert calls == ["collect","fetch","snapshot","assess","research","generate","rules","report"]
 
 
 def test_checkpoint_resume_behavior(tmp_path):
@@ -42,6 +45,9 @@ def test_checkpoint_resume_behavior(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk_tracked("fetch")), \
          patch("geo.orchestrate.graph.snapshot_node", mk_tracked("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk_tracked("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk_tracked("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk_tracked("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
         # Mock the database creation in build_graph to use our test database
@@ -53,7 +59,7 @@ def test_checkpoint_resume_behavior(tmp_path):
             g.invoke({"week": 42}, config={"configurable": {"thread_id": "test_w42"}})
 
     first_run_calls = execution_log.copy()
-    assert first_run_calls == ["collect", "fetch", "snapshot", "assess", "report"]
+    assert first_run_calls == ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]
 
     # Verify checkpoint was written
     checkpoint_data = checkpointer.get({"configurable": {"thread_id": "test_w42"}})
@@ -81,19 +87,22 @@ def test_state_passing_between_nodes(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk_state_tracker("fetch")), \
          patch("geo.orchestrate.graph.snapshot_node", mk_state_tracker("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk_state_tracker("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk_state_tracker("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk_state_tracker("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk_state_tracker("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_state_tracker("report")):
 
         g = build_graph()
         g.invoke({"week": 123}, config={"configurable": {"thread_id": "test_w123"}})
 
     # Verify week=123 propagated through all nodes
-    assert len(state_snapshots) == 5
+    assert len(state_snapshots) == 8
     for snapshot in state_snapshots:
         assert snapshot["week"] == 123, f"week not preserved in {snapshot['node']}"
 
     # Verify node order
     node_order = [s["node"] for s in state_snapshots]
-    assert node_order == ["collect", "fetch", "snapshot", "assess", "report"]
+    assert node_order == ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]
 
 
 def test_checkpoint_persistence(tmp_path):
@@ -111,6 +120,9 @@ def test_checkpoint_persistence(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk_simple("fetch")), \
          patch("geo.orchestrate.graph.snapshot_node", mk_simple("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk_simple("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk_simple("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk_simple("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk_simple("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_simple("report")):
 
         with patch("sqlite3.connect", return_value=conn):
@@ -154,6 +166,9 @@ def test_partial_run_then_resume(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk_tracked("fetch")), \
          patch("geo.orchestrate.graph.snapshot_node", mk_tracked("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk_tracked("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk_tracked("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk_tracked("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
         with patch("sqlite3.connect", return_value=conn):
@@ -167,6 +182,9 @@ def test_partial_run_then_resume(tmp_path):
     assert "fetch" in first_run_calls
     assert "snapshot" in first_run_calls
     assert "assess" in first_run_calls
+    assert "research" in first_run_calls
+    assert "generate" in first_run_calls
+    assert "rules" in first_run_calls
     assert "report" in first_run_calls
 
     # Verify checkpoint exists after run and contains execution state
@@ -180,6 +198,9 @@ def test_partial_run_then_resume(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk_tracked("fetch")), \
          patch("geo.orchestrate.graph.snapshot_node", mk_tracked("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk_tracked("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk_tracked("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk_tracked("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
         with patch("sqlite3.connect", return_value=conn):
@@ -189,7 +210,7 @@ def test_partial_run_then_resume(tmp_path):
             g.invoke({"week": 99}, config={"configurable": {"thread_id": "test_w99"}})
 
     # Different thread_id should execute all nodes
-    assert execution_log == ["collect", "fetch", "snapshot", "assess", "report"]
+    assert execution_log == ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]
 
     # Verify second checkpoint exists independently
     checkpoint2 = checkpointer.get({"configurable": {"thread_id": "test_w99"}})
@@ -225,6 +246,9 @@ def test_resume_skip_behavior(tmp_path):
                  patch("geo.orchestrate.graph.fetch_node", mk_tracked("fetch")), \
                  patch("geo.orchestrate.graph.snapshot_node", mk_tracked("snapshot")), \
                  patch("geo.orchestrate.graph.assess_node", mk_tracked("assess")), \
+                 patch("geo.orchestrate.graph.research_node", mk_tracked("research")), \
+                 patch("geo.orchestrate.graph.generate_node", mk_tracked("generate")), \
+                 patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
                  patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
                 from geo.orchestrate.graph import run_pipeline
@@ -265,6 +289,9 @@ def test_resume_checkpoint_integrity(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk_tracked("fetch")), \
          patch("geo.orchestrate.graph.snapshot_node", mk_tracked("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk_tracked("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk_tracked("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk_tracked("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
         with patch("sqlite3.connect", return_value=conn):
@@ -287,6 +314,9 @@ def test_resume_checkpoint_integrity(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk_tracked("fetch")), \
          patch("geo.orchestrate.graph.snapshot_node", mk_tracked("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk_tracked("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk_tracked("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk_tracked("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
         with patch("sqlite3.connect", return_value=conn):
@@ -301,7 +331,7 @@ def test_resume_checkpoint_integrity(tmp_path):
 
 
 def test_node_wiring_and_state_passing(tmp_path):
-    """Test that state accumulates correctly across collect→fetch→snapshot→assess→report."""
+    """Test that state accumulates correctly across collect→fetch→snapshot→assess→research→generate→rules→report."""
     state_history = []
 
     def mk_state_accumulator(name):
@@ -319,15 +349,18 @@ def test_node_wiring_and_state_passing(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk_state_accumulator("fetch")), \
          patch("geo.orchestrate.graph.snapshot_node", mk_state_accumulator("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk_state_accumulator("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk_state_accumulator("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk_state_accumulator("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk_state_accumulator("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_state_accumulator("report")):
 
         g = build_graph()
         g.invoke({"week": 202}, config={"configurable": {"thread_id": "test_w202"}})
 
-    # Verify all 5 nodes executed in correct order
-    assert len(state_history) == 5
+    # Verify all 8 nodes executed in correct order
+    assert len(state_history) == 8
     node_order = [h["node"] for h in state_history]
-    assert node_order == ["collect", "fetch", "snapshot", "assess", "report"]
+    assert node_order == ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]
 
     # Verify state propagation: each node sees the week value
     for entry in state_history:
@@ -363,6 +396,9 @@ def test_error_handling_graceful_degradation(tmp_path):
          patch("geo.orchestrate.graph.fetch_node", mk_failing_fetch), \
          patch("geo.orchestrate.graph.snapshot_node", mk_tracked("snapshot")), \
          patch("geo.orchestrate.graph.assess_node", mk_tracked("assess")), \
+         patch("geo.orchestrate.graph.research_node", mk_tracked("research")), \
+         patch("geo.orchestrate.graph.generate_node", mk_tracked("generate")), \
+         patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
         with patch("sqlite3.connect", return_value=conn):
@@ -379,6 +415,9 @@ def test_error_handling_graceful_degradation(tmp_path):
     assert "fetch" in execution_log
     assert "snapshot" not in execution_log, "snapshot should not execute after fetch failure"
     assert "assess" not in execution_log, "assess should not execute after fetch failure"
+    assert "research" not in execution_log, "research should not execute after fetch failure"
+    assert "generate" not in execution_log, "generate should not execute after fetch failure"
+    assert "rules" not in execution_log, "rules should not execute after fetch failure"
     assert "report" not in execution_log, "report should not execute after fetch failure"
 
     # Verify checkpoint state is not corrupted (either doesn't exist or is in valid state)
@@ -386,3 +425,55 @@ def test_error_handling_graceful_degradation(tmp_path):
     # After failure, checkpoint may exist but should be in a consistent state
     # The key assertion: we didn't silently continue to snapshot/assess/report
     assert checkpoint is None or checkpoint.get("channel_values", {}).get("week") == 303
+
+
+def test_full_chain_order_and_generate_skip(tmp_path, monkeypatch):
+    """Test full chain order including new nodes and generate skip behavior."""
+    import geo.orchestrate.graph as G
+    calls = []
+    monkeypatch.setattr(G, "REPO", tmp_path)  # Isolate real drafts/eval_report paths
+    monkeypatch.setattr(G, "collect_node", lambda s: (calls.append("collect"), s)[1])
+    monkeypatch.setattr(G, "fetch_node", lambda s: (calls.append("fetch"), s)[1])
+    monkeypatch.setattr(G, "snapshot_node", lambda s: (calls.append("snapshot"), s)[1])
+    import geo.research.run as RR
+    monkeypatch.setattr(RR, "run_research", lambda w, **k: (calls.append("research"), {})[1])
+    import geo.generate.run as GR
+    monkeypatch.setattr(GR, "run_suggest", lambda w, **k: (calls.append("suggest"),
+                                                          {"suggestions": [{"topic": "t", "page_type": "guide"}]})[1])
+    monkeypatch.setattr(GR, "run_generate", lambda *a, **k: (calls.append("generate"), {})[1])
+    monkeypatch.setattr(G, "assess_node", lambda s: (calls.append("assess"), s)[1])
+    import geo.rules.keeper as KP
+    monkeypatch.setattr(KP, "iterate", lambda w, **k: (calls.append("rules"), {})[1])
+    monkeypatch.setattr(G, "report_node", lambda s: (calls.append("report"), s)[1])
+    g = G.build_graph()
+    g.invoke({"week": 9}, config={"configurable": {"thread_id": "test-full"}})
+    # v1.1: assess before generate (generate needs this week's eval_report)
+    assert calls == ["collect", "fetch", "snapshot", "assess", "research", "suggest",
+                     "generate", "rules", "report"]
+
+
+def test_force_new_run_uses_fresh_thread(tmp_path, monkeypatch):
+    """Test that --force-new-run creates timestamped thread ID."""
+    import geo.orchestrate.graph as G
+    seen = {}
+    class FakeApp:
+        def invoke(self, state, config=None):
+            seen["thread"] = config["configurable"]["thread_id"]
+    monkeypatch.setattr(G, "build_graph", lambda: FakeApp())
+    G.run_pipeline(9, force_new_run=True)
+    assert seen["thread"].startswith("w9-")  # Timestamped new thread, bypasses old checkpoint
+
+
+def test_generate_node_skips_when_unreviewed_draft(tmp_path, monkeypatch):
+    """Test that generate_node skips when unreviewed drafts exist."""
+    import geo.orchestrate.graph as G
+    import geo.generate.run as GR
+    # Patch REPO first so draft paths resolve to tmp_path, not real repo
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    drafts = tmp_path / "content" / "drafts"
+    drafts.mkdir(parents=True, exist_ok=True)
+    (drafts / "pending.md").write_text("---\nslug: pending\n---\nbody", encoding="utf-8")
+    # Mock run_suggest to fail if called (only skip path should succeed)
+    boom = lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not call run_suggest when draft exists"))
+    monkeypatch.setattr(GR, "run_suggest", boom)
+    G.generate_node({"week": 9})  # Should not raise = skip succeeded

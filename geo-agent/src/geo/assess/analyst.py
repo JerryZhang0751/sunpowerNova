@@ -138,8 +138,27 @@ def competitor_domains_by_count(week: int, n: int = 10) -> list[str]:
                 c[host] += 1
     return [d for d, _ in sorted(c.items(), key=lambda x: (-x[1], x[0]))[:n]]
 
+def _score_competitors(week: int, static_signals: dict | None) -> list:
+    """竞品 GEO 评分:score_geo 第三参传 {} —— 竞品无全站快照,静态类信号按 0 计(下界 proxy)。
+    不得借用目标站 static_signals(含 pages 列表):否则 about_page_present 等站点级
+    信号会让全体竞品白拿分(v1.1 修正,外部评审 item 6)。"""
+    comp_geos = []
+    for comp_domain in competitor_domains_by_count(week, 5):
+        comp_url = f"https://{comp_domain}"
+        comp_l3 = _load_l3_source(comp_url)
+        if comp_l3:
+            comp_brand_signals = {"mention": 0, "cited": 0, "sov": 0.0, "entity_known": False,
+                                  "on_youtube": False, "on_reddit": False,
+                                  "on_wikipedia": False, "on_linkedin": False}
+            try:
+                comp_geos.append(score_geo(comp_l3, comp_brand_signals, {}))
+            except (KeyError, TypeError, ValueError):
+                continue
+    return comp_geos
 
-def assemble(week: int) -> dict:
+
+def assemble(week: int, *, rules_geo=None, rules_seo=None,
+             out_name: str = "eval_report.json", rule_version: str | None = None) -> dict:
     """
     Assemble deterministic evaluation report from L2 records, GEO/SEO scores, and competitive benchmarks.
 
@@ -148,11 +167,15 @@ def assemble(week: int) -> dict:
 
     Args:
         week: Week number to analyze
+        rules_geo: Optional GEO rules dict for recalc injection (default: use current version)
+        rules_seo: Optional SEO rules dict for recalc injection (default: use current version)
+        out_name: Output filename (default: "eval_report.json")
+        rule_version: Rule version to tag in report (default: from settings.run.rule_version)
 
     Returns:
         dict: Evaluation report with metrics, scores, and competitive differentials
     """
-    rule_version = settings.run.rule_version
+    rule_version = rule_version or settings.run.rule_version
     l1s = list(_iter_l1(week))
 
     # Group L1 records by model
@@ -200,7 +223,7 @@ def assemble(week: int) -> dict:
     if brand_l3 and static_signals:
         brand_metrics = _extract_brand_metrics(l1s)
         try:
-            self_geo_score = score_geo(brand_l3, brand_metrics, static_signals)
+            self_geo_score = score_geo(brand_l3, brand_metrics, static_signals, rules=rules_geo)
         except (KeyError, TypeError, ValueError):
             # Missing required data for scoring - will remain None
             pass
@@ -258,7 +281,7 @@ def assemble(week: int) -> dict:
                     "meta_desc": meta_desc,        # real extracted <meta description>
                 }
 
-                page_seo = score_seo(page_data, gsc_snapshot, content_signals)
+                page_seo = score_seo(page_data, gsc_snapshot, content_signals, rules=rules_seo)
                 seo_scores.append(page_seo)
             except (KeyError, TypeError, ValueError):
                 # Skip pages that can't be scored
@@ -276,20 +299,7 @@ def assemble(week: int) -> dict:
         )
 
     # Score competitors — deterministic top-5 by citation count (matches fetch_node)
-    comp_geos = []
-    for comp_domain in competitor_domains_by_count(week, 5):
-        comp_url = f"https://{comp_domain}"
-        comp_l3 = _load_l3_source(comp_url)
-        if comp_l3 and static_signals:
-            # Use minimal brand signals for competitors (P0 proxy)
-            comp_brand_signals = {"mention": 0, "cited": 0, "sov": 0.0, "entity_known": False,
-                                 "on_youtube": False, "on_reddit": False, "on_wikipedia": False, "on_linkedin": False}
-            try:
-                comp_score = score_geo(comp_l3, comp_brand_signals, static_signals)
-                comp_geos.append(comp_score)
-            except (KeyError, TypeError, ValueError):
-                # Skip competitors that can't be scored
-                continue
+    comp_geos = _score_competitors(week, static_signals)
 
     # Calculate competitive gap
     gap_result = None
@@ -351,7 +361,7 @@ def assemble(week: int) -> dict:
     out.mkdir(parents=True, exist_ok=True)
 
     # Write eval_report.json
-    (out / "eval_report.json").write_text(
+    (out / out_name).write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8"
     )

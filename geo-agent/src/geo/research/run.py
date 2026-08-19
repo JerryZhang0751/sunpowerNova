@@ -13,6 +13,32 @@ log = logging.getLogger("research.run")
 PLATFORMS_TO_VERIFY = ["Qwen","Doubao","Zhipu"]
 BROADER = ["ChatGPT","Gemini","Perplexity","Claude"]
 
+def _collect_feed(week: int, repo: Path) -> dict | None:
+    """确定性反哺输入:上期 eval_report + 已发布清单 + 当前规则版本。零 Kimi。"""
+    def _metrics(w):
+        p = repo / "data" / "analysis" / f"w{w}" / "eval_report.json"
+        if not p.exists():
+            return None
+        r = json.loads(p.read_text(encoding="utf-8"))
+        m = (r.get("gap", {}) or {}).get("metrics", {}) or {}
+        return {"week": w, "mention_rate": m.get("mention_rate"), "citation_rate": m.get("citation_rate"),
+                "sov": m.get("sov"), "self_geo": (r.get("self_geo") or {}).get("total"),
+                "self_seo": (r.get("self_seo") or {}).get("total")}
+    published = []
+    pub_dir = repo / "content" / "published"
+    if pub_dir.exists():
+        import yaml as _y
+        for f in sorted(pub_dir.glob("*.md")):
+            try:
+                fm = _y.safe_load(f.read_text(encoding="utf-8").split("---")[1])
+                published.append({"slug": fm.get("slug") or f.stem, "created": fm.get("created", "")})
+            except Exception:
+                continue
+    latest, prev = _metrics(week - 1), _metrics(week - 2)
+    if latest is None and not published:
+        return None
+    return {"published": published, "latest": latest, "prev": prev}
+
 def run_research(week: int, kimi_enabled: bool = True, *, synth_fn=None, web_fn=None,
                  fetch_n: int = 40, repo: Path = REPO) -> dict:
     corpus = build_corpus(week, repo=repo)
@@ -24,6 +50,7 @@ def run_research(week: int, kimi_enabled: bool = True, *, synth_fn=None, web_fn=
 
     conclusions = []
     verified = {}
+    feed = _collect_feed(week, repo)
     if kimi_enabled:
         try: conclusions = synthesize(agg, examples=[], chat_fn=synth_fn) if synth_fn else synthesize(agg, [])
         except Exception as e: log.warning("synthesize disabled/failed: %s", e)
@@ -36,7 +63,7 @@ def run_research(week: int, kimi_enabled: bool = True, *, synth_fn=None, web_fn=
     (repo/"data"/"analysis"/f"w{week}"/"research_aggregates.json").write_text(
         json.dumps(_agg_jsonable(agg), ensure_ascii=False, indent=2), encoding="utf-8")
     (repo/"knowledge").mkdir(parents=True, exist_ok=True)
-    (repo/"knowledge"/"playbook.md").write_text(render_playbook(conclusions, agg, week), encoding="utf-8")
+    (repo/"knowledge"/"playbook.md").write_text(render_playbook(conclusions, agg, week, feed=feed), encoding="utf-8")
     (repo/"knowledge"/"platform-profiles.md").write_text(
         render_profiles(agg.platforms, verified, week), encoding="utf-8")
     return {"playbook": str(repo/"knowledge"/"playbook.md"),

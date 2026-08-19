@@ -3,6 +3,7 @@
 state/
 data/
 reports/
+rules/history/
 __pycache__/
 *.pyc
 

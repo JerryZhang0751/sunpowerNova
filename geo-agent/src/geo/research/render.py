@@ -5,10 +5,40 @@ from geo.research.models import FeatureAggregates, PlaybookConclusion
 
 _FMT_LABEL = {"comparison_table":"对比表","qa":"Q&A","list":"清单","definition":"定义段","spec_card":"规格卡"}
 
-def render_playbook(conclusions: list[PlaybookConclusion], aggregates: FeatureAggregates, week: int) -> str:
+def _rule_version(feed: dict | None) -> str:
+    rv = (feed or {}).get("rule_version")
+    if rv:
+        return rv
+    from geo.shared.config import settings
+    return settings.run.rule_version
+
+def _feedback_section(feed: dict | None) -> list[str]:
+    if not feed:
+        return ["\n## 6. 上期动作→指标对照", "- 无对照(数据缺失)。"]
+    L = ["\n## 6. 上期动作→指标对照"]
+    pub = feed.get("published") or []
+    if pub:
+        L.append("- 上期发布: " + "; ".join(f"{p['slug']}({p['created']})" for p in pub))
+    else:
+        L.append("- 上期发布: 无")
+    lat, prev = feed.get("latest"), feed.get("prev")
+    def row(k, label):
+        if lat is None:
+            return f"- {label}: 无数据"
+        v = lat[k]
+        if prev:
+            return f"- {label}: {v} → 前期 {prev[k]}(Δ{round(v - prev[k], 1):+})"
+        return f"- {label}: {v}(首期基线,无环比)"
+    L += [row("mention_rate", "mention_rate"), row("citation_rate", "citation_rate"),
+          row("sov", "sov"), row("self_geo", "self_geo"), row("self_seo", "self_seo")]
+    L.append(f"- 规则版本: {feed.get('rule_version', '—')}")
+    L.append("- ⚠️ 收录有延迟、单周样本小;对照为观察性相关,非因果归因。")
+    return L
+
+def render_playbook(conclusions: list[PlaybookConclusion], aggregates: FeatureAggregates, week: int, feed: dict | None = None) -> str:
     c = aggregates.coverage
     L = [f"# SunHestia GEO Playbook · w{week}",
-         f"> rule_version geo-seo-v1 | L1={c.total_l1} | 被引源分析 sample_n={c.l3_resolved}(缺失{c.l3_missing}/js_only{c.l3_js_only})",
+         f"> rule_version {_rule_version(feed)} | L1={c.total_l1} | 被引源分析 sample_n={c.l3_resolved}(缺失{c.l3_missing}/js_only{c.l3_js_only})",
          "> ⚠️ 观察性相关非因果，低置信项已标注。结论由确定性聚合 + Kimi 综合生成。\n",
          "## 1. 被引格式特征"]
     fmt_concl = [x for x in conclusions if x.category=="format"]
@@ -26,6 +56,7 @@ def render_playbook(conclusions: list[PlaybookConclusion], aggregates: FeatureAg
           f"意图簇：{aggregates.problem_space.get('intent_clusters')}  选题缺口候选：{aggregates.problem_space.get('topic_gaps')}",
           "\n## 5. 可复用内容模板",
           "- 据 §1 高被引格式，建议骨架：对比表 / 定义段 / 规格卡（由生成 agent P2 落地）。"]
+    L += _feedback_section(feed)
     return "\n".join(L) + "\n"
 
 def render_profiles(platforms_metrics: dict, verified_facts: dict, week: int) -> str:
