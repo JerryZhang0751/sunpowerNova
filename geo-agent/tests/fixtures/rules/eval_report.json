@@ -1,0 +1,185 @@
+{
+  "authority_gap_note": "权威分基于 P0 代理；外部权威(backlinks/DA)未计入",
+  "gap": {
+    "comp_avg_total": 1.9,
+    "dim_diff": {
+      "brand": 100.0,
+      "citability": 24.0,
+      "eeat": 25.0,
+      "platform": 0.0,
+      "schema": 33.3,
+      "technical_geo": 50.0
+    },
+    "metrics": {
+      "avg_position": null,
+      "citation_rate": 0.08866666666666667,
+      "mention_rate": 0.133,
+      "sov": 3.777666666666667
+    },
+    "self_total": 47.6
+  },
+  "metrics": {
+    "doubao": {
+      "avg_position": null,
+      "citation_rate": 0.0,
+      "mention_rate": 0.133,
+      "planned": 15,
+      "sov": 3.2,
+      "valid": 15
+    },
+    "qwen": {
+      "avg_position": 5.5,
+      "citation_rate": 0.133,
+      "mention_rate": 0.133,
+      "planned": 15,
+      "sov": 3.6,
+      "valid": 15
+    },
+    "zhipu": {
+      "avg_position": 6.5,
+      "citation_rate": 0.133,
+      "mention_rate": 0.133,
+      "planned": 15,
+      "sov": 4.533,
+      "valid": 15
+    }
+  },
+  "prompt_set_version": "aa115bf0a9e3",
+  "rule_version": "geo-seo-v1",
+  "self_geo": {
+    "dims": [
+      {
+        "name": "citability",
+        "score": 32.0,
+        "signals": {
+          "datapoint_count": 60.0,
+          "faq_block_count": 0.0,
+          "has_definition_segment": 100.0,
+          "list_count": 0.0,
+          "table_count": 0.0
+        },
+        "weight": 25.0
+      },
+      {
+        "name": "brand",
+        "score": 100.0,
+        "signals": {
+          "cited_count": 100.0,
+          "entity_known": 100.0,
+          "mention_count": 100.0,
+          "sov_share": 100.0
+        },
+        "weight": 20.0
+      },
+      {
+        "name": "eeat",
+        "score": 25.0,
+        "signals": {
+          "cites_external_sources": 0.0,
+          "has_author_byline": 0.0,
+          "has_publish_date": 0.0,
+          "org_or_person_schema": 100.0
+        },
+        "weight": 20.0
+      },
+      {
+        "name": "technical_geo",
+        "score": 75.0,
+        "signals": {
+          "canonical_present": 100.0,
+          "https": 0.0,
+          "robots_claudebot": 100.0,
+          "robots_gptbot": 100.0
+        },
+        "weight": 15.0
+      },
+      {
+        "name": "schema",
+        "score": 33.3,
+        "signals": {
+          "has_article": 0.0,
+          "has_faqpage": 0.0,
+          "has_organization": 100.0,
+          "has_product": 0.0,
+          "schema_type_count": 66.7
+        },
+        "weight": 10.0
+      },
+      {
+        "name": "platform",
+        "score": 0.0,
+        "signals": {
+          "on_linkedin": 0.0,
+          "on_reddit": 0.0,
+          "on_wikipedia": 0.0,
+          "on_youtube": 0.0
+        },
+        "weight": 10.0
+      }
+    ],
+    "total": 47.6
+  },
+  "self_seo": {
+    "dims": [
+      {
+        "name": "crawlability_index",
+        "score": 100.0,
+        "signals": {
+          "canonical_self": 100.0,
+          "http_200": 100.0,
+          "https": 100.0,
+          "in_sitemap": 100.0,
+          "robots_not_blocked": 100.0
+        },
+        "weight": 20.0
+      },
+      {
+        "name": "technical_foundation",
+        "score": 100.0,
+        "signals": {
+          "http2": 100.0,
+          "https": 100.0,
+          "mobile_viewport": 100.0,
+          "renderable_static": 100.0
+        },
+        "weight": 10.0
+      },
+      {
+        "name": "on_page",
+        "score": 80.0,
+        "signals": {
+          "heading_hierarchy_ok": 100.0,
+          "meta_desc_present": 100.0,
+          "single_h1": 100.0,
+          "title_len_ok": 0.0,
+          "unique_title": 100.0
+        },
+        "weight": 25.0
+      },
+      {
+        "name": "content_eeat",
+        "score": 1.4,
+        "signals": {
+          "cites_external_sources": 0.0,
+          "has_author_byline": 0.0,
+          "has_publish_date": 0.0,
+          "word_count_band": 5.5
+        },
+        "weight": 25.0
+      },
+      {
+        "name": "authority",
+        "score": 0.0,
+        "signals": {
+          "backlinks_est": 0.0,
+          "gsc_clicks": 0.0,
+          "gsc_ctr": 0.0,
+          "gsc_impressions": 0.0
+        },
+        "weight": 20.0
+      }
+    ],
+    "total": 49.8
+  },
+  "week": 1
+}
