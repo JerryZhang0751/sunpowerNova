@@ -157,7 +157,8 @@ def _score_competitors(week: int, static_signals: dict | None) -> list:
     return comp_geos
 
 
-def assemble(week: int) -> dict:
+def assemble(week: int, *, rules_geo=None, rules_seo=None,
+             out_name: str = "eval_report.json", rule_version: str | None = None) -> dict:
     """
     Assemble deterministic evaluation report from L2 records, GEO/SEO scores, and competitive benchmarks.
 
@@ -166,11 +167,15 @@ def assemble(week: int) -> dict:
 
     Args:
         week: Week number to analyze
+        rules_geo: Optional GEO rules dict for recalc injection (default: use current version)
+        rules_seo: Optional SEO rules dict for recalc injection (default: use current version)
+        out_name: Output filename (default: "eval_report.json")
+        rule_version: Rule version to tag in report (default: from settings.run.rule_version)
 
     Returns:
         dict: Evaluation report with metrics, scores, and competitive differentials
     """
-    rule_version = settings.run.rule_version
+    rule_version = rule_version or settings.run.rule_version
     l1s = list(_iter_l1(week))
 
     # Group L1 records by model
@@ -218,7 +223,7 @@ def assemble(week: int) -> dict:
     if brand_l3 and static_signals:
         brand_metrics = _extract_brand_metrics(l1s)
         try:
-            self_geo_score = score_geo(brand_l3, brand_metrics, static_signals)
+            self_geo_score = score_geo(brand_l3, brand_metrics, static_signals, rules=rules_geo)
         except (KeyError, TypeError, ValueError):
             # Missing required data for scoring - will remain None
             pass
@@ -276,7 +281,7 @@ def assemble(week: int) -> dict:
                     "meta_desc": meta_desc,        # real extracted <meta description>
                 }
 
-                page_seo = score_seo(page_data, gsc_snapshot, content_signals)
+                page_seo = score_seo(page_data, gsc_snapshot, content_signals, rules=rules_seo)
                 seo_scores.append(page_seo)
             except (KeyError, TypeError, ValueError):
                 # Skip pages that can't be scored
@@ -356,7 +361,7 @@ def assemble(week: int) -> dict:
     out.mkdir(parents=True, exist_ok=True)
 
     # Write eval_report.json
-    (out / "eval_report.json").write_text(
+    (out / out_name).write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True),
         encoding="utf-8"
     )
