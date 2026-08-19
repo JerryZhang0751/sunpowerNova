@@ -15,13 +15,18 @@ def _load(p: Path):
         weights=d["weights"],
         signals=d.get("signals", {}),
         severity_bands=d.get("severity_bands", {}),
-        p2plus_missing=d.get("p2plus_missing", [])
+        p2plus_missing=d.get("p2plus_missing", []),
+        entries=d.get("entries", [])
     )
 
 
-def load_rules(name: str):
-    """Load rules by name (geo or seo)."""
-    return _load(RULES_DIR / f"{name}-rules.yaml")
+def load_rules(name: str, version: str | None = None):
+    """Load rules by name (geo or seo); version=None reads current, else reads rules/history/{version}/."""
+    p = (RULES_DIR / "history" / version / f"{name}-rules.yaml") if version \
+        else RULES_DIR / f"{name}-rules.yaml"
+    if not p.exists():
+        raise FileNotFoundError(f"rules not found: {p}")
+    return _load(p)
 
 
 def assert_normalized(rules) -> None:
