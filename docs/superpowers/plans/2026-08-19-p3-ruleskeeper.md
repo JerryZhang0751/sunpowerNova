@@ -4,7 +4,9 @@
 
 **Goal:** 让规则文件真正驱动评分(信号注册表),实现确定性规则迭代环 RulesKeeper(条目 draft→active 证据门槛 + 权重证据强度公式 + 版本归档/重算/回滚),并把 research/generate/rules 接进 LangGraph 全链 DAG。
 
-**Architecture:** 先把两个 scorer 的硬编码公式逐字搬进信号注册表、成员关系改由 YAML `signals:` 驱动(v1 语义零漂移,黄金锁死);再建 `geo/rules/` 迭代器(evidence→gate→weights→keeper),升版时归档旧规则到 `rules/history/`;最后 graph.py 增 research/generate/rules 三节点闭环 + reporter 渲染 §5 规则迭代摘要 + research 反哺 playbook。
+**Architecture:** 先做 P2 尾巴加固(Task 0:mark-published 守卫/发布 stamp/竞品 static={});再把两个 scorer 的硬编码公式逐字搬进信号注册表、成员关系改由 YAML `signals:` 驱动(v1 语义零漂移,黄金锁死;已知死路径 list_count 保持,spec §1 澄清 2);再建 `geo/rules/` 迭代器(evidence→gate→weights→keeper),证据**唯一 URL 口径**(features.py 扩 unique 桶)、权重带 2 周同向持续性,升版时归档旧规则到 `rules/history/`(manifest 绑 code_commit)、回滚产新单调版本;最后 graph.py 增 research/generate/rules 三节点闭环(**assess 提前于 research/generate**)+ `--force-new-run` + reporter 渲染 §5 规则迭代摘要 + research 反哺 playbook。
+
+> **v1.1 修订(2026-08-19,外部评审 8 条逐条核实,处置见 spec §10)**:证据唯一 URL 计数(Task 5/6;w1 BreadcrumbList 7/34=20.6%、平台 3 家);权重 2 周同向持续性(Task 7/8;w1 不调权);DAG 重排 + --force-new-run(Task 12);rollback 新单调版本 + manifest(Task 8/9);Task 0 新增(P2 尾巴加固)。
 
 **Tech Stack:** Python 3.11(系统解释器,非 .venv)、pytest、PyYAML、LangGraph(现有 DAG)。
 
@@ -32,14 +34,195 @@
 | `src/geo/rules/weights.py` **(新)** | 权重证据强度公式:步长/夹值/最大余数归一 |
 | `src/geo/rules/keeper.py` **(新)** | 单轮迭代编排:归档/升版/changelog/run.yaml/rules_iteration.json |
 | `src/geo/rules/run.py` **(新)** | CLI:iterate / recalc / rollback / show |
-| `src/geo/assess/analyst.py` **(改)** | `assemble` 增可选 rules 注入 + 输出名(recalc 用) |
+| `src/geo/assess/analyst.py` **(改)** | `assemble` 增可选 rules 注入 + 输出名(recalc 用);竞品评分 `static={}`(Task 0) |
+| `src/geo/research/features.py` **(改)** | unique 桶聚合:`sources.unique_n/schema_unique/schema_unique_platforms` + formats `unique_*`(Task 5) |
 | `src/geo/research/run.py`、`render.py` **(改)** | 反哺输入 + playbook 第 6 节 + header rule_version 修死值 |
+| `src/geo/generate/run.py` **(改)** | mark-published 守卫 + published_at/--url stamp + targets 提示(Task 0) |
 | `src/geo/report/templates/report.html.j2` **(改)** | §5 填真实 rules_iteration |
 | `src/geo/orchestrate/graph.py` **(改)** | 全链 DAG + --next-week |
 | `rules/{geo,seo}-rules.yaml` **(改)** | v1 成员校正 + `entries: []` |
 | `tests/fixtures/rules/` **(新)** | w1 真实数据 fixture(拷贝提交) |
 
-**任务依赖链**:1→2→3→4→(5,6,7 可并行)→8→9→(10,11,12)→13→14。
+**任务依赖链**:0→1→2→3→4→(5,6,7 可并行)→8→9→(10,11,12)→13→14。(Task 0 与 RulesKeeper 无耦合,位置可挪但先做防遗忘。)
+
+---
+
+### Task 0: P2 尾巴加固(发布守卫 + 发布元数据 + 竞品评分上下文)
+
+**Files:**
+- Modify: `src/geo/generate/run.py`、`src/geo/assess/analyst.py`
+- Test: `tests/test_generate_hardening.py`(新)、`tests/test_analyst_competitors.py`(新)
+
+**Interfaces:**
+- Consumes: `content/reviews.jsonl`(append-only)、draft frontmatter、`run_mark_published` 现签名。
+- Produces: `run_mark_published(slug, *, url=None, override=False, reason="", repo=REPO, now=None)`(守卫版,向后兼容调用形态);`_latest_review(repo, slug) -> dict | None`;`analyst._score_competitors(week, static_signals) -> list`(竞品循环抽函数,内部传 `static={}`)。
+
+- [ ] **Step 1: 写失败测试**
+
+```python
+# tests/test_generate_hardening.py
+import json, yaml, pytest
+from geo.generate.run import run_mark_published
+
+def _mk_draft(repo, slug, validation="passed"):
+    d = repo / "content" / "drafts"; d.mkdir(parents=True, exist_ok=True)
+    fm = {"topic": "t", "page_type": "guide", "slug": slug, "created": "2026-08-19",
+          "playbook_week": 1, "brand_version": 1, "status": "draft", "validation": validation}
+    (d / f"{slug}.md").write_text("---\n" + yaml.safe_dump(fm, sort_keys=False) + "---\n\nbody",
+                                  encoding="utf-8")
+
+def _review(repo, slug, verdict, ts):
+    rj = repo / "content" / "reviews.jsonl"; rj.parent.mkdir(parents=True, exist_ok=True)
+    with rj.open("a", encoding="utf-8") as f:
+        f.write(json.dumps({"slug": slug, "verdict": verdict, "notes": "", "ts": ts,
+                            "brand_version": 1, "playbook_week": 1}) + "\n")
+
+def test_unreviewed_draft_rejected(tmp_path):
+    _mk_draft(tmp_path, "x")
+    with pytest.raises(SystemExit):
+        run_mark_published("x", repo=tmp_path)
+    assert (tmp_path / "content" / "drafts" / "x.md").exists()      # 草稿原样保留
+
+def test_latest_reject_wins_even_after_pass(tmp_path):
+    _mk_draft(tmp_path, "x"); _review(tmp_path, "x", "pass", "2026-08-19T10:00:00")
+    _review(tmp_path, "x", "reject", "2026-08-19T11:00:00")
+    with pytest.raises(SystemExit):
+        run_mark_published("x", repo=tmp_path)
+
+def test_pass_publishes_with_stamps_and_targets_warning(tmp_path, capsys):
+    _mk_draft(tmp_path, "x"); _review(tmp_path, "x", "pass", "2026-08-19T10:00:00")
+    res = run_mark_published("x", repo=tmp_path,
+                             url="https://sunhestia.com/news/new-guide/", now="2026-08-19T12:00:00")
+    pub = (tmp_path / "content" / "published" / "x.md").read_text(encoding="utf-8")
+    fm = yaml.safe_load(pub.split("---")[1])
+    assert fm["status"] == "published"
+    assert fm["published_at"] == "2026-08-19T12:00:00"
+    assert fm["published_url"] == "https://sunhestia.com/news/new-guide/"
+    out = capsys.readouterr().out
+    assert "/news/new-guide" in out and "targets.yaml" in out    # 不在 pages 清单 → 提示待加行
+
+def test_flagged_needs_override_with_reason(tmp_path):
+    _mk_draft(tmp_path, "x", validation="flagged"); _review(tmp_path, "x", "pass", "2026-08-19T10:00:00")
+    with pytest.raises(SystemExit):
+        run_mark_published("x", repo=tmp_path)
+    run_mark_published("x", repo=tmp_path, override=True, reason="人工核对数字无误")   # ok
+    fm = yaml.safe_load((tmp_path / "content" / "published" / "x.md").read_text(encoding="utf-8").split("---")[1])
+    assert fm.get("override_reason") == "人工核对数字无误"
+```
+
+```python
+# tests/test_analyst_competitors.py
+def test_competitors_get_empty_static_not_site_signals(monkeypatch):
+    import geo.assess.analyst as A
+    from geo.shared.models import L3Source
+    calls = []
+    monkeypatch.setattr(A, "competitor_domains_by_count", lambda w, n: ["example.com"])
+    monkeypatch.setattr(A, "_load_l3_source",
+                        lambda url: L3Source(url=url, sha1="s", text="t"))
+    monkeypatch.setattr(A, "score_geo",
+                        lambda src, brand, static, **kw: calls.append(static))
+    A._score_competitors(1, {"robots_ai": {"GPTBot": True}, "https": True, "pages": [{"path": "/about"}]})
+    assert calls == [{}]        # 竞品不再借 SunHestia 静态信号(下界 proxy;v1.1 修正)
+```
+
+- [ ] **Step 2: 跑测试确认失败**
+
+Run: `python3.11 -m pytest tests/test_generate_hardening.py tests/test_analyst_competitors.py -q`
+Expected: FAIL(现实现只挡 rejected;`_score_competitors` 不存在)
+
+- [ ] **Step 3: 实现 run.py 守卫与 stamp**(替换 `run_mark_published`;`_fm_update`/`settings` 若未导入则补)
+
+```python
+def _latest_review(repo: Path, slug: str) -> dict | None:
+    rj = repo / "content" / "reviews.jsonl"
+    if not rj.exists():
+        return None
+    latest = None
+    for line in rj.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        if rec.get("slug") == slug:
+            latest = rec                     # append-only,最后一条 = 最新
+    return latest
+
+
+def run_mark_published(slug: str, *, url: str | None = None, override: bool = False,
+                       reason: str = "", repo: Path = REPO, now: str = None) -> dict:
+    repo = Path(repo)
+    draft = repo / "content" / "drafts" / f"{slug}.md"
+    if not draft.exists():
+        raise SystemExit(f"草稿不存在: {slug}")
+    text = draft.read_text(encoding="utf-8")
+    fm = yaml.safe_load(text.split("---")[1])
+    if fm.get("status") == "rejected":
+        raise SystemExit(f"草稿 {slug} 状态为 rejected,不予归档发布")
+    review = _latest_review(repo, slug)
+    if review is None or review.get("verdict") not in ("pass", "minor"):
+        raise SystemExit(
+            f"草稿 {slug} 缺少 pass/minor 人审记录(最新 verdict="
+            f"{(review or {}).get('verdict', '无')})——先 --review 再归档")
+    if fm.get("validation") == "flagged" and not (override and reason):
+        raise SystemExit(f"草稿 {slug} validation=flagged:需 --override 且 --reason 显式放行")
+    updates = {"status": "published",
+               "published_at": now or datetime.now().isoformat(timespec="seconds")}
+    if url:
+        updates["published_url"] = url
+    if override:
+        updates["override_reason"] = reason
+    pub_dir = repo / "content" / "published"
+    pub_dir.mkdir(parents=True, exist_ok=True)
+    (pub_dir / f"{slug}.md").write_text(_fm_update(text, updates), encoding="utf-8")
+    if url:
+        from urllib.parse import urlparse
+        path = urlparse(url).path.rstrip("/")
+        pages = (settings.targets.get("site", {}) or {}).get("pages", [])
+        if path and path not in pages:
+            print(f"⚠️ {path} 不在 targets.yaml site.pages —— 请手动追加,否则静态自审不覆盖此页")
+    draft.unlink()
+    log.info("归档发布: %s%s", slug, f"(override: {reason})" if override else "")
+    return {"slug": slug, "path": str(pub_dir / f"{slug}.md")}
+```
+
+CLI:`--mark-published` 分支改调 `run_mark_published(a.mark_published, url=a.url, override=a.override, reason=a.reason)`;argparse 增 `--url`/`--override`(action="store_true")/`--reason` 三参。
+
+- [ ] **Step 4: 实现 analyst 竞品上下文**
+
+把 assemble 中竞品循环抽为模块级函数(逻辑逐字保留,仅 `score_geo` 第三参改 `{}`):
+
+```python
+def _score_competitors(week: int, static_signals: dict | None) -> list:
+    """竞品 GEO 评分:score_geo 第三参传 {} —— 竞品无全站快照,静态类信号按 0 计(下界 proxy)。
+    不得借用目标站 static_signals(含 pages 列表):否则 about_page_present 等站点级
+    信号会让全体竞品白拿分(v1.1 修正,外部评审 item 6)。"""
+    comp_geos = []
+    for comp_domain in competitor_domains_by_count(week, 5):
+        comp_url = f"https://{comp_domain}"
+        comp_l3 = _load_l3_source(comp_url)
+        if comp_l3:
+            comp_brand_signals = {"mention": 0, "cited": 0, "sov": 0.0, "entity_known": False,
+                                  "on_youtube": False, "on_reddit": False,
+                                  "on_wikipedia": False, "on_linkedin": False}
+            try:
+                comp_geos.append(score_geo(comp_l3, comp_brand_signals, {}))
+            except (KeyError, TypeError, ValueError):
+                continue
+    return comp_geos
+```
+
+assemble 原竞品循环处替换为 `comp_geos = _score_competitors(week, static_signals)`(参数保留以显式表达"有意不用")。报告 gap 注记随 Task 11 模板一并加。
+
+- [ ] **Step 5: 跑测试 + 全量**
+
+Run: `python3.11 -m pytest tests/test_generate_hardening.py tests/test_analyst_competitors.py tests/ -q`
+Expected: 全 PASS。⚠️ 若存量 generate 测试断言"无 review 也能 mark-published"的旧行为,按守卫语义更新该用例(守卫 = P2 spec §6.1"发布归档仅属 pass/minor 分支"的实现补齐)。
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/geo/generate/run.py src/geo/assess/analyst.py tests/test_generate_hardening.py tests/test_analyst_competitors.py
+git commit -m "feat(generate+assess): publish gate guard + publish stamps + competitor empty static (P2 tail hardening)"
+```
 
 ---
 
@@ -547,6 +730,8 @@ Run: `python3.11 scripts/capture_w1_fixtures.py`(本机真实数据存在,零网
 Run: `ls tests/fixtures/rules/`
 Expected: `eval_report.json  research_aggregates.json`
 
+(⚠️ 此 fixture 为出现口径版本;Task 5 Step 0 重生成含 unique 桶的 aggregates 后**重跑本脚本刷新** research_aggregates.json——Task 5/8 测试读 unique 字段。)
+
 - [ ] **Step 5: Commit**
 
 ```bash
@@ -556,15 +741,51 @@ git commit -m "test(rules): real w1 fixtures + v1-semantics golden lock (47.6/49
 
 ---
 
-### Task 5: 证据提取 `evidence.py`
+### Task 5: 证据提取 `evidence.py`(唯一 URL 口径)+ features.py unique 桶
 
 **Files:**
 - Create: `src/geo/rules/evidence.py`
+- Modify: `src/geo/research/features.py`(unique 桶聚合,v1.1)
 - Test: `tests/test_rules_evidence.py`(输入用 `tests/fixtures/rules/research_aggregates.json` + `eval_report.json`)
 
 **Interfaces:**
-- Consumes: fixture JSON 结构(`formats: [{key, cited_n, sample_n, platforms}]`;`sources.schema: {type: count}`、`sources.resolved`;`eval_report.gap.metrics.{mention_rate, citation_rate}`)。
-- Produces: `collect_evidence(agg: dict) -> list[dict]`(元素 `{signal, kind, bucket, cited_n, sample_n, platforms, share}`);`dimension_strengths(agg, evalrep) -> dict[str, float | None]`。Task 6/8 消费。
+- Consumes: fixture JSON 结构(v1.1 扩展后:`formats: [{key, cited_n, sample_n, platforms, unique_cited_n, unique_n, unique_platforms}]`;`sources.schema`(出现口径,P1 展示用)、`sources.unique_n`、`sources.schema_unique: {type: 唯一页数}`、`sources.schema_unique_platforms: {type: [平台]}`;`eval_report.gap.metrics.{mention_rate, citation_rate}`)。
+- Produces: `collect_evidence(agg: dict) -> list[dict]`(元素 `{signal, kind, bucket, with_n, unique_n, platforms, share}`,share = with_n/unique_n);`dimension_strengths(agg, evalrep) -> dict[str, float | None]`(unique 口径)。Task 6/8 消费。
+
+- [ ] **Step 0: features.py 增 unique 桶聚合 + 重生成 w1 aggregates(零网络,v1.1)**
+
+`aggregate()` 内与现有出现口径并行增 per-URL 去重收集(**不改动现有字段**——P1 playbook 渲染与存量测试不变):
+
+```python
+    # —— v1.1:唯一 URL(页-周)口径聚合(RulesKeeper 证据用)——
+    uniq = {}                                   # url -> {"plats": set(), "l3": L3Source}
+    for it in corpus.items:
+        m = it.l1.model
+        for cited, l3 in it.sources:
+            if l3 is None:
+                continue
+            e = uniq.setdefault(cited.url, {"plats": set(), "l3": l3})
+            e["plats"].add(m)
+    schema_u, schema_u_plats = Counter(), {}
+    fmt_u = {k: {"with": 0, "plats": set()} for k in fmt}
+    for url, e in uniq.items():
+        st, se = (e["l3"].structural or {}), (e["l3"].semantic or {})
+        for s in st.get("schema_types", []):
+            schema_u[s] += 1
+            schema_u_plats.setdefault(s, set()).update(e["plats"])
+        if st.get("table_count", 0) > 0: fmt_u["comparison_table"]["with"] += 1; fmt_u["comparison_table"]["plats"].update(e["plats"])
+        if se.get("has_faq_block"): fmt_u["qa"]["with"] += 1; fmt_u["qa"]["plats"].update(e["plats"])
+        if st.get("ul_count", 0) > 0: fmt_u["list"]["with"] += 1; fmt_u["list"]["plats"].update(e["plats"])
+        if se.get("has_definition_segment"): fmt_u["definition"]["with"] += 1; fmt_u["definition"]["plats"].update(e["plats"])
+        if se.get("page_type") == "product" or se.get("datapoint_count", 0) >= 8:
+            fmt_u["spec_card"]["with"] += 1; fmt_u["spec_card"]["plats"].update(e["plats"])
+```
+
+输出侧:`src_dim["unique_n"] = len(uniq)`;`src_dim["schema_unique"] = dict(schema_u)`;`src_dim["schema_unique_platforms"] = {k: sorted(v) for k, v in schema_u_plats.items()}`;每个 formats FeatureBucket 增 `unique_cited_n`/`unique_n`/`unique_platforms` 三字段(模型 dataclass 同步加,默认 0/0/None 保持向后兼容)。
+
+Run: `python3.11 -m geo.research.run --week 1 --no-kimi`(磁盘重算零网络;sample 已抓全不补抓)
+Expected: 重生成 `data/analysis/w1/research_aggregates.json` 含 `unique_n=34`、`schema_unique.BreadcrumbList=7`、`schema_unique_platforms.BreadcrumbList=["doubao","qwen","zhipu"]`(实测预期;不符则停下以脚本重算核对,勿改断言凑数)。
+随后 `python3.11 scripts/capture_w1_fixtures.py` **刷新 fixture**(Task 4 脚本复用,供本任务与 Task 8 测试)。
 
 - [ ] **Step 1: 写失败测试**
 
@@ -582,16 +803,18 @@ def setup_module():
 
 def test_collect_evidence_w1():
     ev = {e["signal"]: e for e in collect_evidence(AGG)}
-    bc = ev["has_breadcrumblist"]                       # add 候选:schema 桶第一名
-    assert bc["kind"] == "signal_add" and bc["cited_n"] == 26 and bc["sample_n"] == 134
-    assert abs(bc["share"] - 0.194) < 0.001 and len(bc["platforms"]) >= 1
-    qa = ev["faq_block_count"]                          # remove 候选:qa 格式 0/134
-    assert qa["kind"] == "signal_remove" and qa["cited_n"] == 0 and qa["share"] == 0.0
+    bc = ev["has_breadcrumblist"]                       # add 候选(唯一 URL 口径)
+    assert bc["kind"] == "signal_add" and bc["with_n"] == 7 and bc["unique_n"] == 34
+    assert abs(bc["share"] - 7 / 34) < 0.001
+    assert bc["platforms"] == ["doubao", "qwen", "zhipu"]
+    qa = ev["faq_block_count"]                          # remove 候选:qa 0/34(唯一)
+    assert qa["kind"] == "signal_remove" and qa["with_n"] == 0 and qa["share"] == 0.0
 
 def test_dimension_strengths_w1():
     s = dimension_strengths(AGG, EVAL)
-    assert abs(s["citability"] - 88 / 134) < 0.001      # list 桶最大 share
-    assert abs(s["schema"] - 26 / 134) < 0.001          # BreadcrumbList 最大
+    assert s["citability"] == max(b["unique_cited_n"] / b["unique_n"]      # unique 口径最大格式桶
+                                  for b in AGG["formats"] if b.get("unique_n"))
+    assert abs(s["schema"] - 7 / 34) < 0.001            # BreadcrumbList 唯一最大
     assert abs(s["brand"] - (0.133 + 0.0887) / 2) < 0.0005
     assert s["eeat"] is None and s["platform"] is None and s["technical_geo"] is None
 
@@ -609,12 +832,14 @@ Expected: FAIL `ModuleNotFoundError`
 
 ```python
 # src/geo/rules/evidence.py
-"""确定性证据提取:候选(声明式映射) + 维度证据强度。零 LLM。"""
+"""确定性证据提取:候选(声明式映射) + 维度证据强度。零 LLM。
+证据口径 = 唯一 URL(页-周)计数(v1.1):with_n/unique_n/share/platforms 全部去重口径;
+出现次数仅留在 aggregates 供 P1 展示,不进门槛。"""
 from __future__ import annotations
 
 # 声明式映射:checker id -> research_aggregates 桶。不在表内 = 无证据源,不会被提名。
 ADD_CANDIDATES: dict[str, str] = {
-    "has_breadcrumblist": "schema.BreadcrumbList",      # sources.schema 桶
+    "has_breadcrumblist": "schema.BreadcrumbList",      # sources.schema_unique 桶
 }
 REMOVE_CANDIDATES: dict[str, str] = {
     "faq_block_count": "qa",                            # formats 桶 key
@@ -629,17 +854,19 @@ def _format_bucket(agg: dict, key: str) -> dict | None:
 
 
 def _schema_bucket(agg: dict, type_: str) -> dict | None:
-    cnt = (agg.get("sources", {}) or {}).get("schema", {}).get(type_)
-    resolved = (agg.get("sources", {}) or {}).get("resolved", 0)
-    if cnt is None or not resolved:
+    src = agg.get("sources", {}) or {}
+    with_n = src.get("schema_unique", {}).get(type_)
+    unique_n = src.get("unique_n", 0)
+    if with_n is None or not unique_n:
         return None
-    return {"cited_n": cnt, "sample_n": resolved}
+    return {"with_n": with_n, "unique_n": unique_n,
+            "platforms": list(src.get("schema_unique_platforms", {}).get(type_, []))}
 
 
 def _evidence(signal: str, kind: str, bucket_label: str, b: dict) -> dict:
-    share = round(b["cited_n"] / b["sample_n"], 4) if b["sample_n"] else 0.0
+    share = round(b["with_n"] / b["unique_n"], 4) if b["unique_n"] else 0.0
     return {"signal": signal, "kind": kind, "bucket": bucket_label,
-            "cited_n": b["cited_n"], "sample_n": b["sample_n"],
+            "with_n": b["with_n"], "unique_n": b["unique_n"],
             "platforms": list(b.get("platforms", [])), "share": share}
 
 
@@ -651,17 +878,20 @@ def collect_evidence(agg: dict) -> list[dict]:
             out.append(_evidence(sig, "signal_add", spec, b))
     for sig, fmt_key in REMOVE_CANDIDATES.items():
         b = _format_bucket(agg, fmt_key)
-        if b:
-            out.append(_evidence(sig, "signal_remove", f"formats.{fmt_key}", b))
+        if b and b.get("unique_n"):
+            out.append(_evidence(sig, "signal_remove", f"formats.{fmt_key}",
+                                 {"with_n": b.get("unique_cited_n", 0), "unique_n": b["unique_n"],
+                                  "platforms": b.get("unique_platforms", [])}))
     return out
 
 
 def dimension_strengths(agg: dict, evalrep: dict) -> dict[str, float | None]:
-    """GEO 维度证据强度;无证据流的维度为 None(不参与权重调整)。SEO 全维度暂无流。"""
-    fmts = [b["cited_n"] / b["sample_n"] for b in agg.get("formats", []) if b.get("sample_n")]
-    schemas = (agg.get("sources", {}) or {}).get("schema", {})
-    resolved = (agg.get("sources", {}) or {}).get("resolved", 0)
-    schema_shares = [c / resolved for t, c in schemas.items() if t and resolved]
+    """GEO 维度证据强度(唯一 URL 口径);无证据流的维度为 None(不参与权重调整)。SEO 全维度暂无流。"""
+    fmts = [b.get("unique_cited_n", 0) / b["unique_n"]
+            for b in agg.get("formats", []) if b.get("unique_n")]
+    src = agg.get("sources", {}) or {}
+    unique_n = src.get("unique_n", 0)
+    schema_shares = [c / unique_n for t, c in src.get("schema_unique", {}).items() if t and unique_n]
     m = ((evalrep.get("gap", {}) or {}).get("metrics", {}) or {})
     mention, citation = m.get("mention_rate"), m.get("citation_rate")
     return {
@@ -672,18 +902,7 @@ def dimension_strengths(agg: dict, evalrep: dict) -> dict[str, float | None]:
     }
 ```
 
-注:`platforms` 字段仅 formats 桶携带;schema 桶无平台维度 → add 候选的 platforms 需非空才能过 Task 6 的 `platforms≥2` 门。w1 的 BreadcrumbList 桶无 platforms 字段 → **会卡在平台门**。为此 `_schema_bucket` 补平台推导:schema 桶的平台 = 该 schema 类型出现在哪些平台的被引源中——P0 聚合无此交叉。**决策(保持确定性且不过度工程):add 候选若桶无 platforms 字段,回退用 `agg["formats"]` 中 share≥0.15 的桶的 platforms 并集去重排序**;w1 = `['doubao','qwen','zhipu']`(3 家,过门)。实现:
-
-```python
-def _fallback_platforms(agg: dict) -> list[str]:
-    ps = set()
-    for b in agg.get("formats", []):
-        if b.get("sample_n") and b["cited_n"] / b["sample_n"] >= 0.15:
-            ps.update(b.get("platforms", []))
-    return sorted(ps)
-```
-
-`_schema_bucket` 返回 dict 增加 `"platforms": _fallback_platforms(agg)`。
+注(v1.1):平台归因来自 features.py 真实 per-URL 归集(`schema_unique_platforms`,Step 0 产出)——w1 BreadcrumbList = `["doubao","qwen","zhipu"]`(3 家,过 Task 6 的 platforms≥2 门)。**不再使用**借用 formats 桶平台并集的推导 hack(出现口径残留,v1.1 删除)。
 
 - [ ] **Step 4: 跑测试确认通过**
 
@@ -707,19 +926,19 @@ git commit -m "feat(rules): deterministic evidence extraction (candidates + dime
 
 **Interfaces:**
 - Consumes: Task 5 `collect_evidence` 输出元素形状。
-- Produces: `evaluate(candidates: list[dict], existing: list[dict], week: int, signal_target: dict[str, str]) -> list[EntryDecision]`;`EntryDecision` 字段 `signal/kind/target/status/change/evidence`;`evidence` 含 `history: [{week, cited_n, sample_n, share, platforms}]`(累积,同周幂等去重)。Task 8 消费。
+- Produces: `evaluate(candidates: list[dict], existing: list[dict], week: int, signal_target: dict[str, str]) -> list[EntryDecision]`;`EntryDecision` 字段 `signal/kind/target/status/change/evidence`;`evidence` 含 `history: [{week, with_n, unique_n, share, platforms}]`(累积,同周幂等去重;全部唯一 URL 口径,v1.1)。Task 8 消费。
 
 - [ ] **Step 1: 写失败测试**
 
 ```python
 # tests/test_rules_gate.py
-from geo.rules.gate import evaluate, ACTIVATE_SAMPLE_N, ACTIVATE_SHARE
+from geo.rules.gate import evaluate, ACTIVATE_UNIQUE_N, ACTIVATE_SHARE
 
 TGT = {"has_breadcrumblist": "schema", "faq_block_count": "citability"}
 W1_ADD = {"signal": "has_breadcrumblist", "kind": "signal_add", "bucket": "schema.BreadcrumbList",
-          "cited_n": 26, "sample_n": 134, "platforms": ["doubao", "qwen", "zhipu"], "share": 0.194}
+          "with_n": 7, "unique_n": 34, "platforms": ["doubao", "qwen", "zhipu"], "share": 0.2059}
 W1_RM = {"signal": "faq_block_count", "kind": "signal_remove", "bucket": "formats.qa",
-         "cited_n": 0, "sample_n": 134, "platforms": [], "share": 0.0}
+         "with_n": 0, "unique_n": 34, "platforms": [], "share": 0.0}
 
 def test_add_promotes_when_gate_met():
     out = evaluate([W1_ADD], [], 1, TGT)
@@ -728,10 +947,10 @@ def test_add_promotes_when_gate_met():
     assert d.evidence["history"][-1]["week"] == 1
 
 def test_add_stays_draft_when_boundary_fails():
-    just_under = {**W1_ADD, "cited_n": 20, "share": 0.149}          # share 0.149 < 0.15
+    just_under = {**W1_ADD, "with_n": 5, "share": 0.149}             # share 0.149 < 0.15
     d = evaluate([just_under], [], 1, TGT)[0]
     assert d.status == "draft" and d.change == "draft"
-    small_n = {**W1_ADD, "sample_n": 99, "cited_n": 99}             # sample 99 < 100(share=1)
+    small_n = {**W1_ADD, "unique_n": 29, "with_n": 29}              # unique 29 < 30(share=1)
     d2 = evaluate([small_n], [], 1, TGT)[0]
     assert d2.status == "draft"
 
@@ -739,7 +958,7 @@ def test_add_rejected_needs_two_zero_weeks():
     d1 = evaluate([W1_ADD], [], 1, TGT)[0]                          # 正常转正
     active = [{"signal": "has_breadcrumblist", "type": "signal_add", "target": "schema",
                "status": "active", "evidence": d1.evidence}]
-    zero = {**W1_ADD, "cited_n": 0, "share": 0.0, "platforms": []}
+    zero = {**W1_ADD, "with_n": 0, "share": 0.0, "platforms": []}
     d2 = evaluate([zero], active, 2, TGT)[0]                        # 第 1 周零 → 仍 active
     assert d2.status == "active"
     active2 = [{"signal": "has_breadcrumblist", "type": "signal_add", "target": "schema",
@@ -748,11 +967,11 @@ def test_add_rejected_needs_two_zero_weeks():
     assert d3.status == "rejected" and d3.change == "rejected"
 
 def test_retire_needs_two_failing_weeks():
-    weak = {**W1_ADD, "cited_n": 20, "share": 0.149, "platforms": ["qwen"]}
+    weak = {**W1_ADD, "with_n": 5, "share": 0.149, "platforms": ["qwen"]}
     d1 = evaluate([weak], [], 1, TGT)[0]                            # draft(不达标)
     entry = [{"signal": "has_breadcrumblist", "type": "signal_add", "target": "schema",
               "status": "active", "evidence": {"history": [
-                  {"week": 0, "cited_n": 26, "sample_n": 134, "share": 0.194,
+                  {"week": 0, "with_n": 7, "unique_n": 34, "share": 0.206,
                    "platforms": ["qwen", "zhipu"]}]}}]
     d2 = evaluate([weak], entry, 1, TGT)[0]                         # 跌破第 1 周 → 仍 active
     assert d2.status == "active"
@@ -796,7 +1015,7 @@ Expected: FAIL `ModuleNotFoundError`
 from __future__ import annotations
 from dataclasses import dataclass
 
-ACTIVATE_SAMPLE_N = 100
+ACTIVATE_UNIQUE_N = 30   # 唯一 URL(页-周)口径;每周抽样 top-N≈30–50(v1.1,原出现口径 100 已弃)
 ACTIVATE_SHARE = 0.15
 ACTIVATE_PLATFORMS = 2
 REJECT_WEEKS = 2      # 连续负证据周数(add→rejected / remove→active)
@@ -810,17 +1029,17 @@ class EntryDecision:
     target: str
     status: str          # draft | active | rejected | retired
     change: str          # promoted | rejected | retired | draft | stays_draft | unchanged
-    evidence: dict       # {bucket, history: [...], weeks, share, sample_n, platforms}
+    evidence: dict       # {bucket, history: [...], weeks, share, unique_n, platforms}
 
 
 def _meets(h: dict) -> bool:
-    return (h["sample_n"] >= ACTIVATE_SAMPLE_N
+    return (h["unique_n"] >= ACTIVATE_UNIQUE_N
             and h["share"] >= ACTIVATE_SHARE
             and len(h.get("platforms", [])) >= ACTIVATE_PLATFORMS)
 
 
 def _negative(h: dict) -> bool:
-    return h["share"] == 0 and h["sample_n"] >= ACTIVATE_SAMPLE_N
+    return h["share"] == 0 and h["unique_n"] >= ACTIVATE_UNIQUE_N
 
 
 def evaluate(candidates: list[dict], existing: list[dict], week: int,
@@ -834,12 +1053,12 @@ def evaluate(candidates: list[dict], existing: list[dict], week: int,
         prev_status = prev.get("status", "new")
         hist = [h for h in (prev.get("evidence", {}) or {}).get("history", [])
                 if h.get("week") != week]                       # 同周重跑幂等
-        cur = {"week": week, "cited_n": cand["cited_n"], "sample_n": cand["sample_n"],
+        cur = {"week": week, "with_n": cand["with_n"], "unique_n": cand["unique_n"],
                "share": cand["share"], "platforms": list(cand["platforms"])}
         hist.append(cur)
         ev = {"bucket": cand["bucket"], "history": hist,
               "weeks": [h["week"] for h in hist],
-              "share": cur["share"], "sample_n": cur["sample_n"],
+              "share": cur["share"], "unique_n": cur["unique_n"],
               "platforms": cur["platforms"]}
         tail = hist[-REJECT_WEEKS:]
 
@@ -898,29 +1117,42 @@ git commit -m "feat(rules): evidence-gate state machine (draft/active/rejected/r
 - Test: `tests/test_rules_weights.py`
 
 **Interfaces:**
-- Consumes: Task 5 `dimension_strengths` 返回形状。
-- Produces: `compute_deltas(strengths, weights) -> dict[str, int]`(空 dict = 无变更);`apply_deltas(weights, deltas) -> dict[str, int]`(和恰 100)。Task 8 消费。
+- Consumes: Task 5 `dimension_strengths` 返回形状;上期 `rules_iteration.json` 的 `dimension_strengths`(keeper 注入,v1.1)。
+- Produces: `compute_deltas(strengths, weights) -> dict[str, int]`(空 dict = 无变更);`persisted_deltas(strengths, prev_strengths, weights) -> dict[str, int]`(**v1.1:2 周同向持续性**——本期与上期 delta 同号才保留;prev 缺失 → {});`apply_deltas(weights, deltas) -> dict[str, int]`(和恰 100)。Task 8 消费。
 
 - [ ] **Step 1: 写失败测试**
 
 ```python
 # tests/test_rules_weights.py
 import pytest
-from geo.rules.weights import compute_deltas, apply_deltas, STEP, W_MIN, W_MAX
+from geo.rules.weights import compute_deltas, persisted_deltas, apply_deltas, STEP, W_MIN, W_MAX
 from geo.rules.loader import assert_normalized
 import types
 
 W = {"citability": 25, "brand": 20, "eeat": 20, "technical_geo": 15, "schema": 10, "platform": 10}
+S_W1 = {"citability": 0.657, "schema": 7/34, "brand": (0.133 + 0.0887)/2,
+        "eeat": None, "technical_geo": None, "platform": None}
 
-def test_w1_example():
-    s = {"citability": 88/134, "schema": 26/134, "brand": (0.133 + 0.0887)/2,
-         "eeat": None, "technical_geo": None, "platform": None}
-    d = compute_deltas(s, W)
-    assert d == {"citability": 1, "brand": -1}                 # spec §3 实算示例
+def test_raw_delta_computation():
+    d = compute_deltas(S_W1, W)                                # 数学不变(出现口径数值仅参考)
+    assert d.get("citability") == 1 and d.get("brand") == -1
     nw = apply_deltas(W, d)
     assert nw == {**W, "citability": 26, "brand": 19}
-    r = types.SimpleNamespace(composite="geo", weights=nw)
-    assert_normalized(r)                                        # 和恰 100
+    assert_normalized(types.SimpleNamespace(composite="geo", weights=nw))   # 和恰 100
+
+def test_first_week_persistence_gate_blocks():
+    assert persisted_deltas(S_W1, None, W) == {}               # v1.1:首周无上期 → 不调权
+
+def test_second_week_same_direction_applies():
+    prev = {**S_W1, "citability": 0.65, "schema": 0.15, "brand": 0.11}
+    d = persisted_deltas(S_W1, prev, W)
+    assert d.get("citability") == 1 and d.get("brand") == -1   # 两周同向 → 通过
+    assert sum(apply_deltas(W, d).values()) == 100
+
+def test_direction_flip_not_applied():
+    prev = {**S_W1, "citability": 0.05, "schema": 0.9, "brand": 0.4}
+    d = persisted_deltas(S_W1, prev, W)                        # 上期 citability 向下、本期向上
+    assert "citability" not in d and "brand" not in d          # 反向维度被持续性门挡下
 
 def test_all_zero_no_change():
     s = {"citability": 0.5, "schema": 0.5, "brand": 0.5,
@@ -957,7 +1189,8 @@ Expected: FAIL `ModuleNotFoundError`
 ```python
 # src/geo/rules/weights.py
 """权重证据强度公式:delta = round(STEP*(S_i - S̄)),夹值 [W_MIN,W_MAX],
-最大余数式归一到恰好 100(确定性:按 |原始delta| 降序、同名 ASCII 升序消化余量)。"""
+最大余数式归一到恰好 100(确定性:按 |原始delta| 降序、同名 ASCII 升序消化余量)。
+v1.1:persisted_deltas 施加 2 周同向持续性——观察性证据无对照基线,单周方向不作数。"""
 from __future__ import annotations
 
 STEP = 3
@@ -972,6 +1205,17 @@ def compute_deltas(strengths: dict[str, float | None], weights: dict[str, int]) 
     mean = sum(vals.values()) / len(vals)
     deltas = {k: round(STEP * (v - mean)) for k, v in vals.items()}
     return {k: v for k, v in deltas.items() if v != 0} or {}
+
+
+def persisted_deltas(strengths: dict[str, float | None],
+                     prev_strengths: dict[str, float | None] | None,
+                     weights: dict[str, int]) -> dict[str, int]:
+    """v1.1:2 周同向持续性——本期与上期 delta 同号才 apply;首周(prev=None)只记录不调权。"""
+    if not prev_strengths:
+        return {}
+    cur = compute_deltas(strengths, weights)
+    prev = compute_deltas(prev_strengths, weights)
+    return {k: v for k, v in cur.items() if k in prev and (v > 0) == (prev[k] > 0)}
 
 
 def _clamp(w: int) -> int:
@@ -1001,7 +1245,7 @@ def apply_deltas(weights: dict[str, int], deltas: dict[str, int]) -> dict[str, i
 - [ ] **Step 4: 跑测试确认通过**
 
 Run: `python3.11 -m pytest tests/test_rules_weights.py -q`
-Expected: PASS(5 passed)
+Expected: PASS(8 passed)
 
 - [ ] **Step 5: Commit**
 
@@ -1019,8 +1263,8 @@ git commit -m "feat(rules): evidence-strength weight formula (step cap, clamp, e
 - Test: `tests/test_rules_keeper.py`(tmp repo + Task 4 fixture)
 
 **Interfaces:**
-- Consumes: Task 2 `load_rules`;Task 5 `collect_evidence/dimension_strengths`;Task 6 `evaluate/EntryDecision`;Task 7 `compute_deltas/apply_deltas`;Task 1 注册表(校验)。
-- Produces: `iterate(week: int, *, repo: Path = REPO) -> dict`——返回即写入 `data/analysis/wN/rules_iteration.json` 的 dict:`{week, from_version, to_version|None, entries: [...], weights_before, weights_after, observations}`。副作用:升版时归档旧 YAML → `rules/history/{旧版本}/`、写新 `{geo,seo}-rules.yaml`、追加 `rules/changelog.md`、更新 `run.yaml` 的 `rule_version`。Task 9 CLI / Task 12 rules 节点调用。
+- Consumes: Task 2 `load_rules`;Task 5 `collect_evidence/dimension_strengths`;Task 6 `evaluate/EntryDecision`;Task 7 `persisted_deltas/apply_deltas`(v1.1:持续性门);Task 1 注册表(校验)。
+- Produces: `iterate(week: int, *, repo: Path = REPO) -> dict`——返回即写入 `data/analysis/wN/rules_iteration.json` 的 dict:`{week, from_version, to_version|None, entries: [...], weights_before, weights_after, dimension_strengths, observations}`(strengths 供次周持续性对照,v1.1)。副作用:升版时归档旧 YAML → `rules/history/{旧版本}/`(含 `manifest.json` 绑 code_commit,v1.1)、写新 `{geo,seo}-rules.yaml`、追加 `rules/changelog.md`、更新 `run.yaml` 的 `rule_version`。Task 9 CLI / Task 12 rules 节点调用。
 
 - [ ] **Step 1: 写失败测试**
 
@@ -1045,16 +1289,18 @@ def _mk_repo(tmp_path):
          "rule_version": "geo-seo-v1", "providers": ["qwen"]}, sort_keys=False))
     return repo
 
-def test_iterate_w1_promotes_breadcrumblist_and_reweights(tmp_path):
+def test_iterate_w1_promotes_breadcrumblist_weights_hold(tmp_path):
     repo = _mk_repo(tmp_path)
     it = iterate(1, repo=repo)
     assert it["from_version"] == "geo-seo-v1" and it["to_version"] == "geo-seo-v2"
     st = {e["signal"]: e["status"] for e in it["entries"]}
-    assert st["has_breadcrumblist"] == "active"            # 26/134 三家 → 转正
-    assert st["faq_block_count"] == "draft"                # 0/134 首周 → 草稿(移除需 2 周)
-    assert it["weights_after"]["citability"] == 26 and it["weights_after"]["brand"] == 19
-    # 归档 + 新文件 + run.yaml + changelog + rules_iteration.json
+    assert st["has_breadcrumblist"] == "active"            # 唯一口径 7/34=20.6%、3 家 → 转正
+    assert st["faq_block_count"] == "draft"                # 0/34 首周 → 草稿(移除需 2 周)
+    assert it["weights_after"] == it["weights_before"]     # v1.1:首周持续性门槛 → 权重不动
+    assert it["dimension_strengths"]["schema"] == round(7 / 34, 4)   # strengths 已记录供次周
+    # 归档(含 manifest)+ 新文件 + run.yaml + changelog + rules_iteration.json
     assert (repo / "rules" / "history" / "geo-seo-v1" / "geo-rules.yaml").exists()
+    assert (repo / "rules" / "history" / "geo-seo-v1" / "manifest.json").exists()
     new_geo = yaml.safe_load((repo / "rules" / "geo-rules.yaml").read_text())
     assert new_geo["version"] == "geo-seo-v2"
     assert "has_breadcrumblist" in new_geo["signals"]["schema"]      # membership 生效
@@ -1073,14 +1319,14 @@ def test_iterate_no_change_no_bump(tmp_path):
     ana = repo / "data" / "analysis" / "w1"
     agg = json.loads((ana / "research_aggregates.json").read_text())
     for b in agg["formats"]:
-        b["cited_n"] = 67; b["sample_n"] = 134; b["platforms"] = ["qwen", "zhipu"]
-    agg["sources"]["schema"] = {"BreadcrumbList": 67}
+        b["unique_cited_n"] = 17; b["unique_n"] = 34; b["unique_platforms"] = ["qwen", "zhipu"]
+    agg["sources"]["schema_unique"] = {"BreadcrumbList": 17}
     (ana / "research_aggregates.json").write_text(json.dumps(agg, ensure_ascii=False))
     ev = json.loads((ana / "eval_report.json").read_text())
     ev["gap"]["metrics"]["mention_rate"] = 0.5             # 三个证据流全部 = 0.5
-    ev["gap"]["metrics"]["citation_rate"] = 0.5            # → deltas 全 0
+    ev["gap"]["metrics"]["citation_rate"] = 0.5            # → raw deltas 全 0
     (ana / "eval_report.json").write_text(json.dumps(ev, ensure_ascii=False))
-    it1 = iterate(1, repo=repo)                            # 首轮:breadcrumblist 转正 → v2
+    it1 = iterate(1, repo=repo)                            # 首轮:breadcrumblist 转正 → v2(权重不动)
     assert it1["to_version"] == "geo-seo-v2"
     it2 = iterate(1, repo=repo)                            # 同周重跑 → 幂等,无变更不升版
     assert it2["to_version"] is None
@@ -1116,7 +1362,7 @@ from geo.shared.config import REPO
 from geo.assess.registry import GEO_SIGNALS, SEO_SIGNALS
 from geo.rules.evidence import collect_evidence, dimension_strengths
 from geo.rules.gate import evaluate
-from geo.rules.weights import compute_deltas, apply_deltas
+from geo.rules.weights import persisted_deltas, apply_deltas
 
 # signal → 目标维度(候选必须已在注册表)
 SIGNAL_TARGET = {"has_breadcrumblist": "schema", "faq_block_count": "citability"}
@@ -1124,6 +1370,16 @@ SIGNAL_TARGET = {"has_breadcrumblist": "schema", "faq_block_count": "citability"
 
 def _bump(v: str) -> str:
     return f"geo-seo-v{int(v.rsplit('v', 1)[1]) + 1}"
+
+
+def _git_head(repo: Path) -> str:
+    """归档绑定代码(v1.1):recalc 精确性 = 版本↔commit + 黄金锁。非 git 环境(测试 tmp)→ unknown。"""
+    import subprocess
+    try:
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True,
+                              text=True, timeout=10).stdout.strip() or "unknown"
+    except Exception:
+        return "unknown"
 
 
 def _converge_membership(signals: dict, decisions) -> dict:
@@ -1159,9 +1415,9 @@ def _entries_yaml(decisions, week, new_version, prev_map: dict) -> list[dict]:
         out.append({
             "id": f"{'add' if d.kind == 'signal_add' else 'remove'}-{d.signal}",
             "type": d.kind, "target": d.target, "signal": d.signal, "status": d.status,
-            "statement": (f"{d.evidence.get('bucket', '')} cited share "
+            "statement": (f"{d.evidence.get('bucket', '')} 被检索源唯一页 share "
                           f"{d.evidence.get('share', 0.0):.1%} "
-                          f"(sample_n={d.evidence.get('sample_n', 0)}, "
+                          f"(unique_n={d.evidence.get('unique_n', 0)}, "
                           f"platforms={len(d.evidence.get('platforms', []))})"),
             "evidence": d.evidence,
             "since_version": since,
@@ -1181,7 +1437,7 @@ def render_changelog(week: int, from_v: str, to_v: str | None, decisions,
             if d.change in ("promoted", "rejected", "retired", "draft"):
                 L.append(f"- entry {d.signal} [{d.kind}→{d.target}]: {d.change} "
                          f"(share={d.evidence.get('share', 0.0):.1%}, "
-                         f"sample_n={d.evidence.get('sample_n', 0)}, "
+                         f"unique_n={d.evidence.get('unique_n', 0)}, "
                          f"platforms={len(d.evidence.get('platforms', []))})")
         if w_after != w_before:
             L.append("- weights: " + ", ".join(
@@ -1207,7 +1463,10 @@ def iterate(week: int, *, repo: Path = REPO) -> dict:
     decisions = evaluate(candidates, geo_raw.get("entries", []), week, SIGNAL_TARGET)
 
     strengths = dimension_strengths(agg, evalrep)
-    deltas = compute_deltas(strengths, geo_raw["weights"])
+    prev_ri = repo / "data" / "analysis" / f"w{week - 1}" / "rules_iteration.json"
+    prev_strengths = (json.loads(prev_ri.read_text(encoding="utf-8")).get("dimension_strengths")
+                      if prev_ri.exists() else None)
+    deltas = persisted_deltas(strengths, prev_strengths, geo_raw["weights"])   # v1.1:2 周同向
     w_before = dict(geo_raw["weights"])
     w_after = apply_deltas(w_before, deltas) if deltas else w_before
 
@@ -1216,15 +1475,21 @@ def iterate(week: int, *, repo: Path = REPO) -> dict:
     from_v = geo_raw["version"]
     to_v = _bump(from_v) if changed else None
 
-    observations = ["SEO 权重证据流暂缺(GSC 太薄)→ 本期休眠"]
-    if not deltas:
-        observations.append("GEO 权重证据未产生调整(全 delta=0 或无证据流)")
+    observations = ["SEO 权重证据流暂缺(GSC 太薄)→ 本期休眠",
+                    "证据口径 = 被检索源唯一 URL(页-周);观察性相关、无未检索对照组",
+                    "权重调整施加 2 周同向持续性门(v1.1)"]
+    if not deltas and any(v is not None for v in strengths.values()):
+        observations.append("GEO 权重证据已记录(dimension_strengths),待与上期同向后调整(首周或方向反转)")
 
     if changed:
         hist_dir = repo / "rules" / "history" / from_v
         hist_dir.mkdir(parents=True, exist_ok=True)
         for f in ("geo-rules.yaml", "seo-rules.yaml"):
             shutil.copy2(repo / "rules" / f, hist_dir / f)
+        manifest = {"code_commit": _git_head(repo), "week": week,
+                    "archived_at": date.today().isoformat()}          # v1.1:版本↔代码绑定
+        (hist_dir / "manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
     new_signals = _converge_membership(geo_raw.get("signals", {}), decisions)
     if to_v:
@@ -1250,11 +1515,14 @@ def iterate(week: int, *, repo: Path = REPO) -> dict:
                      "status": d.status, "change": d.change,
                      "evidence": {"bucket": d.evidence.get("bucket"),
                                   "share": d.evidence.get("share"),
-                                  "sample_n": d.evidence.get("sample_n"),
+                                  "with_n": d.evidence.get("with_n"),
+                                  "unique_n": d.evidence.get("unique_n"),
                                   "platforms": d.evidence.get("platforms"),
                                   "weeks": d.evidence.get("weeks", [])}}
                     for d in decisions],
         "weights_before": w_before, "weights_after": w_after if changed else w_before,
+        "dimension_strengths": {k: (round(v, 4) if v is not None else None)
+                                for k, v in strengths.items()},          # v1.1:供次周持续性对照
         "observations": observations,
     }
     ana.mkdir(parents=True, exist_ok=True)
@@ -1322,11 +1590,14 @@ def repo(tmp_path):
          "rule_version": "geo-seo-v2", "providers": ["qwen"]}, sort_keys=False))
     return r
 
-def test_rollback_restores_v1(repo):
+def test_rollback_creates_new_monotonic_version(repo):
     do_rollback(repo, "geo-seo-v1")
     g = yaml.safe_load((repo / "rules" / "geo-rules.yaml").read_text())
-    assert g["version"] == "geo-seo-v1"
-    assert yaml.safe_load((repo / "run.yaml").read_text())["rule_version"] == "geo-seo-v1"
+    assert g["version"] == "geo-seo-v3"                    # v1.1:不倒退到 v1,产新单调版本
+    assert g["restores"] == "geo-seo-v1"                   # 内容 = v1 快照
+    assert g["weights"]["citability"] == 25                # (v2 的 26 不残留)
+    assert yaml.safe_load((repo / "run.yaml").read_text())["rule_version"] == "geo-seo-v3"
+    assert (repo / "rules" / "history" / "geo-seo-v2" / "geo-rules.yaml").exists()  # 现行 v2 先归档
     assert "rollback" in (repo / "rules" / "changelog.md").read_text()
 
 def test_recalc_writes_separate_file_never_overwrites(repo, monkeypatch):
@@ -1390,19 +1661,46 @@ def do_recalc(repo: Path, week: int, rule_version: str, render: bool = False) ->
     return rep
 
 
+def _known_versions(repo: Path) -> list[str]:
+    vers = [yaml.safe_load((repo / "rules" / "geo-rules.yaml").read_text(encoding="utf-8"))["version"]]
+    hist = repo / "rules" / "history"
+    if hist.exists():
+        vers += [d.name for d in hist.iterdir() if d.is_dir()]
+    return vers
+
+
+def _next_version(repo: Path) -> str:
+    ns = [int(v.rsplit("v", 1)[1]) for v in _known_versions(repo) if v.startswith("geo-seo-v")]
+    return f"geo-seo-v{max(ns) + 1}"
+
+
 def do_rollback(repo: Path, to_version: str) -> None:
+    """v1.1:回滚 = 创建新单调版本(内容 = to_version 快照,restores 元数据),不倒退版本号。
+    直接改回旧号会在下次迭代产出与 history/ 不可变归档同名不同容的版本 → recalc 语义歧义。"""
     src = repo / "rules" / "history" / to_version
     if not src.exists():
         raise SystemExit(f"历史版本不存在: {src}")
+    cur_v = yaml.safe_load((repo / "rules" / "geo-rules.yaml").read_text(encoding="utf-8"))["version"]
+    if cur_v == to_version:
+        raise SystemExit(f"当前已是 {to_version},无需回滚")
+    new_v = _next_version(repo)
+    hist_cur = repo / "rules" / "history" / cur_v          # 现行版本先归档(若未归档)
+    hist_cur.mkdir(parents=True, exist_ok=True)
     for f in ("geo-rules.yaml", "seo-rules.yaml"):
-        shutil.copy2(src / f, repo / "rules" / f)
+        shutil.copy2(repo / "rules" / f, hist_cur / f)
+    for name in ("geo", "seo"):
+        d = yaml.safe_load((src / f"{name}-rules.yaml").read_text(encoding="utf-8"))
+        d["version"] = new_v
+        d["restores"] = to_version
+        (repo / "rules" / f"{name}-rules.yaml").write_text(
+            yaml.safe_dump(d, allow_unicode=True, sort_keys=False), encoding="utf-8")
     run_raw = yaml.safe_load((repo / "run.yaml").read_text(encoding="utf-8"))
-    run_raw["rule_version"] = to_version
+    run_raw["rule_version"] = new_v
     (repo / "run.yaml").write_text(
         yaml.safe_dump(run_raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
     with (repo / "rules" / "changelog.md").open("a", encoding="utf-8") as fh:
-        fh.write(f"\n## rollback — 手动回滚至 {to_version}(现行版本自 changelog 历史可查)\n")
-    print(f"rolled back to {to_version}")
+        fh.write(f"\n## rollback — {new_v} restores {to_version}(现行 {cur_v} 已归档;不倒退版本号)\n")
+    print(f"rolled back: {new_v} restores {to_version}")
 
 
 def do_show(repo: Path) -> None:
@@ -1607,16 +1905,18 @@ def test_rules_iteration_section_rendered(tmp_path):
         "week": 1, "from_version": "geo-seo-v1", "to_version": "geo-seo-v2",
         "entries": [{"signal": "has_breadcrumblist", "type": "signal_add", "target": "schema",
                      "status": "active", "change": "promoted",
-                     "evidence": {"share": 0.194, "sample_n": 134, "platforms": ["doubao", "qwen", "zhipu"],
-                                  "weeks": [1]}}],
-        "weights_before": {"citability": 25}, "weights_after": {"citability": 26},
-        "observations": ["SEO 权重证据流暂缺(GSC 太薄)→ 本期休眠"]}}
+                     "evidence": {"share": 0.206, "with_n": 7, "unique_n": 34,
+                                  "platforms": ["doubao", "qwen", "zhipu"], "weeks": [1]}}],
+        "weights_before": {"citability": 25}, "weights_after": {"citability": 25},
+        "observations": ["SEO 权重证据流暂缺(GSC 太薄)→ 本期休眠",
+                         "GEO 权重证据已记录,待 2 周同向后调整(v1.1 持续性门)"]}}
     out1 = render(rep, tmp_path / "a.html"); out2 = render(rep, tmp_path / "b.html")
     html = out1.read_text(encoding="utf-8")
     assert out1.read_bytes() == out2.read_bytes()               # 字节级确定性
     assert "geo-seo-v1 → geo-seo-v2" in html
     assert "has_breadcrumblist" in html and "promoted" in html
-    assert "25→26" in html and "本期休眠" in html
+    assert "25→26" not in html and "(无)" in html          # v1.1:首周持续性门 → 权重不变
+    assert "本期休眠" in html and "持续性" in html
 
 def test_rules_iteration_section_absent_graceful(tmp_path):
     from geo.report.reporter import render
@@ -1643,11 +1943,11 @@ Expected: FAIL `assert 'geo-seo-v1 → geo-seo-v2' ...`(⑤节仍是占位)
 <p>本期迭代: <code>{{ ri.from_version }}</code> → <code>{{ ri.to_version or ri.from_version }}</code>
 (本周评分用 {{ ri.from_version }},变更自下周生效)</p>
 <table border=1>
-<tr><th>signal</th><th>type</th><th>target</th><th>status</th><th>change</th><th>share</th><th>sample_n</th><th>platforms</th><th>weeks</th></tr>
+<tr><th>signal</th><th>type</th><th>target</th><th>status</th><th>change</th><th>share</th><th>unique_n</th><th>platforms</th><th>weeks</th></tr>
 {% for e in ri.entries %}
 <tr><td>{{ e.signal }}</td><td>{{ e.type }}</td><td>{{ e.target }}</td><td>{{ e.status }}</td>
 <td>{{ e.change }}</td><td>{{ "{:.1%}".format(e.evidence.share or 0) }}</td>
-<td>{{ e.evidence.sample_n }}</td><td>{{ e.evidence.platforms | length }}</td>
+<td>{{ e.evidence.unique_n }}</td><td>{{ e.evidence.platforms | length }}</td>
 <td>{{ e.evidence.weeks | join(',') }}</td></tr>
 {% endfor %}
 </table>
@@ -1660,6 +1960,8 @@ Expected: FAIL `assert 'geo-seo-v1 → geo-seo-v2' ...`(⑤节仍是占位)
 {% endif %}
 </section>
 ```
+
+(同任务顺带:竞争差值(gap)节加一行注记 `<p class="note">竞品评分为下界代理(静态信号按 0 计),gap 不可直读。</p>`——Task 0 竞品 static={} 的报告侧配套;若字节级 golden 断言失败,同步更新 golden fixture 属预期变更。)
 
 - [ ] **Step 4: 跑测试确认通过**
 
@@ -1675,7 +1977,7 @@ git commit -m "feat(report): section 5 rules-iteration summary (deterministic re
 
 ---
 
-### Task 12: DAG 全链 + --next-week
+### Task 12: DAG 全链(重排)+ --next-week + --force-new-run
 
 **Files:**
 - Modify: `src/geo/orchestrate/graph.py`
@@ -1683,7 +1985,7 @@ git commit -m "feat(report): section 5 rules-iteration summary (deterministic re
 
 **Interfaces:**
 - Consumes: `run_research(week)`;`run_suggest/run_generate`;`iterate(week)`(Task 8)。
-- Produces: 图 `collect → fetch → snapshot → research → generate → assess → rules → report`;`run_pipeline(week, next_week: bool = False)`;report dict 合并 `rules_iteration`。
+- Produces: 图 `collect → fetch → snapshot → assess → research → generate → rules → report`(**v1.1 重排**:P2 `--suggest --week N` 读本周 `eval_report.json`,assess 必须在前,否则 generate 新周恒跳过);`run_pipeline(week, next_week=False, force_new_run=False)`(--force-new-run 时间戳 thread 从头跑,修复既有 checkpoint 早退 no-op);report dict 合并 `rules_iteration`。
 
 - [ ] **Step 1: 写失败测试(追加 test_graph.py;先读该文件沿用其 monkeypatch 风格)**
 
@@ -1705,7 +2007,18 @@ def test_full_chain_order_and_generate_skip(tmp_path, monkeypatch):
     monkeypatch.setattr(G, "report_node", lambda s: (calls.append("report"), s)[1])
     g = G.build_graph()
     g.invoke({"week": 9}, config={"configurable": {"thread_id": "test-full"}})
-    assert calls == ["collect", "fetch", "snapshot", "research", "suggest", "assess", "rules", "report"]
+    assert calls == ["collect", "fetch", "snapshot", "assess", "research", "suggest",
+                     "generate", "rules", "report"]          # v1.1:assess 提前(generate 需本周报告)
+
+def test_force_new_run_uses_fresh_thread(tmp_path, monkeypatch):
+    import geo.orchestrate.graph as G
+    seen = {}
+    class FakeApp:
+        def invoke(self, state, config=None):
+            seen["thread"] = config["configurable"]["thread_id"]
+    monkeypatch.setattr(G, "build_graph", lambda: FakeApp())
+    G.run_pipeline(9, force_new_run=True)
+    assert seen["thread"].startswith("w9-")                  # 时间戳新 thread,不受旧 checkpoint 影响
 
 def test_generate_node_skips_when_unreviewed_draft(tmp_path, monkeypatch):
     import geo.orchestrate.graph as G
@@ -1782,17 +2095,17 @@ def rules_node(state):
     g.add_edge(START, "collect")
     g.add_edge("collect", "fetch")
     g.add_edge("fetch", "snapshot")
-    g.add_edge("snapshot", "research")
+    g.add_edge("snapshot", "assess")          # v1.1:assess 提前(generate 需本周 eval_report)
+    g.add_edge("assess", "research")
     g.add_edge("research", "generate")
-    g.add_edge("generate", "assess")
-    g.add_edge("assess", "rules")
+    g.add_edge("generate", "rules")
     g.add_edge("rules", "report")
     g.add_edge("report", END)
 ```
 
 (节点注册 `g.add_node("research", research_node)` 等三条同步加。)
 
-`run_pipeline` 增参 `next_week: bool = False`,尾部:
+`run_pipeline` 增参 `next_week: bool = False, force_new_run: bool = False`(v1.1:--force-new-run 时间戳 thread `w{N}-{YYYYmmdd-HHMMSS}` 从头跑全链——既有实现见完整 checkpoint 即早退 no-op,复跑同周必须换 thread;节点文件级幂等,重跑安全),尾部:
 
 ```python
     if next_week:
@@ -1812,8 +2125,10 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(prog="geo.orchestrate.graph")
     ap.add_argument("--week", type=int, default=None)
     ap.add_argument("--next-week", action="store_true", help="跑完当前周后把 run.yaml 周次 +1")
+    ap.add_argument("--force-new-run", action="store_true",
+                    help="忽略既有 checkpoint,时间戳新 thread 从头跑全周(补页/改规则后复跑用)")
     a = ap.parse_args()
-    run_pipeline(a.week or settings.run.week, next_week=a.next_week)
+    run_pipeline(a.week or settings.run.week, next_week=a.next_week, force_new_run=a.force_new_run)
 ```
 
 - [ ] **Step 4: 跑测试确认通过(含存量 test_graph)**
@@ -1844,10 +2159,10 @@ git commit -m "feat(orchestrate): full-chain DAG (research/generate/rules nodes)
 Run: `python3.11 -m pytest tests/ -q`
 Expected: 全 PASS(247 存量 + P3 新增,0 失败 0 错误)
 
-- [ ] **Step 2: 真实 w1 迭代(纯磁盘,零网络)**
+- [ ] **Step 2: 真实 w1 迭代(纯磁盘,零网络;前置 = Task 5 Step 0 已重生成含 unique 桶的 w1 aggregates)**
 
 Run: `cd "/Users/jerry/AiProject/sunpower nova/geo-agent" && python3.11 -m geo.rules.run iterate --week 1`
-Expected 输出:`from_version=geo-seo-v1 → to_version=geo-seo-v2`;entries:`has_breadcrumblist promoted(active)`、`faq_block_count draft`;weights `citability 25→26, brand 20→19`;observations 含 SEO 休眠。
+Expected 输出:`from_version=geo-seo-v1 → to_version=geo-seo-v2`;entries:`has_breadcrumblist promoted(active,唯一页 7/34=20.6%、3 家)`、`faq_block_count draft(0/34)`;**weights 不变(首周持续性门,v1.1)**;observations 含 SEO 休眠 + 权重证据已记录待 2 周同向。
 
 - [ ] **Step 3: 核对迭代产物**
 
@@ -1872,8 +2187,8 @@ grep -c "has_breadcrumblist" reports/w1/report.html   # ≥1
 
 ```bash
 python3.11 -m geo.rules.run rollback --to geo-seo-v1
-python3.11 -m geo.rules.run show                   # v1
-python3.11 -m geo.rules.run iterate --week 1       # 重新迭代 → v2(幂等,同结果)
+python3.11 -m geo.rules.run show                   # v3(restores: geo-seo-v1;不倒退版本号)
+python3.11 -m geo.rules.run iterate --week 1       # 重新迭代 → v4(单调;幂等同结果)
 ```
 
 - [ ] **Step 6: Commit(如有修复)**
@@ -1915,8 +2230,9 @@ git commit -m "docs(specs): sync integration + P3 specs with implemented reality
 
 ---
 
-## Self-Review 记录(写计划后自查)
+## Self-Review 记录(写计划后自查;v1.1 修订后复核)
 
-1. **Spec 覆盖**:§1 注册表→Task 1/3;§1 v1 校正+黄金→Task 4;§2 条目模型+门槛→Task 6(+8 序列化);§3 权重公式→Task 7;§4 版本/changelog/重算/回滚→Task 8/9;§5 DAG→Task 12;§6 反哺→Task 10;§7 报告§5→Task 11;§8 测试→各任务 TDD+Task 13;§9 交付物/偏差→Task 14。无缺口。
+1. **Spec 覆盖**:§1 注册表→Task 1/3;§1 v1 校正+映射表+黄金→Task 4;§2 条目模型+唯一口径门槛→Task 5(含 features unique 桶)+Task 6(+8 序列化);§3 权重公式+2 周持续性→Task 7;§4 版本/changelog/重算/回滚(manifest+单调版本)→Task 8/9;§5 DAG(重排+force)+竞品上下文→Task 12+Task 0;§6 反哺→Task 10;§7 报告§5→Task 11;§8 测试→各任务 TDD+Task 13;§9 交付物/偏差(含 Task 0 尾巴加固)→Task 14。无缺口。
 2. **占位符扫描**:无 TBD/TODO;所有代码块完整可写。
-3. **类型一致性**:`collect_evidence → evaluate → keeper` 的 dict 形状已对齐(`{signal,kind,bucket,cited_n,sample_n,platforms,share}`;EntryDecision.evidence.history 元素 `{week,cited_n,sample_n,share,platforms}`);`load_rules(version=)`/`score_*(rules=)`/`assemble(rules_geo=…,out_name=…)` 跨任务签名一致。
+3. **类型一致性**:`collect_evidence → evaluate → keeper` 的 dict 形状已对齐(v1.1 唯一口径:`{signal,kind,bucket,with_n,unique_n,platforms,share}`;EntryDecision.evidence.history 元素 `{week,with_n,unique_n,share,platforms}`);`load_rules(version=)`/`score_*(rules=)`/`assemble(rules_geo=…,out_name=…)`/`persisted_deltas(strengths,prev,weights)` 跨任务签名一致。
+4. **v1.1 修订自审**:①证据唯一口径贯穿 features→evidence→gate→keeper→报告(Task 11 模板 sample_n 列已改 unique_n);②持续性门槛的 prev strengths 存取闭环(rules_iteration.json `dimension_strengths` ↔ keeper 读取);③回滚单调性:rollback 把当前置为最大版本号,keeper `_bump` +1 恒安全,`restores` 元数据可溯;④Task 4 fixture 捕获先于 Task 5 重生成——Task 5 Step 0 末尾必须重跑 capture 脚本刷新 fixture(含 unique 字段),否则 Task 5/8 测试读不到 unique 桶;⑤w1 首轮预期改为"条目转正、权重不动"(unique 7/34=20.6%、3 家平台实测过门);⑥Task 0 与 RulesKeeper 零耦合,先行落地不依赖 Task 1-4。
