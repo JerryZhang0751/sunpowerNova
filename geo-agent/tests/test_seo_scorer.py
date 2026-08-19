@@ -484,16 +484,6 @@ def test_signals_in_dimensions():
     assert "backlinks_est" in d["authority"].signals
 
 
-def test_unknown_signal_id_rejected():
-    import types
-    bad = types.SimpleNamespace(version="x", composite="seo",
-        weights={"crawlability_index": 100}, signals={"crawlability_index": ["no_such_signal"]},
-        severity_bands={}, p2plus_missing=[], entries=[])
-    import pytest
-    with pytest.raises(ValueError, match="no_such_signal"):
-        score_seo(PAGE, {}, {}, rules=bad)
-
-
 def test_seo_independent_from_geo():
     """Test that SEO scoring is independent from GEO system."""
     # SEO scorer should not use GEO-specific signals
@@ -512,21 +502,49 @@ def test_seo_independent_from_geo():
     assert dim_names == seo_dimensions
 
 
-def test_membership_driven_and_rules_injection():
-    """成员关系驱动:注入裁剪版规则 → 只算剩余维度;权重取注入值。"""
-    from geo.rules.loader import load_rules
+def test_membership_driven_crawlability_only():
+    """成员关系驱动:注入只含 crawlability_index 的规则 → 维度分 = 5个 checker 均值。"""
     import types
-    full = score_seo(PAGE, GSC, CONTENT)
-    assert 0 < full.total < 100  # Baseline sanity check
-    tiny = types.SimpleNamespace(
+    # 构造测试数据: robots_not_blocked=False, 其他 4 项通过
+    custom_page = {
+        "http_status": 200,           # http_200 = 100.0
+        "https": True,                 # https = 100.0
+        "in_sitemap": True,            # in_sitemap = 100.0
+        "robots_not_blocked": False,   # robots_not_blocked = 0.0
+        "canonical_self": True,        # canonical_self = 100.0
+        "has_viewport": True,
+    }
+    custom_gsc = {}
+    custom_content = {}
+
+    # 计算 5 个 checker 的预期均值
+    expected_signals = {
+        "http_200": 100.0,
+        "in_sitemap": 100.0,
+        "robots_not_blocked": 0.0,
+        "canonical_self": 100.0,
+        "https": 100.0,
+    }
+    expected_dim_score = round(sum(expected_signals.values()) / len(expected_signals), 1)  # 400.0 / 5 = 80.0
+
+    # 注入只含 crawlability_index 的规则
+    injected_rules = types.SimpleNamespace(
         version="geo-seo-v1", composite="seo",
-        weights={"crawlability_index": 100}, signals={"crawlability_index": ["http_200", "in_sitemap", "robots_not_blocked", "canonical_self", "https"]},
-        severity_bands={}, p2plus_missing=[], entries=[])
-    one = score_seo(PAGE, GSC, CONTENT, rules=tiny)
-    assert [d.name for d in one.dims] == ["crawlability_index"]
-    assert one.dims[0].score == 100.0 and one.total == 100.0
-    expected_signals = {"http_200": 100.0, "in_sitemap": 100.0, "robots_not_blocked": 100.0, "canonical_self": 100.0, "https": 100.0}
-    assert one.dims[0].signals == expected_signals
+        weights={"crawlability_index": 100},
+        signals={"crawlability_index": ["http_200", "in_sitemap", "robots_not_blocked", "canonical_self", "https"]},
+        severity_bands={}, p2plus_missing=[], entries=[]
+    )
+
+    result = score_seo(custom_page, custom_gsc, custom_content, rules=injected_rules)
+
+    # 断言: 只返回一个维度,命名为 crawlability_index
+    assert [d.name for d in result.dims] == ["crawlability_index"]
+    # 断言: 维度分等于 5 个 checker 的均值
+    assert result.dims[0].score == expected_dim_score, f"Expected {expected_dim_score}, got {result.dims[0].score}"
+    # 断言: 总分等于该维度分
+    assert result.total == expected_dim_score, f"Expected total={expected_dim_score}, got {result.total}"
+    # 断言: 信号值与预期一致
+    assert result.dims[0].signals == expected_signals
 
 
 def test_unknown_signal_id_rejected():
