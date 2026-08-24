@@ -31,7 +31,7 @@ GEO_SIGNALS = {
     # brand
     "mention_count":          lambda s, b, st: _ratio(b.get("mention", 0), 0, 3),
     "cited_count":            lambda s, b, st: _ratio(b.get("cited", 0), 0, 2),
-    "sov_share":              lambda s, b, st: _ratio(b.get("sov", 0.0), 0, 0.2),
+    "sov_share":              lambda s, b, st: _ratio(b.get("sov", 0.0), 0, 0.2),  # sov=声量份额0–1(brand/(brand+comp));份额≥0.2 满分
     "entity_known":           lambda s, b, st: _pct(b.get("entity_known")),
     # eeat
     "has_author_byline":      lambda s, b, st: _pct((s.semantic or {}).get("has_author_byline")),

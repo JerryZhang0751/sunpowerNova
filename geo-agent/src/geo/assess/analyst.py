@@ -7,15 +7,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from geo.shared.config import REPO, settings
 from geo.shared.models import L1Record, L2Record, L3Source, CompositeScore
-from geo.shared.storage import sha1_url
+from geo.shared.storage import sha1_url, read_run_records
 from geo.assess.geo_scorer import score_geo
 from geo.assess.seo_scorer import score_seo
 from geo.assess.benchmarker import gap
 
+# 数据质量门(与 collector.COLLECTION_GATE 同值;此处独立常量避免 assess→collect 重依赖)
+COLLECTION_GATE = 0.95
+
 
 @dataclass
 class MentionMetrics:
-    """Metrics for brand mentions and citations per model."""
+    """Metrics for brand mentions and citations per model.
+    sov = 品牌声量份额 brand/(brand+竞品提及), 0–1(2026-08-24 审查#2 修正方向)。"""
     model: str
     planned: int
     valid: int
@@ -40,6 +44,15 @@ class MentionMetrics:
         if self.position_sum is not None:
             return round(self.position_sum, 1)
         return None
+
+    @property
+    def failed(self) -> int:
+        """planned − valid:采集失败数(2026-08-24 审查#5,不得从分母消失)。"""
+        return max(0, self.planned - self.valid)
+
+    @property
+    def success_rate(self) -> float | None:
+        return round(self.valid / self.planned, 3) if self.planned else None
 
 
 def _iter_l1(week: int):
@@ -90,6 +103,17 @@ def _load_gsc_snapshot(week: int) -> dict:
     return {}
 
 
+def _sov_share(brand_mentions: int, competitor_mentions: int) -> float:
+    """SOV = 品牌声量份额 brand/(brand+竞品提及), 0–1。
+
+    2026-08-24 审查#2 修正: 旧实现是"每回答平均竞品数"且越高分越高——
+    竞品越多品牌分反而越高(W1 出现 SOV=3.78 同时 brand 满分)。份额口径
+    方向正确: 竞品声量越大 → 份额越低。
+    """
+    denom = brand_mentions + competitor_mentions
+    return round(brand_mentions / denom, 3) if denom else 0.0
+
+
 def _extract_brand_metrics(l1s: list[L1Record]) -> dict:
     """Extract brand metrics from L1 records for GEO scoring."""
     # Aggregate brand signals across all L1 records
@@ -99,7 +123,7 @@ def _extract_brand_metrics(l1s: list[L1Record]) -> dict:
 
     mentioned = sum(1 for l in l1s if l.l2.mentioned)
     cited = sum(1 for l in l1s if l.l2.cited_with_link)
-    sov = sum(len(l.l2.competitors_mentioned) for l in l1s) / max(1, total)
+    sov = _sov_share(mentioned, sum(len(l.l2.competitors_mentioned) for l in l1s))
 
     # Check if brand entity is known (mentioned in any response)
     entity_known = mentioned > 0
@@ -183,9 +207,18 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
     for l in l1s:
         by_model.setdefault(l.model, []).append(l)
 
-    # Calculate metrics per model
+    # planned 分母(2026-08-24 审查#5): runs.jsonl 里唯一 (model,prompt,run) 键数。
+    # 无 manifest 的历史周回退 planned=valid(legacy,门不可判定)。
+    manifest = read_run_records(week)
+    planned_by_model: dict[str, int] = {}
+    if manifest:
+        for m, _, _ in {(r.model, r.prompt_id, r.run) for r in manifest}:
+            planned_by_model[m] = planned_by_model.get(m, 0) + 1
+
+    # Calculate metrics per model(含 manifest 里全败、盘上 0 条 L1 的模型)
     metrics = {}
-    for model, items in by_model.items():
+    for model in list(by_model) + [m for m in planned_by_model if m not in by_model]:
+        items = by_model.get(model, [])
         valid = len(items)
         mention = sum(1 for i in items if i.l2.mentioned)
         cited = sum(1 for i in items if i.l2.cited_with_link)
@@ -194,14 +227,12 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         positions = [i.l2.citation_position for i in items if i.l2.citation_position is not None]
         position_sum = sum(positions) / len(positions) if positions else None
 
-        # Calculate SOV (Share of Voice - avg competitors mentioned per response)
-        sov = round(
-            sum(len(i.l2.competitors_mentioned) for i in items) / max(1, valid), 3
-        )
+        # SOV = 品牌声量份额(2026-08-24 审查#2:旧"平均竞品数"方向颠倒)
+        sov = _sov_share(mention, sum(len(i.l2.competitors_mentioned) for i in items))
 
         metrics[model] = MentionMetrics(
             model=model,
-            planned=valid,
+            planned=planned_by_model.get(model, valid),
             valid=valid,
             mention=mention,
             cited=cited,
@@ -334,6 +365,16 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
                     for d in self_seo_score.dims]
         }
 
+    # 采集质量门:manifest 存在时按各家最低成功率判 ok(2026-08-24 审查#5);
+    # legacy(无 manifest)分母不可追溯 → min_success_rate=None,不得虚报 1.0
+    rates = [m.success_rate for m in metrics.values() if m.success_rate is not None]
+    collection_gate = {
+        "manifest": bool(manifest),
+        "threshold": COLLECTION_GATE,
+        "min_success_rate": (min(rates) if rates else None) if manifest else None,
+        "ok": (min(rates) >= COLLECTION_GATE) if (manifest and rates) else True,
+    }
+
     # Build report structure with REAL scores
     report = {
         "week": week,
@@ -343,6 +384,8 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
             model: {
                 "planned": m.planned,
                 "valid": m.valid,
+                "failed": m.failed,
+                "success_rate": m.success_rate,
                 "mention_rate": m.mention_rate,
                 "citation_rate": m.citation_rate,
                 "avg_position": m.avg_position,
@@ -350,6 +393,7 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
             }
             for model, m in metrics.items()
         },
+        "collection_gate": collection_gate,
         "self_geo": self_geo_dict,  # Real GEO score from Task 14
         "self_seo": self_seo_dict,  # Real SEO score from Task 15
         "gap": gap_result,  # Real competitive gap from Task 16

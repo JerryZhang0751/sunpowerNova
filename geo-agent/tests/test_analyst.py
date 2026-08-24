@@ -141,8 +141,8 @@ def test_metrics_denominators():
     # Avg position: None (no citations)
     assert qwen_metrics["avg_position"] is None
 
-    # SOV: 2 competitors / 2 valid = 1.0
-    assert qwen_metrics["sov"] == 1.0
+    # SOV(声量份额,2026-08-24 审查#2 修正方向): brand/(brand+竞品) = 1/(1+2) = 0.333
+    assert qwen_metrics["sov"] == 0.333
 
 
 def test_multi_model_metrics():
@@ -206,7 +206,7 @@ def test_avg_position_calculation():
 
 
 def test_sov_calculation():
-    """Test Share of Voice (SOV) calculation."""
+    """SOV = 品牌声量份额 brand/(brand+竞品),0–1;不再是"平均竞品数"。"""
     records = [
         # Record 1: 2 competitors mentioned
         mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True, cited=True, competitors=["CompA", "CompB"])),
@@ -227,8 +227,57 @@ def test_sov_calculation():
                                 report = assemble(week=1)
 
     qwen_metrics = report["metrics"]["qwen"]
-    # SOV: (2 + 1 + 0) / 3 = 1.0
-    assert qwen_metrics["sov"] == 1.0
+    # SOV: 3 / (3 + 3) = 0.5
+    assert qwen_metrics["sov"] == 0.5
+
+
+def test_sov_direction_more_competitors_lower_share():
+    """方向性反回归(审查#2 核心): 提及不变、竞品更多 → SOV 必须更低且∈[0,1]。
+    旧实现把"平均竞品数"当 SOV 且越高分越高——竞品越多品牌分反而越高。"""
+    def _sov(records):
+        with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+            with patch('geo.assess.analyst._load_l3_source', return_value=None):
+                with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                    with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                        with patch('geo.assess.analyst.REPO'):
+                            with patch('pathlib.Path.mkdir'):
+                                with patch('pathlib.Path.write_text'):
+                                    return assemble(week=1)["metrics"]["qwen"]["sov"]
+
+    few = [mk_l1(model="qwen", prompt_id="B02", run=1,
+                 l2=mk_l2(mentioned=True, cited=True, competitors=["CompA"]))]
+    many = [mk_l1(model="qwen", prompt_id="B02", run=1,
+                  l2=mk_l2(mentioned=True, cited=True, competitors=["A", "B", "C", "D", "E"]))]
+    s_few, s_many = _sov(few), _sov(many)
+    assert 0.0 <= s_many < s_few <= 1.0
+    assert s_few == 0.5 and round(s_many, 3) == round(1 / 6, 3)
+
+
+def test_sov_zero_when_no_mentions():
+    """品牌与竞品都无提及 → SOV=0(分母空安全)。"""
+    records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=False, competitors=[]))]
+    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.REPO'):
+                        with patch('pathlib.Path.mkdir'):
+                            with patch('pathlib.Path.write_text'):
+                                report = assemble(week=1)
+    assert report["metrics"]["qwen"]["sov"] == 0.0
+
+
+def test_extract_brand_metrics_sov_share():
+    """_extract_brand_metrics(喂 score_geo 的 brand 信号)同口径:份额而非平均竞品数。"""
+    from geo.assess.analyst import _extract_brand_metrics
+    records = [
+        mk_l1(l2=mk_l2(mentioned=True, cited=True, competitors=["A", "B"])),
+        mk_l1(l2=mk_l2(mentioned=False, competitors=["A"])),
+    ]
+    m = _extract_brand_metrics(records)
+    assert m["mention"] == 1
+    assert m["sov"] == round(1 / 4, 3)      # 1/(1+3)
+    assert 0.0 <= m["sov"] <= 1.0
 
 
 def test_report_structure():
@@ -383,8 +432,8 @@ def test_competitor_counting():
                                 report = assemble(week=1)
 
     qwen_metrics = report["metrics"]["qwen"]
-    # SOV: (3 + 1) / 2 = 2.0
-    assert qwen_metrics["sov"] == 2.0
+    # SOV 份额: 2 / (2 + 4) = 0.333
+    assert qwen_metrics["sov"] == 0.333
 
 
 def test_sentiment_passthrough():
@@ -572,3 +621,66 @@ def test_score_integration_determinism():
     # All reports should have identical scores (deterministic)
     assert reports[0]["self_geo"]["total"] == reports[1]["self_geo"]["total"] == reports[2]["self_geo"]["total"]
     assert reports[0]["self_seo"]["total"] == reports[1]["self_seo"]["total"] == reports[2]["self_seo"]["total"]
+
+# ---- Fix(2026-08-24 审查#5): planned 来自 manifest,失败不得从分母消失 ----
+from geo.shared.models import RunRecord
+
+def _manifest(week=94, model="qwen", ok=10, fail=5):
+    recs = []
+    for i in range(ok):
+        recs.append(RunRecord(week=week, model=model, prompt_id=f"P{i:02d}", run=1,
+                              prompt_set_version="p", rule_snapshot_version="t",
+                              status="ok", l1_path="x"))
+    for i in range(fail):
+        recs.append(RunRecord(week=week, model=model, prompt_id=f"F{i:02d}", run=1,
+                              prompt_set_version="p", rule_snapshot_version="t",
+                              status="failed", l1_path="", error="api down"))
+    return recs
+
+def _assemble_with(records, manifest_recs):
+    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+        with patch('geo.assess.analyst._load_l3_source', return_value=None):
+            with patch('geo.assess.analyst._load_static_signals', return_value={}):
+                with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
+                    with patch('geo.assess.analyst.read_run_records', return_value=manifest_recs):
+                        with patch('geo.assess.analyst.REPO'):
+                            with patch('pathlib.Path.mkdir'):
+                                with patch('pathlib.Path.write_text'):
+                                    return assemble(week=1)
+
+def test_planned_from_manifest_not_valid_count():
+    """15 计划只落盘 10 → planned=15, valid=10, failed=5, success_rate=0.667(旧: planned=valid=10 假健康)。"""
+    records = [mk_l1(model="qwen", prompt_id=f"P{i:02d}", run=1,
+                     l2=mk_l2(mentioned=False)) for i in range(10)]
+    rep = _assemble_with(records, _manifest(ok=10, fail=5))
+    q = rep["metrics"]["qwen"]
+    assert q["planned"] == 15 and q["valid"] == 10 and q["failed"] == 5
+    assert q["success_rate"] == 0.667
+    assert rep["collection_gate"]["ok"] is False
+    assert rep["collection_gate"]["threshold"] == 0.95
+
+def test_fully_failed_model_visible_in_metrics():
+    """整家 provider 全败(0 条 L1):也必须出现在 metrics 里,不得凭空消失。"""
+    records = [mk_l1(model="qwen", prompt_id="P00", run=1, l2=mk_l2())]
+    manifest = _manifest(ok=1, fail=0) + _manifest(model="zhipu", ok=0, fail=3)
+    rep = _assemble_with(records, manifest)
+    z = rep["metrics"]["zhipu"]
+    assert z["planned"] == 3 and z["valid"] == 0 and z["failed"] == 3
+    assert z["success_rate"] == 0.0
+    assert rep["collection_gate"]["ok"] is False
+
+def test_gate_passes_at_threshold():
+    records = [mk_l1(model="qwen", prompt_id=f"P{i:02d}", run=1, l2=mk_l2()) for i in range(19)]
+    manifest = _manifest(ok=19, fail=1)   # 19/20 = 0.95
+    rep = _assemble_with(records, manifest)
+    assert rep["metrics"]["qwen"]["success_rate"] == 0.95
+    assert rep["collection_gate"]["ok"] is True
+
+def test_legacy_weeks_without_manifest_fall_back():
+    """无 manifest 的历史周:planned=valid(legacy 标记,门不可判定不误杀)。"""
+    records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True))]
+    rep = _assemble_with(records, [])
+    assert rep["metrics"]["qwen"]["planned"] == 1
+    assert rep["collection_gate"]["manifest"] is False
+    assert rep["collection_gate"]["ok"] is True
+    assert rep["collection_gate"]["min_success_rate"] is None   # 无 manifest 不可判定,不得虚报 1.0

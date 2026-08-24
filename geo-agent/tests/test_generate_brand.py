@@ -125,3 +125,35 @@ def test_parse_claims_guards_against_kwhz_false_positive():
     claims = parse_claims("3 kwhz units")
     assert (frozenset({"3"}), "kwh") not in claims, \
         "Should NOT extract 'kwh' from 'kwhz' - lookahead must block alphanumeric after unit"
+
+
+# ---- Fix(2026-08-24 审查#4): 小数与千分位不得绕过数字门禁 --------------------
+def test_parse_claims_decimals():
+    claims = parse_claims("A 5.5 kW inverter with a 10.9 kWh battery")
+    assert (frozenset({"5.5"}), "kw") in claims
+    assert (frozenset({"10.9"}), "kwh") in claims
+    assert (frozenset({"5"}), "kw") not in claims      # 不得截成 5
+    assert (frozenset({"9"}), "kwh") not in claims     # 不得截成 9
+
+def test_parse_claims_thousands_separator():
+    claims = parse_claims("Peak output of 1,500 W")
+    assert (frozenset({"1500"}), "w") in claims
+    assert (frozenset({"500"}), "w") not in claims     # 不得截成 500
+
+def test_claims_match_rejects_decimal_against_int_inventory():
+    """审查复现: brand 只有 5 kW,正文称 5.5 kW —— 旧解析两边都成 {5},误判通过。"""
+    inv = [(frozenset({"5"}), "kw")]
+    assert not claims_match((frozenset({"5.5"}), "kw"), inv)
+
+def test_claims_match_decimal_inventory_roundtrip():
+    inv = [(frozenset({"5.5"}), "kw")]
+    assert claims_match((frozenset({"5.5"}), "kw"), inv)
+    assert not claims_match((frozenset({"5"}), "kw"), inv)
+
+def test_validate_brand_rejects_thousands_mismatch():
+    brand_dict = {"version": 1, "entity": {}, "glossary": [], "faqs": [],
+                  "products": [{"id": "inv", "name": "Inv", "specs": {"power_w": "1,500"}}],
+                  "banned": []}
+    violations = validate_brand(brand_dict, "The inverter peaks at 2,500 W.")
+    assert any("2500" in v or "1500" in v for v in violations), \
+        "2,500 W 不得经 500 W 匹配到 1,500 W 库存"

@@ -108,3 +108,31 @@ def test_harvest():
     assert _harvest("") == []
     assert _harvest([]) == []
     assert _harvest(None) == []
+
+
+# Fix(2026-08-24 审查#1): annotations 是 provider 明证的"引用"(url_citation
+# 附着在 message 内容上),须与"检索"区分暴露,供 parse_l2 单独采信。
+def test_parse_doubao_exposes_attested_citations():
+    """annotations 同时出现在 search_results(检索视图)与 citations(明证引用视图)。"""
+    fx = load("C01")
+    out = parse_doubao_response(fx["response"])
+    assert out["citations"], "url_citation annotations 必须进入 citations 键"
+    ann_urls = [s["url"] for s in out["citations"]]
+    assert len(ann_urls) == len(set(ann_urls))
+    # C01 有 3 条 annotation 引用
+    assert len(ann_urls) == 3
+    # 检索视图(向后兼容)与明证视图同源
+    assert ann_urls == [s["url"] for s in out["search_results"]]
+
+
+def test_parse_doubao_citations_empty_on_harvest_fallback(monkeypatch):
+    """无 annotations 走 _harvest 兜底时,citations 必须为空——harvest 出的是检索,不是引用。"""
+    raw = {"output": [{"type": "message",
+                       "content": [{"type": "output_text", "text": "answer",
+                                    "annotations": None}]}]}
+    # 强制 annotations 路径不产出 → 落到 harvest 兜底
+    raw = {"output": [{"type": "message",
+                       "content": [{"type": "output_text", "text": "see https://a.com/x"}]}]}
+    out = parse_doubao_response(raw)
+    assert out["search_results"] == [{"url": "https://a.com/x", "title": ""}]
+    assert out["citations"] == []

@@ -522,3 +522,29 @@ def test_generate_node_skips_when_unreviewed_draft(tmp_path, monkeypatch):
     boom = lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not call run_suggest when draft exists"))
     monkeypatch.setattr(GR, "run_suggest", boom)
     G.generate_node({"week": 9})  # Should not raise = skip succeeded
+
+
+# ---- Fix(2026-08-24 审查#5): 采集成功率 <95% 必须阻断流水线 ----
+def test_collect_node_blocks_below_gate():
+    from geo.orchestrate import graph as G
+    with patch.object(G, "run_collection"), \
+         patch.object(G, "collection_health",
+                      return_value={"manifest": True,
+                                    "per_model": {"qwen": {"planned": 15, "valid": 7, "success_rate": 0.467}},
+                                    "min_success_rate": 0.467}):
+        with pytest.raises(RuntimeError, match="采集成功率"):
+            G.collect_node({"week": 1})
+
+def test_collect_node_passes_at_or_above_gate():
+    from geo.orchestrate import graph as G
+    with patch.object(G, "run_collection"), \
+         patch.object(G, "collection_health",
+                      return_value={"manifest": True, "per_model": {}, "min_success_rate": 0.97}):
+        assert G.collect_node({"week": 1}) == {"week": 1}
+
+def test_collect_node_legacy_week_without_manifest_passes():
+    from geo.orchestrate import graph as G
+    with patch.object(G, "run_collection"), \
+         patch.object(G, "collection_health",
+                      return_value={"manifest": False, "per_model": {}, "min_success_rate": None}):
+        assert G.collect_node({"week": 1}) == {"week": 1}

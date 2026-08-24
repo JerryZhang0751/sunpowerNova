@@ -1,7 +1,6 @@
 {
-  "cited_sources_extract_method": "structured",
   "mentioned": true,
-  "cited_with_link": true,
+  "cited_with_link": false,
   "sentiment": "neg",
-  "competitors_mentioned_contains": ["Tesla", "Enphase", "SolarEdge", "BYD", "sonnen", "LG"]
+  "competitors_mentioned_contains": ["BYD", "LG", "SolarEdge", "Tesla", "sonnen"]
 }

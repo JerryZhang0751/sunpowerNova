@@ -312,3 +312,70 @@ def test_fetch_source_http_error_handling():
     (sd / "text.md").unlink()
     (sd / "meta.json").unlink()
     sd.rmdir()
+
+
+# ---- Fix(2026-08-24 审查#3): SSRF 防线 ----------------------------------
+import httpx
+import pytest
+from geo.fetch.url_guard import UnsafeURLError
+
+# 假域名不真解析:统一 mock 成公网地址,让防线只检验"跳转目标"本身
+from unittest.mock import patch as _patch
+import ipaddress as _ipa
+_PUB = [_ipa.ip_address("93.184.216.34")]
+
+BODY = "<html><head><title>t</title></head><body><p>word " * 20 + "</p></body></html>"
+
+def _cleanup(url):
+    sd = source_dir(sha1_url(url))
+    for f in (sd / "text.md", sd / "meta.json"):
+        if f.exists(): f.unlink()
+    if sd.exists(): sd.rmdir()
+
+def test_fetch_source_blocks_redirect_to_internal():
+    """公网 URL 302 → 云元数据地址:第二跳必须被拦截,且不落缓存。"""
+    url = "https://public-redirect.example/a"
+    _cleanup(url)
+    def handler(request):
+        if request.url.path == "/a":
+            return httpx.Response(302, headers={"location": "http://169.254.169.254/latest/meta-data/"})
+        return httpx.Response(200, text=BODY)
+    with _patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
+        with pytest.raises(UnsafeURLError):
+            fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
+    sd = source_dir(sha1_url(url))
+    assert not (sd / "meta.json").exists() and not (sd / "text.md").exists()
+    _cleanup(url)
+
+def test_fetch_source_follows_safe_redirects():
+    """安全重定向正常跟随(手动循环,每跳已验证)。"""
+    url = "https://public-hop.example/start"
+    _cleanup(url)
+    def handler(request):
+        if request.url.path == "/start":
+            return httpx.Response(301, headers={"location": "/final"})
+        return httpx.Response(200, text=BODY)
+    with _patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
+        rec = fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
+    assert rec.http_status == 200
+    _cleanup(url)
+
+def test_fetch_source_caps_redirect_hops():
+    url = "https://loop.example/0"
+    _cleanup(url)
+    def handler(request):
+        n = int(request.url.path.strip("/"))
+        return httpx.Response(302, headers={"location": f"/{n+1}"})
+    with _patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
+        with pytest.raises(UnsafeURLError, match="重定向"):
+            fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
+    _cleanup(url)
+
+def test_fetch_source_rejects_internal_url_immediately():
+    url = "http://10.0.0.7/private"
+    _cleanup(url)
+    with pytest.raises(UnsafeURLError):
+        fetch_source(url, fetcher_kimi=False)
+    sd = source_dir(sha1_url(url))
+    assert not (sd / "meta.json").exists() and not (sd / "text.md").exists()
+    _cleanup(url)
