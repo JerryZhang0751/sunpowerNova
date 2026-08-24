@@ -31,7 +31,11 @@ def slugify(topic: str) -> str:
 # --- 数字 claim 提取（brand 抽取校验与草稿核验共用脊柱）---
 _UNITS = r"(kwh|kw|wh|watts|watt|w|years|year|percent|volts|volt|v|%|°c|°f)"
 _UNIT_NORM = {"watts": "w", "watt": "w", "years": "year", "percent": "%", "volts": "v", "volt": "v"}
-_NUM = r"(\d+(?:\s*[-–—]\s*\d+)?)"
+# 数字原子(2026-08-24 审查#4): 支持小数与千分位;千分位形必须在前,否则 \d+ 会
+# 把 "1,500" 截成 "1"。比较前一律规范化(_canon_num): "1,500"→"1500"、"5.50"→"5.5"。
+_NUM_ATOM = r"(?:\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)"
+_NUM = rf"({_NUM_ATOM}(?:\s*[-–—]\s*{_NUM_ATOM})?)"
+_NUM_TOK_RE = re.compile(_NUM_ATOM)
 # 文本体：数字在前，单位紧随（含 "10-year" 连字符形）
 # 使用 (?![a-z0-9]) 替代 \b 以匹配 % 等非字母单位（% 后的字符都是非单词字符，\b 无法匹配）
 _CLAIM_RE = re.compile(rf"{_NUM}\s*[-\s]*{_UNITS}(?![a-z0-9])", re.I)
@@ -46,8 +50,23 @@ def _norm_unit(u: str) -> str:
     u = u.lower()
     return _UNIT_NORM.get(u, "%" if u == "percent" else u)
 
+def _canon_num(tok: str) -> str:
+    """数字 token 规范形式: 去千分位、去尾零("1,500"→"1500"、"5.50"→"5.5")。"""
+    f = float(tok.replace(",", ""))
+    return str(int(f)) if f.is_integer() else repr(f)
+
 def _norm_nums(raw: str) -> frozenset[str]:
-    return frozenset(p.strip() for p in re.split(r"[-]+", raw) if p.strip())
+    return frozenset(_canon_num(p.strip()) for p in re.split(r"[-]+", raw) if p.strip())
+
+def tokenize_nums(text: str) -> list[str]:
+    """提取文本中全部数字 token(规范化;range 两端拆开)。validate 的 anchor
+    值核对与其用同一 tokenizer,否则小数/千分位两边口径不一仍可绕过。"""
+    out: list[str] = []
+    for m in _NUM_TOK_RE.finditer(_norm(text)):
+        for part in re.split(r"[-]+", m.group(0)):
+            if part.strip():
+                out.append(_canon_num(part.strip()))
+    return out
 
 def parse_claims(text: str) -> list[tuple[frozenset[str], str]]:
     t = _norm(text)

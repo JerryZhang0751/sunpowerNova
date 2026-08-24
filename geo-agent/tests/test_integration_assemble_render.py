@@ -47,7 +47,8 @@ HTML = """<html><head>
 def _mock_httpx():
     """httpx.Client mock that serves HTML for any URL (no real network)."""
     client = MagicMock()
-    client.get.side_effect = lambda url: MagicMock(status_code=200, text=HTML)
+    # is_redirect=False 显式声明(2026-08-24 起走手动重定向循环,MagicMock 真值会误入跳转分支)
+    client.get.side_effect = lambda url: MagicMock(status_code=200, text=HTML, is_redirect=False)
     client.__enter__.return_value = client
     return client
 
@@ -82,7 +83,11 @@ def test_assemble_render_seam_real_l3(tmp_path):
          patch("geo.assess.analyst.REPO", tmp_path):
 
         # 1. Fetch brand + competitor L3 via the REAL fetcher (offline).
-        with patch("httpx.Client", return_value=_mock_httpx()), \
+        #    (SSRF 防线在 httpx 之前做 DNS 校验——离线假域名须一并 mock,见 test_url_guard)
+        import ipaddress as _ipa
+        with patch("geo.fetch.url_guard._resolve_ips",
+                   return_value=[_ipa.ip_address("93.184.216.34")]), \
+             patch("httpx.Client", return_value=_mock_httpx()), \
              patch("geo.fetch.meta_llm.OpenAI") as mock_openai:
             mock_openai.return_value.chat.completions.create.side_effect = _kimi_response
             brand_l3 = fetch_source(BRAND_URL, fetcher_kimi=True)

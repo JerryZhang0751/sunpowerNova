@@ -1,8 +1,6 @@
 {
-  "cited_sources_extract_method": "structured",
-  "cited_urls_subset": ["https://www.consumerreports.org", "https://www.energysage.com"],
   "mentioned": false,
   "cited_with_link": false,
   "sentiment": "neu",
-  "competitors_mentioned_contains": ["Tesla"]
+  "competitors_mentioned_contains": ["Enphase", "Franklin", "Panasonic", "SolarEdge", "Tesla"]
 }

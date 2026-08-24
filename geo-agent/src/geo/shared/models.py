@@ -11,10 +11,11 @@ class CitedSource(BaseModel):
     url: str
     title: str = ""
     snippet: str = ""
-    extract_method: str = "structured"   # structured | inferred
+    extract_method: str = "structured"   # structured|inferred(答案内URL) | attested(provider明证) | retrieved(仅检索)
 
 class L2Record(BaseModel):
-    cited_sources: list[CitedSource]
+    cited_sources: list[CitedSource]     # 仅答案内证据(URL在answer文本)或provider明证(2026-08-24 审查#1)
+    retrieved_sources: list[CitedSource] = Field(default_factory=list)  # search_results 原样(检索≠引用)
     mentioned: bool = False
     cited_with_link: bool = False
     citation_position: int | None = None
@@ -44,8 +45,9 @@ class RunRecord(BaseModel):
     week: int; model: str; prompt_id: str; run: int
     prompt_set_version: str
     rule_snapshot_version: str
-    status: str
+    status: str                    # planned | ok | failed | skipped_exists
     l1_path: str
+    error: str = ""                # failed 时的失败原因(2026-08-24 审查#5)
 
 class DimScore(BaseModel):
     name: str; score: float; weight: float; signals: dict

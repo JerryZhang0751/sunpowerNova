@@ -2,7 +2,7 @@
 from __future__ import annotations
 import re
 from dataclasses import dataclass, field
-from geo.generate.brand import parse_claims, brand_claims, claims_match
+from geo.generate.brand import parse_claims, brand_claims, claims_match, tokenize_nums, _NUM_ATOM
 
 _MISSING = object()
 JSONLD_REQUIRED = {"FAQPage": ["mainEntity"], "Article": ["headline"],
@@ -62,8 +62,8 @@ def validate_draft(draft: dict, brand: dict) -> ValidationResult:
 
     # Map number sets to original unit text from body for display
     original_units = {}
-    for m in re.finditer(r"(\d+(?:[-–—]+\d+)?)\s*([a-zA-Z%]+)", body):
-        nums_in_match = frozenset(re.findall(r"\d+", m.group(1)))
+    for m in re.finditer(rf"({_NUM_ATOM}(?:\s*[-–—]+\s*{_NUM_ATOM})?)\s*([a-zA-Z%]+)", body):
+        nums_in_match = frozenset(tokenize_nums(m.group(1)))
         original_units[nums_in_match] = m.group(2)
 
     for claim in body_claims:
@@ -127,4 +127,6 @@ def validate_draft(draft: dict, brand: dict) -> ValidationResult:
     return ValidationResult(ok=not issues, issues=issues, appendix_md="\n".join(lines))
 
 def parse_nums_from(s: str) -> list[str]:
-    return re.findall(r"\d+", str(s))
+    """与 brand.parse_claims 同一数字 tokenizer(小数/千分位规范化),
+    保证 anchor 覆盖判断两侧口径一致(2026-08-24 审查#4)。"""
+    return tokenize_nums(str(s))

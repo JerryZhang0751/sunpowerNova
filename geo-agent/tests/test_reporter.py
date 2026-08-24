@@ -100,3 +100,20 @@ def test_rules_iteration_section_absent_graceful(tmp_path):
             "self_seo": {"total": 49.8, "dims": []}, "gap": {}}
     html = render(base, tmp_path / "c.html").read_text(encoding="utf-8")
     assert "本期无规则迭代记录" in html
+
+# ---- Fix(2026-08-24 审查#5): 采集真实分母与质量门必须在报告中可见 ----
+def test_collection_gate_visible(tmp_path):
+    rep = json.loads(json.dumps(REPORT))
+    rep["metrics"]["qwen"].update({"planned": 15, "valid": 10, "failed": 5, "success_rate": 0.667})
+    rep["collection_gate"] = {"manifest": True, "threshold": 0.95,
+                              "min_success_rate": 0.667, "ok": False}
+    html = render(rep, tmp_path / "gate.html").read_text(encoding="utf-8")
+    assert "采集门" in html
+    assert "66.7%" in html                       # 最低成功率可见
+    assert "未达" in html                        # 门未过要明说,不再虚假健康
+    assert "<td>15</td>" in html and "<td>10</td>" in html and "<td>5</td>" in html  # planned/valid/failed
+
+def test_collection_gate_absent_graceful(tmp_path):
+    """旧报告/最小 dict(无新键)渲染不崩。"""
+    html = render(REPORT, tmp_path / "old.html").read_text(encoding="utf-8")
+    assert "采集门" not in html or "legacy" in html

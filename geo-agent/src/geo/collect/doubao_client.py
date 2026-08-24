@@ -32,7 +32,9 @@ def parse_doubao_response(raw: dict) -> dict:
                     answer += c.get("text") or c.get("output_text") or ""
 
     # Doubao citations in output[type=message].content[].annotations[]
-    # ({type:url_citation,title,url}), NOT in web_search_call
+    # ({type:url_citation,title,url}), NOT in web_search_call.
+    # url_citation 附着在 message 内容上 = provider 明证的"引用",同时作为
+    # citations(明证)与 search_results(检索视图,向后兼容)暴露(2026-08-24 审查#1)。
     seen, srcs = set(), []
     for o in raw.get("output", []):
         if isinstance(o, dict) and o.get("type") == "message":
@@ -43,11 +45,13 @@ def parse_doubao_response(raw: dict) -> dict:
                         seen.add(u)
                         srcs.append({"url": u, "title": (a or {}).get("title", "")})
 
-    # Fallback: if annotations missing, recursively harvest URLs
+    # Fallback: if annotations missing, recursively harvest URLs.
+    # harvest 出的是检索痕迹(工具结果/答案文本),不是 provider 明证 → citations 为空。
     if not srcs:
         srcs = [{"url": u, "title": ""} for u in _harvest(raw.get("output", []))]
 
-    return {"answer": answer, "search_results": srcs}
+    return {"answer": answer, "search_results": srcs,
+            "citations": list(srcs) if seen else []}
 
 
 def _harvest(obj, found=None) -> list[str]:

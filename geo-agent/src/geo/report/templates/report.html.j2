@@ -15,6 +15,15 @@ h1,h2,h3{color:#212529}</style>
 <h2>①执行摘要</h2>
 <p>GEO总分: <strong>{{ '%.1f'|format(report.self_geo.total) if report.self_geo else '-' }}</strong>/100</p>
 <p>SEO总分: <strong>{{ '%.1f'|format(report.self_seo.total) if report.self_seo else '-' }}</strong>/100</p>
+{% if report.collection_gate is defined and report.collection_gate %}
+{% set cg = report.collection_gate %}
+<p>采集门(成功率 ≥ {{ '{:.0%}'.format(cg.threshold) }}):
+{% if not cg.manifest %}<span class="note">legacy(无 runs.jsonl,分母不可追溯)</span>
+{% elif cg.ok %}<strong style="color:#198754">通过</strong>(最低 {{ '{:.1%}'.format(cg.min_success_rate) }})
+{% else %}<strong style="color:#dc3545">未达</strong>(最低 {{ '{:.1%}'.format(cg.min_success_rate or 0) }})</p>
+<p class="note">采集成功率低于门槛,本周数据不完整;failed 项见下表,重跑采集补齐后再评估。</p>
+{% endif %}</p>
+{% endif %}
 </section>
 
 <section>
@@ -31,8 +40,13 @@ h1,h2,h3{color:#212529}</style>
 
 <section>
 <h2>3 模型横向对比</h2><table border=1>
-<tr><th>model</th><th>mention</th><th>citation</th><th>position</th><th>SOV</th></tr>
-{% for m,v in report.metrics.items()|sort %}<tr><td>{{ m }}</td><td>{{ '%.3f'|format(v.mention_rate) }}</td>
+<tr><th>model</th><th>planned</th><th>valid</th><th>failed</th><th>success</th><th>mention</th><th>citation</th><th>position</th><th>SOV</th></tr>
+{% for m,v in report.metrics.items()|sort %}<tr><td>{{ m }}</td>
+<td>{{ v.planned if v.planned is defined else '-' }}</td>
+<td>{{ v.valid if v.valid is defined else '-' }}</td>
+<td>{{ v.failed if v.failed is defined else '-' }}</td>
+<td>{{ '{:.1%}'.format(v.success_rate) if v.success_rate is defined and v.success_rate is not none else '-' }}</td>
+<td>{{ '%.3f'|format(v.mention_rate) }}</td>
 <td>{{ '%.3f'|format(v.citation_rate) }}</td><td>{{ v.avg_position if v.avg_position is not none else '-' }}</td>
 <td>{{ '%.3f'|format(v.sov) }}</td></tr>{% endfor %}</table>
 </section>

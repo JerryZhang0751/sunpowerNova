@@ -145,3 +145,38 @@ def test_validate_flags_unattributed_percent_claims():
     assert not r.ok, f"Expected validation failure for unattributed % claim but got ok. Issues: {r.issues}"
     assert any("96" in i and ("%" in i or "percent" in i.lower()) for i in r.issues), \
         f"Expected issue about unattributed '96%' claim but got: {r.issues}"
+
+
+# ---- Fix(2026-08-24 审查#4): 草稿核验同样不得被小数/千分位绕过 ----------------
+import copy
+
+def test_validate_flags_decimal_against_int_inventory():
+    """审查复现: brand 只有 5 kW 规格,正文声称 5.5 kW 仍必须拒。"""
+    d = _draft(body_md="# t\n\nA 5.5 kW inverter is included.")
+    r = validate_draft(d, BRAND)
+    assert not r.ok and any("5.5" in i for i in r.issues), r.issues
+
+def test_validate_flags_wrong_thousands():
+    d = _draft(body_md="# t\n\nPanels deliver 2,500 W each.")
+    r = validate_draft(d, BRAND)
+    assert not r.ok and any("2500" in i for i in r.issues), r.issues
+
+def test_validate_accepts_matching_decimal_with_anchor():
+    """库存确有 5.5 kW 且 anchor 值吻合 → 必须通过(不得因小数误报)。"""
+    brand2 = copy.deepcopy(BRAND)
+    brand2["products"][0]["specs"]["power_kw"] = "5.5"
+    d = _draft(body_md="# t\n\nThe inverter runs at 5.5 kW.",
+               fact_anchors=[{"claim": "5.5 kW", "path": "products[home-battery].specs.power_kw",
+                              "value": "5.5"}])
+    r = validate_draft(d, brand2)
+    assert r.ok, r.issues
+    assert "| 5.5 kW | products[home-battery].specs.power_kw | ✅ |" in r.appendix_md
+
+def test_validate_accepts_matching_thousands():
+    brand2 = copy.deepcopy(BRAND)
+    brand2["products"][0]["specs"]["power_w"] = "1,500"
+    d = _draft(body_md="# t\n\nPeak output reaches 1,500 W.",
+               fact_anchors=[{"claim": "1,500 W", "path": "products[home-battery].specs.power_w",
+                              "value": "1,500"}])
+    r = validate_draft(d, brand2)
+    assert r.ok, r.issues

@@ -5,6 +5,7 @@ from geo.shared.config import settings
 from geo.shared.models import L3Source
 from geo.shared.storage import sha1_url, source_dir
 from geo.fetch.meta_llm import extract_semantic
+from geo.fetch.url_guard import UnsafeURLError, assert_safe_url, MAX_REDIRECTS
 
 def extract_structural(soup: BeautifulSoup) -> dict:
     # On-page text signals the SEO scorer needs; captured at snapshot/fetch time
@@ -29,7 +30,30 @@ def extract_structural(soup: BeautifulSoup) -> dict:
             "h_counts": h_counts, "table_count": len(soup.find_all("table")),
             "ul_count": len(soup.find_all(["ul","ol"]))}
 
-def fetch_source(url: str, fetcher_kimi=True) -> L3Source:
+def _safe_get(url: str, transport=None) -> httpx.Response:
+    """手动重定向循环: 每一跳先过 SSRF 防线再请求,跳数封顶。
+
+    不用 follow_redirects=True——那会让 httpx 自动跟进 Location,模型注入的
+    内网跳转在防线外执行(2026-08-24 审查#3)。transport 仅供测试注入。
+    """
+    current = url
+    for _ in range(MAX_REDIRECTS + 1):
+        assert_safe_url(current)                      # 每跳验证(含首跳)
+        kwargs = {"timeout": 30.0, "follow_redirects": False}
+        if transport is not None:
+            kwargs["transport"] = transport
+        elif settings.proxy:
+            kwargs["proxy"] = settings.proxy
+        with httpx.Client(**kwargs) as c:
+            r = c.get(current)
+        if r.is_redirect:
+            loc = r.headers.get("location", "")
+            current = str(httpx.URL(current).join(loc))
+            continue
+        return r
+    raise UnsafeURLError(f"重定向超过 {MAX_REDIRECTS} 跳: {url!r}")
+
+def fetch_source(url: str, fetcher_kimi=True, transport=None) -> L3Source:
     sha = sha1_url(url); sd = source_dir(sha)
     text_path = sd/"text.md"; meta_path = sd/"meta.json"
     if text_path.exists():               # 跨周去重：已抓过直接读
@@ -37,11 +61,13 @@ def fetch_source(url: str, fetcher_kimi=True) -> L3Source:
         return L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
     t0 = time.time(); status = None; text = ""; js_only = False; structural = {}
     try:
-        with httpx.Client(timeout=30.0, follow_redirects=True, proxy=settings.proxy) as c:
-            r = c.get(url); status = r.status_code
+        r = _safe_get(url, transport); status = r.status_code
         text = trafilatura.extract(r.text) or ""
         if not text.strip(): js_only = True
         structural = extract_structural(BeautifulSoup(r.text, "lxml"))
+    except UnsafeURLError:
+        # 安全拦截必须上抛且不落盘——落盘空文本会既污染缓存又掩盖攻击面
+        raise
     except Exception:
         js_only = True
     semantic = extract_semantic(text) if (fetcher_kimi and text.strip()) else {}

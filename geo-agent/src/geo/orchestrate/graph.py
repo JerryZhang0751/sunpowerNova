@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 import sqlite3
 from geo.shared.config import settings, REPO
-from geo.collect.collector import run_collection
+from geo.collect.collector import run_collection, collection_health, COLLECTION_GATE
 from geo.fetch.fetcher import fetch_source
 from geo.fetch.gsc import snapshot_gsc
 from geo.fetch.site_signals import snapshot_static_signals
@@ -16,6 +16,13 @@ class S(TypedDict): week: int
 def collect_node(state):
     run_collection(week=state["week"], models=settings.run.providers, prompt_ids=None,
                    runs=settings.run.runs, rule_version=settings.run.rule_version)
+    # 数据质量门(2026-08-24 审查#5): 采集成功率 <95% 就此阻断,拒绝让"planned=valid"
+    # 的虚假健康流入 fetch/assess/rules;重跑 collect 补齐失败项后续跑即可恢复。
+    h = collection_health(state["week"])
+    if h["manifest"] and h["min_success_rate"] is not None \
+            and h["min_success_rate"] < COLLECTION_GATE:
+        raise RuntimeError(
+            f"采集成功率 {h['min_success_rate']:.1%} < {COLLECTION_GATE:.0%} 门槛,阻断流水线: {h['per_model']}")
     return state
 
 def fetch_node(state):

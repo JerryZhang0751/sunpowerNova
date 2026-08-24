@@ -37,14 +37,25 @@ def _client_out_from_fixture(provider: str, raw_fixture: dict) -> dict:
     from geo.collect.zhipu_client import parse_zhipu_response
     return parse_zhipu_response(resp)
 
-def _structured_sources(provider: str, client_out: dict) -> list[CitedSource]:
+def _retrieved_sources(client_out: dict) -> list[CitedSource]:
+    """search_results = 模型检索过的列表(≠引用),原样保留在 retrieved_sources。"""
     srcs = []
-    for i, s in enumerate(client_out.get("search_results", [])):
+    for i, s in enumerate(client_out.get("search_results", []) or []):
         url = s.get("url") if isinstance(s, dict) else None
         if not url: continue
         srcs.append(CitedSource(position=i+1, url=url, title=(s.get("title") or ""),
-                                snippet=(s.get("snippet") or ""), extract_method="structured"))
+                                snippet=(s.get("snippet") or ""), extract_method="retrieved"))
     return srcs
+
+def _answer_urls(answer: str) -> list[str]:
+    """答案文本中的 URL,按首次出现顺序去重(去 query、去尾部标点)。"""
+    seen, out = set(), []
+    for m in _URL.findall(answer):
+        u = m.split("?")[0].rstrip(".,)")
+        if u and u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
 
 def _compute_sentiment(answer: str) -> str:
     """Compute sentiment deterministically using keyword-based approach."""
@@ -82,43 +93,70 @@ def _compute_sentiment(answer: str) -> str:
     # Default to neutral
     return "neu"
 
-def _fallback_sources(answer: str, structured: list[CitedSource]) -> list[CitedSource]:
-    have = {s.url for s in structured}
-    extra = []
-    for m in _URL.findall(answer):
-        u = m.split("?")[0].rstrip(".,)")
-        if u not in have: extra.append(CitedSource(position=None, url=u, extract_method="inferred"))
-    return extra
+def _brand_keys(brand_terms: list[str]) -> list[str]:
+    """["SunHestia","sunhestia.com"] → ["sunhestia","sunhestia"](URL 子串匹配用)。"""
+    keys = []
+    for term in brand_terms:
+        base = term.lower()
+        if "." in base:
+            base = base.split(".")[0]
+        keys.append(base)
+    return keys
 
 def parse_l2(provider: str, client_out: dict, row: PromptRow,
              brand_terms: list[str], competitor_set: list[str]) -> L2Record:
+    """L2 解析:cited 只认答案内证据。
+
+    证据分层(2026-08-24 审查#1 修复:检索结果≠最终引用):
+    - structured / inferred: URL 真出现在最终答案文本里(前者可在检索列表找到
+      元数据,后者找不到)——这是"模型引用了"的确定性证据;
+    - attested: provider 明证的引用(doubao message 内容上的 url_citation
+      annotations),即使答案文本不重复 URL 也采信;
+    - retrieved: 仅出现在 search_results(模型"检索过"),存 retrieved_sources,
+      不进 cited、不计提及/引用率/引用位置/竞品。
+    mentioned/competitors 只看答案文本;citation_position = 答案内引用顺序,
+    不是搜索结果排名。
+    """
     answer = client_out.get("answer", "") or ""
-    structured = _structured_sources(provider, client_out)
-    inferred = _fallback_sources(answer, structured)
-    cited = structured + inferred
-    blob = answer + " " + " ".join(s.url for s in cited)
+    retrieved = _retrieved_sources(client_out)
+    retrieved_by_url = {s.url: s for s in retrieved}
+
+    cited: list[CitedSource] = []
+    inferred_any = False
+    for u in _answer_urls(answer):
+        meta = retrieved_by_url.get(u)
+        if meta:
+            cited.append(CitedSource(position=len(cited)+1, url=u, title=meta.title,
+                                     snippet=meta.snippet, extract_method="structured"))
+        else:
+            cited.append(CitedSource(position=len(cited)+1, url=u, title="", snippet="",
+                                     extract_method="inferred"))
+            inferred_any = True
+
+    cited_urls = {s.url for s in cited}
+    for c in client_out.get("citations", []) or []:
+        u = c.get("url") if isinstance(c, dict) else None
+        if not u or u in cited_urls: continue
+        cited.append(CitedSource(position=len(cited)+1, url=u, title=(c.get("title") or ""),
+                                 snippet=(c.get("snippet") or ""), extract_method="attested"))
+        cited_urls.add(u)
+
     low = "SunHestia" in row.prompt.upper() or row.category == "brand"
-    mentioned = any(t.lower() in blob.lower() for t in brand_terms)
+    mentioned = any(t.lower() in answer.lower() for t in brand_terms)
 
-    # Extract brand key from brand_terms (e.g., from "sunhestia.com" -> "sunhestia")
-    brand_keys = []
-    for term in brand_terms:
-        # Remove TLD if present and extract base brand name
-        base = term.lower()
-        if "." in base:
-            # Extract domain without TLD
-            base = base.split(".")[0]
-        brand_keys.append(base)
+    brand_keys = _brand_keys(brand_terms)
+    domain_terms = [t.lower() for t in brand_terms if "." in t]
+    # 答案内 URL 引用含品牌,或答案文本写出了品牌裸域名(如 "SunHestia (sunhestia.com)")
+    cited_with_link = (any(any(b in s.url.lower() for b in brand_keys) for s in cited)
+                       or any(dt in answer.lower() for dt in domain_terms))
+    position = next((s.position for s in cited if any(b in s.url.lower() for b in brand_keys)), None)
 
-    # Use brand_keys for URL checking
-    cited_with_link = any(any(b in s.url.lower() for b in brand_keys) for s in cited)
-    position = next((s.position for s in structured if any(b in s.url.lower() for b in brand_keys)), None)
-
-    comp = sorted({c for c in competitor_set if c.lower() in blob.lower()})
+    comp = sorted({c for c in competitor_set if c.lower() in answer.lower()})
 
     # Only compute sentiment if brand is mentioned in the answer (spec: "未提及时空")
     sentiment = _compute_sentiment(answer) if mentioned else "neu"
 
-    return L2Record(cited_sources=cited, mentioned=mentioned, cited_with_link=cited_with_link,
-                    citation_position=position, sentiment=sentiment, competitors_mentioned=comp,
-                    low_confidence=bool(inferred) and low)
+    return L2Record(cited_sources=cited, retrieved_sources=retrieved, mentioned=mentioned,
+                    cited_with_link=cited_with_link, citation_position=position,
+                    sentiment=sentiment, competitors_mentioned=comp,
+                    low_confidence=inferred_any and low)
