@@ -103,7 +103,6 @@ def build_graph():
     return g.compile(checkpointer=SqliteSaver(conn))
 
 def run_pipeline(week: int, next_week: bool = False, force_new_run: bool = False):
-    from langgraph.checkpoint.sqlite import SqliteSaver
     from datetime import datetime
 
     if force_new_run:
@@ -112,23 +111,27 @@ def run_pipeline(week: int, next_week: bool = False, force_new_run: bool = False
         thread_id = f"w{week}-{timestamp}"
     else:
         thread_id = f"w{week}"
-    db_path = REPO/"state"/"runs.sqlite"
-
-    # Check if checkpoint already exists for this week (resume from previous run)
-    if not force_new_run and db_path.exists():
-        conn = sqlite3.connect(db_path, check_same_thread=False)
-        checkpointer = SqliteSaver(conn)
-        checkpoint = checkpointer.get({"configurable": {"thread_id": thread_id}})
-
-        # If checkpoint exists with complete state, skip re-execution
-        if checkpoint is not None and "channel_values" in checkpoint:
-            if checkpoint["channel_values"].get("week") == week:
-                # Graph already completed for this week, skip re-run
-                return
 
     app = build_graph()
-    # thread_id=w{week} → SqliteSaver checkpoint 续跑：已完成节点重跑时跳过
-    app.invoke({"week": week}, config={"configurable": {"thread_id": thread_id}})
+    config = {"configurable": {"thread_id": thread_id}}
+
+    # Completion check via get_state: a graph at END has next == (). DO NOT test
+    # channel_values.week alone — it is set from the very first checkpoint, so a
+    # crashed run is indistinguishable from a completed one that way (w202 incident).
+    partial = False
+    if not force_new_run:
+        snap = app.get_state(config)
+        if snap.values.get("week") == week and not snap.next:
+            print(f"[pipeline] w{week} already completed (thread {thread_id}) — skip")
+            return
+        partial = snap.values.get("week") == week
+        if partial:
+            print(f"[pipeline] w{week} resuming from checkpoint, pending nodes: {list(snap.next)}")
+
+    # invoke(None) resumes a partial thread from its checkpoint (only pending
+    # nodes re-run); passing fresh input would restart the graph from START
+    # and re-execute already-checkpointed (paid) work.
+    app.invoke(None if partial else {"week": week}, config=config)
 
     if next_week:
         import yaml as _y

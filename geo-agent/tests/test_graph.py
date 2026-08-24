@@ -1,5 +1,6 @@
 import tempfile
 import sqlite3
+import pytest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
 from langgraph.checkpoint.sqlite import SqliteSaver
@@ -462,6 +463,50 @@ def test_force_new_run_uses_fresh_thread(tmp_path, monkeypatch):
     monkeypatch.setattr(G, "build_graph", lambda: FakeApp())
     G.run_pipeline(9, force_new_run=True)
     assert seen["thread"].startswith("w9-")  # Timestamped new thread, bypasses old checkpoint
+
+
+def test_pipeline_resumes_after_node_failure(tmp_path, monkeypatch):
+    """Regression (w202 incident): a crashed run must RESUME the remaining nodes
+    on re-run of the same week — not silently no-op, and not re-run from START.
+
+    Old bug: the guard checked channel_values.week, which is set from the very
+    first checkpoint, so any started-then-crashed week became a silent no-op.
+    """
+    import geo.orchestrate.graph as G
+
+    calls = []
+    fail_flags = {"fetch": True}
+
+    def mk(name):
+        def f(state):
+            calls.append(name)
+            if fail_flags.get(name):
+                raise RuntimeError(f"boom at {name}")
+            return state
+        return f
+
+    monkeypatch.setattr(G, "REPO", tmp_path)  # isolate state/runs.sqlite
+    for n in ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]:
+        monkeypatch.setattr(G, f"{n}_node", mk(n))
+
+    # First run: crashes at fetch (collect completed & checkpointed)
+    with pytest.raises(RuntimeError, match="boom at fetch"):
+        G.run_pipeline(week=202)
+
+    # Fix the failing node, re-run the same week
+    fail_flags["fetch"] = False
+    calls.clear()
+    G.run_pipeline(week=202)
+
+    # Resume must re-attempt the failed node and everything after it,
+    # but NOT re-run collect (its checkpoint is reused — no re-burning paid API calls)
+    assert calls == ["fetch", "snapshot", "assess", "research", "generate", "rules", "report"], \
+        f"expected resume from fetch, got {calls}"
+
+    # Third run: a completed week must be an idempotent no-op
+    calls.clear()
+    G.run_pipeline(week=202)
+    assert calls == [], f"completed week must not re-execute nodes, got {calls}"
 
 
 def test_generate_node_skips_when_unreviewed_draft(tmp_path, monkeypatch):
