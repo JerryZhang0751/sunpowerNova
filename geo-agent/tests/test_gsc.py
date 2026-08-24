@@ -7,6 +7,22 @@ def test_gsc_degrades_on_auth_error(tmp_path, monkeypatch):
         out = snapshot_gsc(week=99, rule_version="t")
     assert out["degraded"] is True and out["rows"] == []
 
+def test_gsc_http_sets_timeout(tmp_path, monkeypatch):
+    """httplib2 has NO default timeout — every Http() in the GSC path must set one,
+    or a stalled Google endpoint (through the Clash proxy) hangs snapshot_node forever.
+    Must hold on BOTH branches: direct and proxied."""
+    for proxy in (None, "http://127.0.0.1:7890"):
+        with patch("geo.fetch.gsc.settings") as mock_settings:
+            mock_settings.proxy = proxy
+            mock_settings.gsc_key_file = "/tmp/fake-key.json"
+            with patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file"):
+                with patch("geo.fetch.gsc.httplib2.Http") as mock_http:
+                    with patch("geo.fetch.gsc.build"):
+                        _build_service()
+        for call in mock_http.call_args_list:
+            assert call.kwargs.get("timeout") == 60, \
+                f"Http() missing timeout=60 (proxy={proxy}): {call}"
+
 def test_gsc_happy(tmp_path, monkeypatch):
     svc = MagicMock()
     svc.searchanalytics().query().execute.return_value = {"rows":[{"keys":["solar battery"],"clicks":3,"impressions":50,"ctr":0.06,"position":4.2}]}
