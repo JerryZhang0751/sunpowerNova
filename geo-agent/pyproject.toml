@@ -22,12 +22,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.2", "pytest-cov>=5.0"]
+dev = ["pytest>=8.2", "pytest-cov>=5.0", "pytest-timeout>=2.3"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q --strict-markers"
+# Hard hang defense: the suite once hung indefinitely when a real API call leaked
+# in (commit 1a06ab5). 300s per test is far above any legitimate test (~2s suite).
+timeout = 300
 
 [build-system]
 requires = ["setuptools>=68"]

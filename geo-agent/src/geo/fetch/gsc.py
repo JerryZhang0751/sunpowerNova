@@ -10,12 +10,17 @@ from urllib.parse import urlparse
 
 SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
+# httplib2 has NO default timeout — without this a stalled Google endpoint
+# (through the proxy) hangs snapshot_node forever (same incident class as the
+# Kimi hang; every httpx call site in the repo sets 20-300s).
+GSC_TIMEOUT_S = 60.0
+
 def _build_service():
     creds = service_account.Credentials.from_service_account_file(settings.gsc_key_file, scopes=SCOPES)
-    http = httplib2.Http()
+    http = httplib2.Http(timeout=GSC_TIMEOUT_S)
     if settings.proxy:
         proxy_info = httplib2.proxy_info_from_url(settings.proxy)
-        http = httplib2.Http(proxy_info=proxy_info)
+        http = httplib2.Http(proxy_info=proxy_info, timeout=GSC_TIMEOUT_S)
     http = AuthorizedHttp(creds, http=http)   # google-auth 无 creds.authorize；用 AuthorizedHttp 包代理 httplib2
     return build("searchconsole", "v1", http=http, cache_discovery=False)
 
