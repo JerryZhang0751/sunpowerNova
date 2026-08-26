@@ -1,4 +1,4 @@
-version: geo-seo-v2
+version: geo-seo-v1
 composite: seo
 weights:
   crawlability_index: 20

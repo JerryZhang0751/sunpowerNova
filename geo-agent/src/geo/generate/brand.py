@@ -32,40 +32,64 @@ def slugify(topic: str) -> str:
 _UNITS = r"(kwh|kw|wh|watts|watt|w|years|year|percent|volts|volt|v|%|°c|°f)"
 _UNIT_NORM = {"watts": "w", "watt": "w", "years": "year", "percent": "%", "volts": "v", "volt": "v"}
 # 数字原子(2026-08-24 审查#4): 支持小数与千分位;千分位形必须在前,否则 \d+ 会
-# 把 "1,500" 截成 "1"。比较前一律规范化(_canon_num): "1,500"→"1500"、"5.50"→"5.5"。
-_NUM_ATOM = r"(?:\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?)"
-_NUM = rf"({_NUM_ATOM}(?:\s*[-–—]\s*{_NUM_ATOM})?)"
-_NUM_TOK_RE = re.compile(_NUM_ATOM)
+# 把 "1,500" 截成 "1"。(2026-08-25 二次审查#4)千分位形补小数尾巴("1,500.5"),
+# 否则正则回退会截出子数 "500.5";另补欧式小数逗号形("5,5"),规范化时逗号→点,
+# 不得截成 "5"。
+_NUM_ATOM = r"(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+,\d+|\d+(?:\.\d+)?)"
+# 符号位(2026-08-25 二次审查#4): "+10°C" 与 "-10°C" 是方向相反的两个事实;
+# 原子/RANGE 端点各带 [+-]?,规范化保留负号、+ 归一(数值等同)。_norm 已把
+# en/em dash 与 U+2212 归一为 "-",分隔符只写 "-"。
+_NUM = rf"([+-]?{_NUM_ATOM}(?:\s*[-]\s*[+-]?{_NUM_ATOM})?)"
+_RANGE_RE = re.compile(rf"([+-]?{_NUM_ATOM})\s*-\s*([+-]?{_NUM_ATOM})")
+_NUM_TOKEN_RE = re.compile(rf"[+-]?{_NUM_ATOM}(?:\s*-\s*[+-]?{_NUM_ATOM})?")
 # 文本体：数字在前，单位紧随（含 "10-year" 连字符形）
 # 使用 (?![a-z0-9]) 替代 \b 以匹配 % 等非字母单位（% 后的字符都是非单词字符，\b 无法匹配）
 _CLAIM_RE = re.compile(rf"{_NUM}\s*[-\s]*{_UNITS}(?![a-z0-9])", re.I)
 # 键值体：键名含单位在前、值在后（"capacity kwh: 5–15"；下划线先归一为空格）
-# 同样使用 (?![a-z0-9]) 替代 \b 以一致处理非字母单位
-_KEYVAL_RE = re.compile(rf"\b{_UNITS}(?![a-z0-9])[^0-9\n]{{0,25}}{_NUM}", re.I)
+# 间隔用惰性量词并禁止吞掉贴着数字的符号位——否则 "temp °c: -10" 的 "-" 被
+# 贪婪间隔吃掉,值变成无符号 10(2026-08-25 二次审查#4)。
+_KEYVAL_RE = re.compile(rf"\b{_UNITS}(?![a-z0-9])[^0-9\n]{{0,25}}?{_NUM}", re.I)
 
 def _norm(s: str) -> str:
-    return re.sub(r"\s+", " ", s.replace("_", " ").replace("–", "-").replace("—", "-")).strip().lower()
+    return re.sub(
+        r"\s+", " ",
+        s.replace("_", " ").replace("–", "-").replace("—", "-").replace("−", "-")
+    ).strip().lower()
 
 def _norm_unit(u: str) -> str:
     u = u.lower()
     return _UNIT_NORM.get(u, "%" if u == "percent" else u)
 
 def _canon_num(tok: str) -> str:
-    """数字 token 规范形式: 去千分位、去尾零("1,500"→"1500"、"5.50"→"5.5")。"""
-    f = float(tok.replace(",", ""))
+    """数字 token 规范形式: 千分位去除/欧式小数逗号归一、保留负号、去尾零。
+
+    "+10"→"10"(数值等同); "-10"→"-10"; "1,500"→"1500"; "1,500.5"→"1500.5";
+    "5,5"→"5.5"(非合法千分位的逗号按小数逗号处理,不得截成 "5")。
+    """
+    t = tok.strip()
+    neg = t.startswith("-")
+    t = t.lstrip("+-")
+    if re.fullmatch(r"\d{1,3}(?:,\d{3})+(?:\.\d+)?", t):
+        t = t.replace(",", "")                     # 合法千分位
+    else:
+        t = t.replace(",", ".")                    # 欧式小数逗号("5,5"→"5.5")
+    f = -float(t) if neg else float(t)
     return str(int(f)) if f.is_integer() else repr(f)
 
 def _norm_nums(raw: str) -> frozenset[str]:
-    return frozenset(_canon_num(p.strip()) for p in re.split(r"[-]+", raw) if p.strip())
+    """range 两端拆开(各带符号);单值带符号整体化。"""
+    t = raw.strip()
+    m = _RANGE_RE.fullmatch(t)
+    if m:
+        return frozenset({_canon_num(m.group(1)), _canon_num(m.group(2))})
+    return frozenset({_canon_num(t)})
 
 def tokenize_nums(text: str) -> list[str]:
-    """提取文本中全部数字 token(规范化;range 两端拆开)。validate 的 anchor
-    值核对与其用同一 tokenizer,否则小数/千分位两边口径不一仍可绕过。"""
+    """提取文本中全部数字 token(规范化;range 两端拆开、符号保留)。validate
+    的 anchor 值核对与其用同一 tokenizer,否则小数/千分位/符号两边口径不一仍可绕过。"""
     out: list[str] = []
-    for m in _NUM_TOK_RE.finditer(_norm(text)):
-        for part in re.split(r"[-]+", m.group(0)):
-            if part.strip():
-                out.append(_canon_num(part.strip()))
+    for m in _NUM_TOKEN_RE.finditer(_norm(text)):
+        out.extend(sorted(_norm_nums(m.group(0)), key=float))   # 数值序,非字典序
     return out
 
 def parse_claims(text: str) -> list[tuple[frozenset[str], str]]:

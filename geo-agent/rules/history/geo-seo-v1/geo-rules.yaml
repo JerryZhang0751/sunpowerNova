@@ -1,4 +1,4 @@
-version: geo-seo-v2
+version: geo-seo-v1
 composite: geo
 weights:        # 和 = 100
   citability: 25

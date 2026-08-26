@@ -48,3 +48,22 @@ def test_load_with_version_reads_history(tmp_path):
 def test_entries_default_empty():
     r = load_rules("geo")
     assert r.entries == []            # v1 文件尚无 entries → 默认空
+
+
+# ---- Fix(2026-08-25 二次审查#6): 报告版本标签必须与实际加载的规则一致 -----------
+
+def test_current_rule_files_match_run_yaml_version():
+    """run.yaml 的 rule_version(报告将贴的标签)必须与 rules/*.yaml 的 version
+    (评分器实际加载的规则)一致——否则产出"v2 标签、v1 规则"的审计错位,
+    且 rules/run.py 的 do_recalc(version=) 会因 history/ 缺失而 FileNotFoundError。"""
+    from geo.shared.config import settings
+    rg = load_rules("geo")
+    rs = load_rules("seo")
+    assert rg.version == rs.version, (
+        f"geo({rg.version})/seo({rs.version}) 规则文件版本不同步")
+    assert rg.version == settings.run.rule_version, (
+        f"rules/*.yaml={rg.version} != run.yaml rule_version={settings.run.rule_version}")
+    # 请求现行版本 → 解析到现行文件,不要求 history/ 里已有同名归档
+    assert load_rules("geo", version=settings.run.rule_version).version == rg.version
+    # 历史版本走归档: v1 归档已补齐(2026-08-25),do_recalc --to geo-seo-v1 可用
+    assert load_rules("geo", version="geo-seo-v1").version == "geo-seo-v1"

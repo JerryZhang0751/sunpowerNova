@@ -66,7 +66,8 @@ def test_failures_persisted_to_manifest(tmp_path, monkeypatch):
     assert ("zhipu", "planned") in statuses and ("zhipu", "failed") in statuses
 
 def test_collection_health_denominator(tmp_path, monkeypatch):
-    """manifest 记 2 个 job、盘上只有 1 个 L1 → planned=2/valid=1/success=0.5。"""
+    """manifest 记 2 个 job、盘上只有 1 个可用 L1 → planned=2/valid=1/success=0.5。
+    (二次审查 2026-08-25: valid 判据从"文件存在"收紧为"可解析且带非空答案"。)"""
     fake_l1 = _iso(tmp_path, monkeypatch)
     import geo.shared.storage as storage
     mp = tmp_path / "data" / "raw" / "w96" / "runs.jsonl"
@@ -76,12 +77,65 @@ def test_collection_health_denominator(tmp_path, monkeypatch):
             RunRecord(week=96, model="qwen", prompt_id="D01", run=1, prompt_set_version="p",
                       rule_snapshot_version="t", status="failed", l1_path="", error="x")]
     mp.write_text("\n".join(r.model_dump_json() for r in recs), encoding="utf-8")
-    p = fake_l1(96, "qwen", "C01", 1); p.write_text("{}", encoding="utf-8")
+    p = fake_l1(96, "qwen", "C01", 1)
+    p.write_text(json.dumps({"answer": "a real answer"}), encoding="utf-8")
     from geo.collect.collector import collection_health
     h = collection_health(96)
     assert h["manifest"] is True
     assert h["per_model"]["qwen"] == {"planned": 2, "valid": 1, "success_rate": 0.5}
     assert h["min_success_rate"] == 0.5
+
+def test_collection_health_rejects_empty_or_torn_l1(tmp_path, monkeypatch):
+    """二次审查(2026-08-25)#5: 空答案 L1、截断 JSON L1 不得进有效分子——
+    "文件存在即成功"会让超时空答/崩溃残留绕过 95% 数据质量门。"""
+    fake_l1 = _iso(tmp_path, monkeypatch)
+    mp = tmp_path / "data" / "raw" / "w98" / "runs.jsonl"
+    mp.parent.mkdir(parents=True)
+    recs = [RunRecord(week=98, model="qwen", prompt_id=p, run=1, prompt_set_version="p",
+                      rule_snapshot_version="t", status="planned", l1_path="")
+            for p in ("C01", "D01", "B02")]
+    mp.write_text("\n".join(r.model_dump_json() for r in recs), encoding="utf-8")
+    fake_l1(98, "qwen", "C01", 1).write_text(json.dumps({"answer": "ok"}), encoding="utf-8")
+    fake_l1(98, "qwen", "D01", 1).write_text(json.dumps({"answer": "   "}), encoding="utf-8")
+    fake_l1(98, "qwen", "B02", 1).write_text('{"answer": "tor', encoding="utf-8")  # 截断
+    from geo.collect.collector import collection_health
+    h = collection_health(98)
+    assert h["per_model"]["qwen"]["planned"] == 3
+    assert h["per_model"]["qwen"]["valid"] == 1
+    assert h["per_model"]["qwen"]["success_rate"] == round(1 / 3, 3)
+
+def test_timeout_or_empty_answer_is_failure_not_ok(tmp_path, monkeypatch):
+    """二次审查(2026-08-25)#5: qwen timeout=True / 任意家空答案 → failed,
+    不写 L1、error 落 manifest;不得 status=ok 进成功率分子。"""
+    def timeout_client(prompt, **k):
+        return {"answer": "", "search_results": [], "usage": {}, "elapsed_s": 600.0,
+                "timeout": True}
+    def empty_client(prompt, **k):
+        return {"answer": "   ", "search_results": [], "usage": {}, "elapsed_s": 1.0}
+    l1 = _iso(tmp_path, monkeypatch,
+              clients={"qwen": timeout_client, "zhipu": empty_client})
+    recs = run_collection(week=94, models=["qwen", "zhipu"], prompt_ids=["C01"], runs=1,
+                          rule_version="t")
+    assert all(r.status == "failed" for r in recs), [r.status for r in recs]
+    assert not l1(94, "qwen", "C01", 1).exists()
+    assert not l1(94, "zhipu", "C01", 1).exists()
+    lines = [json.loads(l) for l in (tmp_path / "data" / "raw" / "w94" / "runs.jsonl")
+             .read_text(encoding="utf-8").splitlines() if l.strip()]
+    assert any(l["model"] == "qwen" and l["status"] == "failed" and "超时" in l["error"]
+               for l in lines)
+    assert any(l["model"] == "zhipu" and l["status"] == "failed" and "空答案" in l["error"]
+               for l in lines)
+
+def test_resume_ignores_invalid_existing_l1(tmp_path, monkeypatch):
+    """续跑对截断/空答案 L1 不得 skipped_exists——重采覆盖,否则坏文件永久占位。"""
+    l1 = _iso(tmp_path, monkeypatch, clients={"qwen": _fake_collect})
+    p = l1(93, "qwen", "C01", 1)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text('{"answer": "tor', encoding="utf-8")               # 崩溃残留
+    recs = run_collection(week=93, models=["qwen"], prompt_ids=["C01"], runs=1,
+                          rule_version="t")
+    assert all(r.status == "ok" for r in recs)
+    assert json.loads(p.read_text(encoding="utf-8"))["answer"] == "A SunHestia"  # 已重采覆写
 
 def test_collection_health_no_manifest(tmp_path, monkeypatch):
     _iso(tmp_path, monkeypatch)

@@ -125,6 +125,32 @@ def test_parse_doubao_exposes_attested_citations():
     assert ann_urls == [s["url"] for s in out["search_results"]]
 
 
+def test_collect_doubao_passes_citations_through(monkeypatch):
+    """二次审查(2026-08-25)#1: parse 出的 citations 必须随客户端返回值交给 L2。
+
+    线上断链复现: parse_doubao_response 已产出 citations,但 collect_doubao
+    返回 dict 丢弃了该键 → L2 的 attested 路径永远拿不到豆包明证引用,
+    答案只有 annotation、无裸 URL 时真实引用被漏报为"未引用"。
+    """
+    import geo.collect.doubao_client as dc
+    fx = load("C01")
+
+    class _Resp:
+        def raise_for_status(self): pass
+        def json(self): return fx["response"]
+
+    class _Client:
+        def __init__(self, **k): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def post(self, *a, **k): return _Resp()
+
+    monkeypatch.setattr(dc.httpx, "Client", _Client)
+    out = dc.collect_doubao("prompt")
+    expected = parse_doubao_response(fx["response"])["citations"]
+    assert out.get("citations") == expected, "collect_doubao 必须透传 citations 给 L2"
+
+
 def test_parse_doubao_citations_empty_on_harvest_fallback(monkeypatch):
     """无 annotations 走 _harvest 兜底时,citations 必须为空——harvest 出的是检索,不是引用。"""
     raw = {"output": [{"type": "message",

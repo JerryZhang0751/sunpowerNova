@@ -48,7 +48,8 @@ def _mock_httpx():
     """httpx.Client mock that serves HTML for any URL (no real network)."""
     client = MagicMock()
     # is_redirect=False 显式声明(2026-08-24 起走手动重定向循环,MagicMock 真值会误入跳转分支)
-    client.get.side_effect = lambda url: MagicMock(status_code=200, text=HTML, is_redirect=False)
+    # **kw: 2026-08-25 IP pin 起 get 携带请求级 headers/extensions(Host/SNI 保留原主机)
+    client.get.side_effect = lambda url, **kw: MagicMock(status_code=200, text=HTML, is_redirect=False)
     client.__enter__.return_value = client
     return client
 

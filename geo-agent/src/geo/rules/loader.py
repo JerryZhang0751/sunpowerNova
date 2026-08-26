@@ -21,11 +21,24 @@ def _load(p: Path):
 
 
 def load_rules(name: str, version: str | None = None):
-    """Load rules by name (geo or seo); version=None reads current, else reads rules/history/{version}/."""
-    p = (RULES_DIR / "history" / version / f"{name}-rules.yaml") if version \
-        else RULES_DIR / f"{name}-rules.yaml"
-    if not p.exists():
-        raise FileNotFoundError(f"rules not found: {p}")
+    """Load rules by name (geo or seo); version=None reads current, else reads
+    rules/history/{version}/。
+
+    请求恰好等于现行文件 version 的版本 → 解析到现行文件(用现行版本做 recalc
+    不得依赖下一次升版后才存在的归档;2026-08-25 二次审查#6);其余历史版本
+    读归档,缺归档抛 FileNotFoundError。
+    """
+    p_cur = RULES_DIR / f"{name}-rules.yaml"
+    if version:
+        p_hist = RULES_DIR / "history" / version / f"{name}-rules.yaml"
+        if p_hist.exists():
+            p = p_hist
+        elif p_cur.exists() and _load(p_cur).version == version:
+            p = p_cur
+        else:
+            raise FileNotFoundError(f"rules not found: {p_hist}")
+    else:
+        p = p_cur
     return _load(p)
 
 

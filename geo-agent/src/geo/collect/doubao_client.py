@@ -103,9 +103,12 @@ def collect_doubao(prompt: str, model: str = "doubao-seed-2-1-pro-260628") -> di
         raw = r.json()
 
     out = parse_doubao_response(raw)
+    # citations(annotations 明证)必须透传给 L2——漏传会让只有 annotation、
+    # 答案文本无裸 URL 的真实引用被判"未引用"(2026-08-25 二次审查#1)。
     return {
         "answer": out["answer"],
         "raw": raw,
         "search_results": out["search_results"],
+        "citations": out["citations"],
         "elapsed_s": round(time.time() - t0, 1),
     }
