@@ -1,54 +1,123 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 280" width="460" height="280">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 480" role="img" aria-labelledby="title desc">
+  <title id="title">SunHestia home solar energy flow</title>
+  <desc id="desc">A refined diagram showing sunlight reaching rooftop panels, surplus energy charging a home battery, and stored solar powering the home after sunset.</desc>
   <defs>
-    <linearGradient id="hsky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#1d4e7a"/>
-      <stop offset="1" stop-color="#143a66"/>
+    <linearGradient id="backdrop" x1="70" y1="18" x2="700" y2="450" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#143D68"/>
+      <stop offset=".58" stop-color="#0B2442"/>
+      <stop offset="1" stop-color="#07182D"/>
     </linearGradient>
-    <radialGradient id="hsun" cx="0.4" cy="0.4" r="0.7">
-      <stop offset="0" stop-color="#ffd27a"/>
-      <stop offset="1" stop-color="#f5a524"/>
+    <linearGradient id="roof" x1="245" y1="150" x2="495" y2="270" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#243B59"/>
+      <stop offset="1" stop-color="#0D1D32"/>
+    </linearGradient>
+    <linearGradient id="wallFront" x1="302" y1="246" x2="472" y2="356" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F8FBFF"/>
+      <stop offset="1" stop-color="#D9E5F1"/>
+    </linearGradient>
+    <linearGradient id="wallSide" x1="472" y1="248" x2="535" y2="342" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BFD0E1"/>
+      <stop offset="1" stop-color="#91A8C0"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="282" y1="170" x2="445" y2="236" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2581E8"/>
+      <stop offset=".55" stop-color="#1555A4"/>
+      <stop offset="1" stop-color="#0B315F"/>
+    </linearGradient>
+    <linearGradient id="battery" x1="581" y1="182" x2="658" y2="328" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#183D64"/>
+      <stop offset="1" stop-color="#0A1A2D"/>
+    </linearGradient>
+    <radialGradient id="sun" cx=".36" cy=".32" r=".74">
+      <stop stop-color="#FFE29B"/>
+      <stop offset=".52" stop-color="#FFBD52"/>
+      <stop offset="1" stop-color="#F0961A"/>
     </radialGradient>
+    <radialGradient id="sunGlow">
+      <stop stop-color="#FFB83E" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#FFB83E" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#BFD7EE" stroke-opacity=".055"/>
+    </pattern>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="180%">
+      <feDropShadow dx="0" dy="16" stdDeviation="14" flood-color="#020A14" flood-opacity=".38"/>
+    </filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 10 5 0 10Z" fill="#FFBD52"/>
+    </marker>
   </defs>
 
-  <rect width="460" height="280" rx="18" fill="url(#hsky)"/>
+  <rect width="760" height="480" rx="24" fill="url(#backdrop)"/>
+  <rect width="760" height="480" rx="24" fill="url(#grid)"/>
+  <path d="M0 390C132 338 219 422 346 378C492 327 603 379 760 311V480H0Z" fill="#061525" fill-opacity=".72"/>
 
-  <!-- sun -->
-  <circle cx="378" cy="58" r="24" fill="url(#hsun)"/>
-  <g stroke="#f5a524" stroke-width="4" stroke-linecap="round" opacity="0.8">
-    <line x1="378" y1="22" x2="378" y2="12"/>
-    <line x1="378" y1="104" x2="378" y2="94"/>
-    <line x1="342" y1="58" x2="332" y2="58"/>
-    <line x1="424" y1="58" x2="414" y2="58"/>
-    <line x1="353" y1="33" x2="346" y2="26"/>
-    <line x1="403" y1="83" x2="410" y2="90"/>
+  <circle cx="654" cy="88" r="88" fill="url(#sunGlow)"/>
+  <circle cx="654" cy="88" r="31" fill="url(#sun)" filter="url(#glow)"/>
+  <g stroke="#FFC866" stroke-width="3" stroke-linecap="round" opacity=".75">
+    <path d="M654 41V26M654 150v-15M607 88h-15M716 88h-15M621 55l-11-11M698 132l-11-11M621 121l-11 11M698 44l-11 11"/>
+  </g>
+  <text x="54" y="78" fill="#FFCE78" font-family="Inter,Segoe UI,sans-serif" font-size="12" font-weight="750" letter-spacing="1.8">DAYLIGHT</text>
+  <text x="54" y="105" fill="#FFFFFF" font-family="Inter,Segoe UI,sans-serif" font-size="20" font-weight="700">Generate your own power</text>
+
+  <path d="M625 117C594 138 555 158 510 180" fill="none" stroke="#FFBD52" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 9" marker-end="url(#arrow)"/>
+  <path d="M525 217C549 214 563 222 580 239" fill="none" stroke="#FFBD52" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 9" marker-end="url(#arrow)"/>
+  <path d="M583 291C555 315 524 321 486 315" fill="none" stroke="#76B9FF" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 9" marker-end="url(#arrow)"/>
+
+  <g filter="url(#softShadow)">
+    <!-- A true two-plane pitched roof: the panels sit entirely on the right roof plane. -->
+    <path d="M303 260 390 207 472 132 384 187Z" fill="#162A43"/>
+    <path d="M384 187 472 132 548 237 465 289Z" fill="url(#roof)"/>
+    <path d="M303 260 384 187 465 289 465 365 303 341Z" fill="url(#wallFront)"/>
+    <path d="M465 289 548 237 548 326 465 365Z" fill="url(#wallSide)"/>
+    <path d="M384 187 472 132" fill="none" stroke="#4F6680" stroke-width="2"/>
+
+    <path d="M407 196 473 154 521 220 457 261Z" fill="url(#panel)" stroke="#72B9FF" stroke-width="1.6"/>
+    <g fill="none" stroke="#B9DBFF" stroke-opacity=".62" stroke-width="1">
+      <path d="M423.5 185.5 473 250.8M440 175 489 240.5M456.5 164.5 505 230.3"/>
+      <path d="M419.5 212.3 485 170.5M432 228.5 497 187M444.5 244.8 509 203.5"/>
+    </g>
+    <path d="M411 192 471 154 515 214" fill="none" stroke="#BFE2FF" stroke-opacity=".75" stroke-width="2"/>
+    <rect x="354" y="293" width="33" height="58" rx="3" fill="#17324D"/>
+    <rect x="408" y="298" width="26" height="25" rx="4" fill="#B8D2E8"/>
+    <path d="M421 298v25M408 310.5h26" stroke="#7895AE" stroke-width="2"/>
+    <path d="M482 292v49M520 267v52" stroke="#6F8AA3" stroke-width="2"/>
+    <path d="M478 317 538 280" stroke="#6F8AA3" stroke-width="2"/>
   </g>
 
-  <!-- energy flow: sun to roof -->
-  <line x1="350" y1="84" x2="250" y2="122" stroke="#f5a524" stroke-width="3" stroke-linecap="round" opacity="0.45" stroke-dasharray="5 9"/>
-
-  <!-- house wall -->
-  <rect x="118" y="150" width="184" height="90" fill="#eaf1f8" rx="5"/>
-  <!-- door -->
-  <rect x="190" y="188" width="36" height="52" fill="#9fb2cc" rx="3"/>
-  <!-- roof -->
-  <polygon points="100,152 210,84 320,152" fill="#0b1f3a"/>
-  <!-- PV panels on roof -->
-  <polygon points="122,150 210,92 210,128 158,150" fill="#1f6feb"/>
-  <polygon points="210,92 298,150 262,150 210,126" fill="#1f6feb"/>
-  <g stroke="#cfe0f7" stroke-width="1.2" opacity="0.7">
-    <line x1="156" y1="150" x2="210" y2="111"/>
-    <line x1="190" y1="150" x2="210" y2="135"/>
-    <line x1="210" y1="126" x2="262" y2="150"/>
-    <line x1="210" y1="136" x2="236" y2="150"/>
+  <g filter="url(#softShadow)">
+    <rect x="580" y="188" width="84" height="140" rx="15" fill="url(#battery)" stroke="#47749F" stroke-width="1.5"/>
+    <rect x="596" y="207" width="52" height="8" rx="4" fill="#294E72"/>
+    <rect x="596" y="207" width="39" height="8" rx="4" fill="#FFBD52"/>
+    <path d="M620 239c-11 16-17 27-17 35a19 19 0 0 0 38 0c0-8-7-19-21-35Z" fill="#163457" stroke="#69B4FA" stroke-width="2"/>
+    <path d="m622 252-9 20h10l-5 16 14-22h-10l6-14Z" fill="#FFBD52"/>
+    <circle cx="622" cy="309" r="3" fill="#75C996"/>
   </g>
+  <text x="622" y="351" fill="#9CB7D1" font-family="Inter,Segoe UI,sans-serif" font-size="11" text-anchor="middle" letter-spacing="1.2">HOME BATTERY</text>
 
-  <!-- energy flow: house to battery -->
-  <line x1="302" y1="180" x2="348" y2="180" stroke="#f5a524" stroke-width="3" stroke-linecap="round" opacity="0.5" stroke-dasharray="5 9"/>
-
-  <!-- wall-mounted LiFePO4 battery -->
-  <rect x="350" y="150" width="60" height="100" rx="9" fill="#0b1f3a" stroke="#2a3f5f" stroke-width="2"/>
-  <rect x="362" y="166" width="36" height="10" rx="2" fill="#f5a524"/>
-  <rect x="362" y="182" width="36" height="10" rx="2" fill="#f5a524" opacity="0.7"/>
-  <rect x="362" y="198" width="36" height="10" rx="2" fill="#f5a524" opacity="0.4"/>
-  <text x="380" y="232" fill="#9fb2cc" font-size="13" font-family="Inter, system-ui, sans-serif" text-anchor="middle" font-weight="700">LiFePO4</text>
+  <g transform="translate(40 390)">
+    <rect width="214" height="60" rx="14" fill="#102D4C" stroke="#2B4C6D"/>
+    <circle cx="29" cy="29" r="14" fill="#FFBD52" fill-opacity=".15"/>
+    <path d="M23 29h12M29 23v12" stroke="#FFBD52" stroke-width="2" stroke-linecap="round"/>
+    <text x="52" y="24" fill="#FFCB70" font-family="Inter,Segoe UI,sans-serif" font-size="10" font-weight="750" letter-spacing="1.2">01 · GENERATE</text>
+    <text x="52" y="43" fill="#D6E4F1" font-family="Inter,Segoe UI,sans-serif" font-size="11">Solar powers your home first</text>
+  </g>
+  <g transform="translate(273 390)">
+    <rect width="214" height="60" rx="14" fill="#102D4C" stroke="#2B4C6D"/>
+    <circle cx="29" cy="29" r="14" fill="#FFBD52" fill-opacity=".15"/>
+    <path d="M24 34h10V24H24v10Zm10-7h3v4h-3" fill="none" stroke="#FFBD52" stroke-width="2"/>
+    <text x="52" y="24" fill="#FFCB70" font-family="Inter,Segoe UI,sans-serif" font-size="10" font-weight="750" letter-spacing="1.2">02 · STORE</text>
+    <text x="52" y="43" fill="#D6E4F1" font-family="Inter,Segoe UI,sans-serif" font-size="11">Surplus charges the battery</text>
+  </g>
+  <g transform="translate(506 390)">
+    <rect width="214" height="60" rx="14" fill="#102D4C" stroke="#2B4C6D"/>
+    <circle cx="29" cy="29" r="14" fill="#76B9FF" fill-opacity=".15"/>
+    <path d="m21 30 8-7 8 7v8h-6v-6h-4v6h-6Z" fill="none" stroke="#76B9FF" stroke-width="2" stroke-linejoin="round"/>
+    <text x="52" y="24" fill="#8CC8FF" font-family="Inter,Segoe UI,sans-serif" font-size="10" font-weight="750" letter-spacing="1.2">03 · USE</text>
+    <text x="52" y="43" fill="#D6E4F1" font-family="Inter,Segoe UI,sans-serif" font-size="11">Stored solar powers evenings</text>
+  </g>
 </svg>

@@ -38,19 +38,45 @@ const steps = [
   description="SunHestia designs residential solar photovoltaic and battery storage systems for European homeowners. Generate, store and consume your own clean energy."
 >
   <section class="hero">
-    <div class="wrap">
-      <h1>Your roof. Your power. Your storage.</h1>
-      <p class="lead">
-        SunHestia pairs high-efficiency solar panels with home battery storage
-        so European homeowners can generate clean electricity, store the surplus,
-        and run their homes on self-produced energy day and night.
-      </p>
-      <div class="actions">
-        <a class="btn btn-primary" href="/contact/">Get a free quote</a>
-        <a class="btn btn-ghost" href="/products/">Explore products</a>
+    <div class="wrap hero-layout">
+      <div class="hero-copy">
+        <p class="eyebrow">Solar, storage, self-consumption</p>
+        <h1>Your roof. Your power. Your storage.</h1>
+        <p class="lead">
+          SunHestia pairs high-efficiency solar panels with home battery storage
+          so European homeowners can generate clean electricity, store the surplus,
+          and run their homes on self-produced energy day and night.
+        </p>
+        <div class="actions">
+          <a class="btn btn-primary" href="/contact/">Get a free quote</a>
+          <a class="btn btn-ghost" href="/products/">Explore products</a>
+        </div>
       </div>
 
-      <div class="stats" style="margin-top: 56px">
+      <figure class="hero-media">
+        <video
+          data-hero-video
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          poster="/solar-home-poster.webp"
+          aria-label="A European solar home, rooftop panels, home battery storage and the house illuminated at night"
+        >
+          <source src="/solar-home-combined.mp4" type="video/mp4" />
+          <img
+            src="/solar-home-poster.webp"
+            alt="European detached home with a rooftop solar panel array in warm afternoon light"
+          />
+        </video>
+        <figcaption class="hero-media-caption">
+          <span class="status-dot" aria-hidden="true"></span>
+          Clean power starts at home
+        </figcaption>
+      </figure>
+
+      <div class="stats hero-stats">
         {stats.map((s) => (
           <div>
             <div class="num">{s.num}</div>
@@ -58,12 +84,43 @@ const steps = [
           </div>
         ))}
       </div>
+    </div>
+  </section>
 
-      <img
-        src="/hero-solar.svg"
-        alt="How a SunHestia system works: rooftop solar panels generate electricity by day, surplus is stored in a wall-mounted LiFePO4 home battery, and the home runs on stored power after dark."
-        style="margin-top: 48px; max-width: 420px; width: 100%; height: auto"
-      />
+  <script>
+    const heroVideo = document.querySelector<HTMLVideoElement>("[data-hero-video]");
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncHeroMotion = () => {
+      if (reducedMotion.matches) heroVideo?.pause();
+      else heroVideo?.play().catch(() => {});
+    };
+    syncHeroMotion();
+    reducedMotion.addEventListener("change", syncHeroMotion);
+  </script>
+
+  <section class="section energy-story">
+    <div class="wrap energy-story-layout">
+      <div class="energy-story-copy">
+        <p class="section-kicker">Your energy, in one clear flow</p>
+        <h2>From daylight to dinner time</h2>
+        <p class="sub">
+          Your roof produces electricity first for the home. Any surplus charges
+          the battery, ready for the evening when the sun goes down.
+        </p>
+        <ol class="energy-steps">
+          <li><span>01</span><div><strong>Generate</strong><p>Rooftop panels turn daylight into usable electricity.</p></div></li>
+          <li><span>02</span><div><strong>Store</strong><p>Surplus energy charges the home battery automatically.</p></div></li>
+          <li><span>03</span><div><strong>Use</strong><p>Your home draws on stored solar after sunset.</p></div></li>
+        </ol>
+      </div>
+      <figure class="energy-visual">
+        <img
+          src="/hero-solar.svg?v=e05e0bff"
+          alt="SunHestia home energy flow: rooftop solar generates electricity, surplus charges a home battery, and stored energy powers the home in the evening."
+          loading="lazy"
+          decoding="async"
+        />
+      </figure>
     </div>
   </section>
 

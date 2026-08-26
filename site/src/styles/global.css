@@ -116,25 +116,135 @@ h3 {
 
 /* ---------- Hero ---------- */
 .hero {
-  background: linear-gradient(180deg, #0b1f3a 0%, #143a66 100%);
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 82% 18%, rgba(31, 111, 235, 0.24), transparent 32%),
+    radial-gradient(circle at 16% 92%, rgba(245, 165, 36, 0.13), transparent 30%),
+    linear-gradient(145deg, #07182d 0%, #0b2342 52%, #123b65 100%);
   color: #fff;
-  padding: 84px 0 92px;
+  padding: 72px 0 44px;
+}
+.hero::before {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  content: "";
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+  pointer-events: none;
+}
+.hero-layout {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(420px, 1.08fr);
+  gap: 52px 56px;
+  align-items: center;
+}
+.hero-copy {
+  padding: 16px 0;
+}
+.hero .eyebrow,
+.section-kicker {
+  margin: 0 0 18px;
+  color: var(--c-sun);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 .hero h1 {
   color: #fff;
-  font-size: clamp(2.1rem, 5vw, 3.4rem);
-  max-width: 16ch;
+  font-size: clamp(2.4rem, 5vw, 4.25rem);
+  letter-spacing: -0.045em;
+  margin: 0;
+  max-width: 12ch;
 }
 .hero p.lead {
-  color: #d6e2f2;
-  font-size: 1.15rem;
-  max-width: 56ch;
-  margin: 18px 0 28px;
+  color: #cfdded;
+  font-size: 1.08rem;
+  line-height: 1.72;
+  max-width: 54ch;
+  margin: 24px 0 32px;
 }
 .hero .actions {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
+}
+.hero-media {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 26px;
+  background: #102943 url("/solar-home-poster.webp") center / cover no-repeat;
+  box-shadow:
+    0 32px 70px rgba(0, 0, 0, 0.34),
+    0 0 0 10px rgba(255, 255, 255, 0.035);
+}
+.hero-media::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(4, 14, 27, 0.48) 100%);
+  content: "";
+  pointer-events: none;
+}
+.hero-media video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.hero-media-caption {
+  position: absolute;
+  z-index: 1;
+  right: 20px;
+  bottom: 18px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 650;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.45);
+}
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--c-sun);
+  box-shadow: 0 0 0 5px rgba(245, 165, 36, 0.2);
+}
+.hero-stats {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  padding-top: 28px;
+}
+.hero-stats > div {
+  min-width: 0;
+  padding: 0 24px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+.hero-stats > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.hero-stats .num {
+  color: #ffbd52;
+  font-size: clamp(1.55rem, 3vw, 2.15rem);
+}
+.hero-stats .lbl {
+  max-width: 21ch;
+  color: #b8c9dc;
+  line-height: 1.45;
 }
 .btn {
   display: inline-block;
@@ -159,6 +269,59 @@ h3 {
   text-decoration: none;
 }
 
+@media (max-width: 920px) {
+  .hero-layout {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .hero-copy {
+    max-width: 680px;
+  }
+  .hero h1 {
+    max-width: 13ch;
+  }
+  .hero-media {
+    width: 100%;
+    max-width: 760px;
+  }
+  .hero-stats {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 24px;
+  }
+  .hero-stats > div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .hero {
+    padding: 52px 0 36px;
+  }
+  .hero-layout {
+    gap: 32px;
+  }
+  .hero h1 {
+    font-size: clamp(2.35rem, 12vw, 3.2rem);
+  }
+  .hero-media {
+    border-radius: 19px;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.3);
+  }
+  .hero-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .hero-stats > div {
+    padding: 0 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-media video {
+    visibility: hidden;
+  }
+}
+
 /* ---------- Sections ---------- */
 .section {
   padding: 72px 0;
@@ -174,6 +337,87 @@ h3 {
   color: var(--c-ink-soft);
   max-width: 64ch;
   margin-bottom: 40px;
+}
+
+/* ---------- Home energy story ---------- */
+.energy-story {
+  padding: 88px 0;
+  background: #f7f9fc;
+}
+.energy-story-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(480px, 1.22fr);
+  gap: 72px;
+  align-items: center;
+}
+.energy-story .section-kicker {
+  color: var(--c-sun-deep);
+}
+.energy-story h2 {
+  margin: 0 0 16px;
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  letter-spacing: -0.035em;
+}
+.energy-story .sub {
+  margin-bottom: 32px;
+}
+.energy-steps {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.energy-steps li {
+  display: grid;
+  grid-template-columns: 46px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  border: 1px solid var(--c-border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.8);
+}
+.energy-steps li > span {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: #0b1f3a;
+  color: #ffbd52;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.energy-steps strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--c-ink);
+}
+.energy-steps p {
+  margin: 0;
+  color: var(--c-ink-soft);
+  font-size: 0.94rem;
+  line-height: 1.5;
+}
+.energy-visual {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 24px;
+  box-shadow: 0 28px 60px rgba(11, 31, 58, 0.17);
+}
+.energy-visual img {
+  width: 100%;
+}
+
+@media (max-width: 920px) {
+  .energy-story-layout {
+    grid-template-columns: 1fr;
+    gap: 44px;
+  }
+  .energy-story-copy {
+    max-width: 680px;
+  }
 }
 
 .grid {
@@ -234,6 +478,17 @@ h3 {
 .stats .lbl {
   color: var(--c-ink-soft);
   font-size: 0.92rem;
+}
+.stats.hero-stats {
+  display: grid;
+  gap: 0;
+}
+.stats.hero-stats .num {
+  color: #ffbd52;
+  font-size: clamp(1.55rem, 3vw, 2.15rem);
+}
+.stats.hero-stats .lbl {
+  color: #b8c9dc;
 }
 
 /* ---------- Prose pages ---------- */
