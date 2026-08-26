@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch: {}   # push 事件偶发被 Actions 丢弃(2026-08-26 三连),留手动强制触发口
 
 jobs:
   test:
