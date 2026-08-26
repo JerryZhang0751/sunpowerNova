@@ -62,7 +62,7 @@ def validate_draft(draft: dict, brand: dict) -> ValidationResult:
 
     # Map number sets to original unit text from body for display
     original_units = {}
-    for m in re.finditer(rf"({_NUM_ATOM}(?:\s*[-–—]+\s*{_NUM_ATOM})?)\s*([a-zA-Z%]+)", body):
+    for m in re.finditer(rf"([+-]?{_NUM_ATOM}(?:\s*[-–—]+\s*[+-]?{_NUM_ATOM})?)\s*([a-zA-Z%°]+)", body):
         nums_in_match = frozenset(tokenize_nums(m.group(1)))
         original_units[nums_in_match] = m.group(2)
 

@@ -379,3 +379,41 @@ def test_fetch_source_rejects_internal_url_immediately():
     sd = source_dir(sha1_url(url))
     assert not (sd / "meta.json").exists() and not (sd / "text.md").exists()
     _cleanup(url)
+
+
+# ---- Fix(2026-08-25 二次审查#3): IP pin —— 校验解析 ≠ 连接解析的 rebinding 窗口
+# 防线解析出的公网 IP 直接作为连接目标(URL 主机改写为 IP),Host 头/SNI 保留
+# 原主机;每一跳都 pin。MockTransport 下 pin 的可观测面 = 请求 URL host 与 Host 头。
+
+def test_fetch_pins_connection_to_validated_ip():
+    """请求必须打到已验证 IP(而非按主机名二次解析),Host 头保留原域名。"""
+    url = "https://pin-target.example/a"
+    _cleanup(url)
+    seen = {}
+    def handler(request):
+        seen["host"] = request.url.host
+        seen["Host"] = request.headers.get("host")
+        return httpx.Response(200, text=BODY)
+    with _patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
+        rec = fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
+    assert rec.http_status == 200
+    assert seen["host"] == "93.184.216.34", "连接目标必须是防线验过的 IP"
+    assert seen["Host"] == "pin-target.example", "Host 头必须保留原主机"
+    _cleanup(url)
+
+def test_fetch_pins_each_redirect_hop_with_port_in_host_header():
+    """重定向第二跳同样 pin;非默认端口的 Host 头需带端口。"""
+    url = "https://pin-hop.example:8443/start"
+    _cleanup(url)
+    seen = []
+    def handler(request):
+        seen.append((request.url.host, request.headers.get("host")))
+        if request.url.path == "/start":
+            return httpx.Response(301, headers={"location": "https://pin-hop.example:8443/final"})
+        return httpx.Response(200, text=BODY)
+    with _patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
+        rec = fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
+    assert rec.http_status == 200
+    assert seen[0][0] == "93.184.216.34" and seen[1][0] == "93.184.216.34"
+    assert seen[0][1] == "pin-hop.example:8443", "非默认端口 Host 头须带端口"
+    _cleanup(url)

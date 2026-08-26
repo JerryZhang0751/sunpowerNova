@@ -95,3 +95,42 @@ def test_provider_attested_citations_count():
     assert l2.cited_sources[0].extract_method == "attested"
     assert l2.cited_with_link is True
     assert l2.citation_position == 1
+
+
+# ---- Fix(2026-08-25 二次审查#1): URL 身份与品牌引用判定 ----------------------
+# 品牌引用只认 URL 主机(=品牌域或其子域);路径/参数里含品牌词的第三方 URL
+# 不是品牌引用。query 是 URL 身份的一部分,不得剥离合并。
+
+def test_brand_word_in_url_path_is_not_brand_citation():
+    """codex 复现: evil.example/sunhestia-review 含品牌词 → 旧子串匹配误报
+    cited_with_link=True 且 position=1。host 不匹配必须判 False/None。"""
+    out = {"answer": "See https://evil.example/sunhestia-review for details.",
+           "search_results": []}
+    l2 = parse_l2("qwen", out, ROW, BRAND, COMP)
+    assert len(l2.cited_sources) == 1                    # URL 本身仍是答案内引用
+    assert l2.cited_with_link is False
+    assert l2.citation_position is None
+
+def test_brand_domain_host_and_subdomain_are_brand_citations():
+    out = {"answer": "Docs at https://www.sunhestia.com/docs and https://sunhestia.com.",
+           "search_results": []}
+    l2 = parse_l2("qwen", out, ROW, BRAND, COMP)
+    assert l2.cited_with_link is True
+    assert l2.citation_position == 1                     # www 子域也算,按答案内顺序
+
+def test_query_urls_keep_identity():
+    """codex 复现: ?id=one 与 ?id=two 剥 query 后合并成同一条;且文本 URL 带
+    query 时旧逻辑对不上带 query 的检索键,误判 inferred。"""
+    out = {"answer": "See https://example.com/page?id=one and https://example.com/page?id=two.",
+           "search_results": [{"url": "https://example.com/page?id=one", "title": "One"}]}
+    l2 = parse_l2("qwen", out, ROW, BRAND, COMP)
+    assert [s.url for s in l2.cited_sources] == ["https://example.com/page?id=one",
+                                                 "https://example.com/page?id=two"]
+    assert l2.cited_sources[0].extract_method == "structured"
+    assert l2.cited_sources[1].extract_method == "inferred"
+
+def test_bare_domain_lookalike_in_answer_is_not_brand_link():
+    """答案写 "sunhestia.com.evil.io"(伪装域名)不算品牌裸域名出现。"""
+    out = {"answer": "Watch out for sunhestia.com.evil.io lookalikes.", "search_results": []}
+    l2 = parse_l2("qwen", out, ROW, BRAND, COMP)
+    assert l2.cited_with_link is False

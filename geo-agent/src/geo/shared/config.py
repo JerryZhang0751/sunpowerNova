@@ -11,7 +11,7 @@ class RunSpec(BaseModel):
     mode: str = "audit"
     scope: str = "core"
     runs: int = 1
-    rule_version: str = "geo-seo-v1"
+    rule_version: str = "geo-seo-v2"
     cost_budget_yuan: float = 100.0
     augment_citation_prompt: bool = False
     providers: list[str] = Field(default_factory=lambda: ["qwen", "doubao", "zhipu"])

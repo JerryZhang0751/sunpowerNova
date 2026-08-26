@@ -17,9 +17,31 @@ CLIENTS = {"qwen": collect_qwen, "doubao": collect_doubao, "zhipu": collect_zhip
 # 数据质量门(整合设计: 采集成功率 ≥ 95% 才可流入后续环节)
 COLLECTION_GATE = 0.95
 
+
+class InvalidCollection(ValueError):
+    """客户端返回不可用响应(超时空答/空答案)——不得写 L1、不得计 ok
+    (2026-08-25 二次审查#5: 否则超时空答能以 status=ok 绕过 95% 门)。"""
+
+
+def _l1_valid(p) -> bool:
+    """盘上 L1 有效判据: 可解析且带非空答案。
+
+    "文件存在即成功"会让空答案/崩溃截断的 L1 冒充有效(二次审查#5);空文件、
+    截断文件一律不计入有效分子,续跑遇到也不得 skipped_exists。
+    """
+    try:
+        return bool((json.loads(p.read_text(encoding="utf-8")).get("answer") or "").strip())
+    except Exception:
+        return False
+
+
 @retry(reraise=True, stop=stop_after_attempt(2), wait=wait_exponential(min=2, max=10))
 def _one(model, row, run, week, rule_version, brand, comp):
     out = CLIENTS[model](row.prompt)
+    if out.get("timeout"):
+        raise InvalidCollection(f"{model} 响应超时(timeout=True),截断答案不可用")
+    if not (out.get("answer") or "").strip():
+        raise InvalidCollection(f"{model} 返回空答案")
     l2 = parse_l2(model, out, row, brand, comp)
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     l1 = L1Record(week=week, model=model, prompt_id=row.id, run=run, answer=out["answer"],
@@ -42,8 +64,8 @@ def collection_health(week:int) -> dict:
     """从 runs.jsonl 计算 per-model 计划/有效/成功率。
 
     planned = manifest 中唯一 (model,prompt_id,run) 键数(先注册后执行,崩溃也在
-    分母里);valid = 该键 L1 文件确实存在(盘上是权威)。无 manifest(历史周)
-    返回 manifest=False,调用方按 legacy 处理(planned 无法追溯)。
+    分母里);valid = 该键 L1 存在且可解析且带非空答案(_l1_valid,盘上是权威)。
+    无 manifest(历史周)返回 manifest=False,调用方按 legacy 处理。
     """
     recs = read_run_records(week)
     if not recs:
@@ -53,7 +75,7 @@ def collection_health(week:int) -> dict:
         m, pid, run = key
         d = per.setdefault(m, {"planned": 0, "valid": 0})
         d["planned"] += 1
-        if l1_path(week, m, pid, run).exists():
+        if _l1_valid(l1_path(week, m, pid, run)):
             d["valid"] += 1
     rates = []
     for d in per.values():
@@ -72,13 +94,14 @@ def run_collection(week:int, models:list[str], prompt_ids:list[str]|None, runs:i
     if prompt_ids: ids=set(prompt_ids); rows=[r for r in rows if r.id in ids]
     jobs = [(m, r, run, week, rule_version, brand, comp) for m in models for r in rows for run in range(1, runs+1)]
     recs = []
-    for (m, r, run, *_) in jobs:                       # 续跑去重
-        if l1_path(week, m, r.id, run).exists():
+    for (m, r, run, *_) in jobs:                       # 续跑去重(只跳过有效 L1)
+        if _l1_valid(l1_path(week, m, r.id, run)):
             rec = _mk_rec(week, m, r.id, run, rule_version, "skipped_exists",
                           l1=str(l1_path(week,m,r.id,run)))
             recs.append(rec); append_run_records(week, [rec]); continue
+    # 空/截断的既有 L1 不跳过——进 todo 重采覆写,否则坏文件永久占位
     todo = [(m,r,run,week,rule_version,brand,comp) for (m,r,run,*_) in jobs
-            if not l1_path(week,m,r.id,run).exists()]
+            if not _l1_valid(l1_path(week,m,r.id,run))]
     # 先注册后执行(2026-08-24 审查#5): 每个 job 先落 planned,进程崩溃也留在分母
     append_run_records(week, [_mk_rec(week, m, r.id, run, rule_version, "planned",
                                       l1=str(l1_path(week, m, r.id, run)))

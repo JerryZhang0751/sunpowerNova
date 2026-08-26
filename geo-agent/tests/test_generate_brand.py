@@ -1,7 +1,8 @@
 # tests/test_generate_brand.py
 from pathlib import Path
 import pytest
-from geo.generate.brand import load_brand, BrandError, slugify, parse_claims, brand_claims, claims_match, validate_brand
+from geo.generate.brand import (load_brand, BrandError, slugify, parse_claims, brand_claims,
+                                claims_match, validate_brand, tokenize_nums)
 import yaml
 
 FIX = Path(__file__).parent / "fixtures" / "generate"
@@ -157,3 +158,49 @@ def test_validate_brand_rejects_thousands_mismatch():
     violations = validate_brand(brand_dict, "The inverter peaks at 2,500 W.")
     assert any("2500" in v or "1500" in v for v in violations), \
         "2,500 W 不得经 500 W 匹配到 1,500 W 库存"
+
+
+# ---- Fix(2026-08-25 二次审查#4): 符号与组合格式不得绕过数字门禁 --------------
+# codex 复现三连: +10°C vs -10°C 通过(方向错); 500.5 W vs 1,500.5 W 通过
+# (数量级错); 5,5 kW 被解析成 5 kW(欧式小数逗号截断)。
+
+def test_parse_claims_signed_temperatures():
+    claims = parse_claims("Operates from -10°C to +45°C.")
+    assert (frozenset({"-10"}), "°c") in claims
+    assert (frozenset({"45"}), "°c") in claims          # +45 与 45 同值
+
+def test_sign_mismatch_rejected():
+    inv = [(frozenset({"10"}), "°c")]                   # 事实 +10°C
+    assert claims_match((frozenset({"10"}), "°c"), inv)      # +10 == 10
+    assert not claims_match((frozenset({"-10"}), "°c"), inv) # -10 ≠ +10(方向)
+    inv_neg = [(frozenset({"-10"}), "°c")]              # 事实 -10°C
+    assert not claims_match((frozenset({"10"}), "°c"), inv_neg)
+
+def test_thousands_with_decimal_not_truncated():
+    claims = parse_claims("Peak output of 1,500.5 W.")
+    assert (frozenset({"1500.5"}), "w") in claims
+    assert (frozenset({"500.5"}), "w") not in claims    # 不得回退截出 500.5
+    assert (frozenset({"1500"}), "w") not in claims     # 不得丢小数
+
+def test_thousands_decimal_mismatch_rejected():
+    inv = [(frozenset({"500.5"}), "w")]
+    assert not claims_match((frozenset({"1500.5"}), "w"), inv)  # 数量级错不得过
+
+def test_decimal_comma_european_not_collapsed():
+    claims = parse_claims("Rated at 5,5 kW.")
+    assert (frozenset({"5.5"}), "kw") in claims
+    assert (frozenset({"5"}), "kw") not in claims       # "5,5" 不得当成 "5"
+
+def test_validate_brand_rejects_sign_flip():
+    brand_dict = {"version": 1, "entity": {}, "glossary": [], "faqs": [],
+                  "products": [{"id": "b", "name": "B",
+                                "specs": {"description": "Operates down to +10°C."}}],
+                  "banned": []}
+    violations = validate_brand(brand_dict, "The battery operates down to -10°C.")
+    assert any("10" in v and "°c" in v for v in violations), \
+        "+10°C 事实不得被 -10°C 正文通过"
+
+def test_tokenize_nums_signed_and_ranges():
+    """tokenizer 与 parse_claims 同口径: 负值带符号、range 两端拆开、+ 视为无符号。"""
+    assert tokenize_nums("-10°C and 5–15 kWh") == ["-10", "5", "15"]
+    assert tokenize_nums("+10") == ["10"]

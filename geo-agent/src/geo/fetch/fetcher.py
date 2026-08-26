@@ -5,7 +5,7 @@ from geo.shared.config import settings
 from geo.shared.models import L3Source
 from geo.shared.storage import sha1_url, source_dir
 from geo.fetch.meta_llm import extract_semantic
-from geo.fetch.url_guard import UnsafeURLError, assert_safe_url, MAX_REDIRECTS
+from geo.fetch.url_guard import UnsafeURLError, resolve_safe_ips, MAX_REDIRECTS
 
 def extract_structural(soup: BeautifulSoup) -> dict:
     # On-page text signals the SEO scorer needs; captured at snapshot/fetch time
@@ -31,24 +31,40 @@ def extract_structural(soup: BeautifulSoup) -> dict:
             "ul_count": len(soup.find_all(["ul","ol"]))}
 
 def _safe_get(url: str, transport=None) -> httpx.Response:
-    """手动重定向循环: 每一跳先过 SSRF 防线再请求,跳数封顶。
+    """手动重定向循环: 每一跳先过 SSRF 防线、按已验 IP pin 连接,跳数封顶。
 
     不用 follow_redirects=True——那会让 httpx 自动跟进 Location,模型注入的
-    内网跳转在防线外执行(2026-08-24 审查#3)。transport 仅供测试注入。
+    内网跳转在防线外执行(2026-08-24 审查#3)。
+    2026-08-25 二次审查#3: 防线解析出的公网 IP 直接作为连接目标(URL 主机改写
+    为该 IP,Host 头/SNI 保留原主机)——校验与连接共用同一次 DNS 结果,关闭
+    rebinding 窗口;走代理时发给代理的 CONNECT 目标同样是 IP,代理侧不再自行
+    解析域名。transport 仅供测试注入。
     """
     current = url
     for _ in range(MAX_REDIRECTS + 1):
-        assert_safe_url(current)                      # 每跳验证(含首跳)
-        kwargs = {"timeout": 30.0, "follow_redirects": False}
+        ips = resolve_safe_ips(current)               # 每跳验证(含首跳)
+        u = httpx.URL(current)
+        pinned = str(ips[0])                          # 连接目标 = 已验证 IP
+        req_url = u.copy_with(host=pinned)
+        client_kwargs = {"timeout": 30.0, "follow_redirects": False}
         if transport is not None:
-            kwargs["transport"] = transport
+            client_kwargs["transport"] = transport
         elif settings.proxy:
-            kwargs["proxy"] = settings.proxy
-        with httpx.Client(**kwargs) as c:
-            r = c.get(current)
+            client_kwargs["proxy"] = settings.proxy
+        req_kwargs: dict = {}
+        if pinned != u.host:                          # Host/SNI 保留原主机
+            orig_host = u.raw_host.decode("ascii")    # ASCII/punycode 形式
+            default_port = 443 if u.scheme == "https" else 80
+            if u.port and u.port != default_port:
+                orig_host = f"{orig_host}:{u.port}"
+            req_kwargs["headers"] = {"Host": orig_host}
+            if u.scheme == "https":
+                req_kwargs["extensions"] = {"sni_hostname": orig_host}
+        with httpx.Client(**client_kwargs) as c:
+            r = c.get(req_url, **req_kwargs)
         if r.is_redirect:
             loc = r.headers.get("location", "")
-            current = str(httpx.URL(current).join(loc))
+            current = str(u.join(loc))
             continue
         return r
     raise UnsafeURLError(f"重定向超过 {MAX_REDIRECTS} 跳: {url!r}")

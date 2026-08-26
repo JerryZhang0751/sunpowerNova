@@ -1,5 +1,11 @@
 # Rules changelog
 ## geo-seo-v2(语义修正:SOV 方向 + 引用证据口径)— 2026-08-24
+- 2026-08-25 二次审查#6 补记: v2 升版当日只改了代码语义与 run.yaml 标签,
+  规则文件 version 头漏升(仍 v1)——产生"v2 报告标签、v1 规则文件"的审计
+  错位,且 rules/history/ 缺失使 do_recalc(version=geo-seo-v2) FileNotFoundError。
+  已补: 两文件 version 头升至 v2(内容不变,语义在代码);v1 文件归档
+  rules/history/geo-seo-v1/(manifest 绑 a21794e);config 默认版本对齐;
+  一致性由 tests/test_rules_loader.py::test_current_rule_files_match_run_yaml_version 锁死。
 - 审查#2: brand.sov_share 的输入 SOV 由"每回答平均竞品数"(值域 0–N,越高分
   越高 → 竞品越多品牌分越高,W1 出现 SOV=3.78 且 brand 满分)改为品牌声量份额
   brand/(brand+竞品提及),值域 0–1,方向正确。公式在 analyst._sov_share,
