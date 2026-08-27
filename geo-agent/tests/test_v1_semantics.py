@@ -18,9 +18,14 @@ from geo.assess.analyst import assemble
 from geo.rules.loader import _load
 
 
+_REQUIRED_LOCAL = [
+    REPO / "data" / "raw" / "w1",
+    REPO / "data" / "analysis" / "w1" / "eval_report.json",   # 与断言实际读取同源(假信心修复)
+]
+
 @pytest.mark.skipif(
-    not (REPO / "data" / "raw" / "w1").exists(),
-    reason="需本地真实 w1 数据(data/ gitignored)"
+    not all(p.exists() for p in _REQUIRED_LOCAL),
+    reason="需本地真实 w1 数据(gitignored): data/raw/w1 与 data/analysis/w1/eval_report.json",
 )
 def test_v1_semantics_unchanged_on_real_w1():
     """证明当前语义在真实 w1 数据上零漂移：重新计算的 report 与归档的 eval_report.json 完全一致。
