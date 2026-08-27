@@ -1,19 +1,20 @@
 from unittest.mock import patch, MagicMock, PropertyMock
 from geo.fetch.site_signals import snapshot_static_signals, _robots_allows_ai
+from geo.shared.weeks import TEST_WEEK
 import pytest
 
-def test_signals_per_page(tmp_path):
+def test_signals_per_page(iso_snapshots):
     """Test happy path: all signals extracted correctly."""
     fake = MagicMock(status_code=200, text="<html><head><meta name='viewport' content='w'>"
                           "<link rel='canonical' href='https://sunhestia.com/x'>"
                           "<script type='application/ld+json'>{\"@type\":\"Organization\"}</script></head></html>")
     with patch("geo.fetch.site_signals.httpx.Client") as C:
         C.return_value.__enter__.return_value.get.return_value = fake
-        out = snapshot_static_signals(week=99, rule_version="t")
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
     pg = out["pages"][0]
     assert pg["https"] is True and pg["has_viewport"] is True and "Organization" in pg["schema_types"]
 
-def test_graceful_per_page_failure():
+def test_graceful_per_page_failure(iso_snapshots):
     """Test that individual page failures don't crash the batch."""
     fake_response = MagicMock(status_code=200, text="<html><head></head></html>")
 
@@ -27,7 +28,7 @@ def test_graceful_per_page_failure():
         mock_client.get.side_effect = raise_error
         C.return_value.__enter__.return_value = mock_client
 
-        out = snapshot_static_signals(week=99, rule_version="t")
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
 
     # Should have both success and failure records
     assert len(out["pages"]) >= 1
@@ -89,7 +90,7 @@ def test_robots_txt_empty():
     result = _robots_allows_ai("")
     assert all(result[bot] is True for bot in result)
 
-def test_sitemap_presence_and_parsing():
+def test_sitemap_presence_and_parsing(iso_snapshots):
     """Test sitemap.xml presence and URL parsing."""
     sitemap_xml = """<?xml version="1.0" encoding="UTF-8"?>
     <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -113,14 +114,14 @@ def test_sitemap_presence_and_parsing():
         mock_client.get.side_effect = mock_get
         C.return_value.__enter__.return_value = mock_client
 
-        out = snapshot_static_signals(week=99, rule_version="t")
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
 
     assert out["sitemap_present"] is True
     # Check that some pages are correctly identified as in sitemap
     in_sitemap = [p for p in out["pages"] if p.get("in_sitemap") is True]
     assert len(in_sitemap) >= 1
 
-def test_sitemap_absence():
+def test_sitemap_absence(iso_snapshots):
     """Test with sitemap.xml missing."""
     fake_response = MagicMock(status_code=200, text="<html><head></head></html>")
 
@@ -136,13 +137,13 @@ def test_sitemap_absence():
         mock_client.get.side_effect = mock_get
         C.return_value.__enter__.return_value = mock_client
 
-        out = snapshot_static_signals(week=99, rule_version="t")
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
 
     assert out["sitemap_present"] is False
     # All pages should show in_sitemap as False when sitemap is missing
     assert all(p.get("in_sitemap") is False for p in out["pages"])
 
-def test_thirteen_page_iteration():
+def test_thirteen_page_iteration(iso_snapshots):
     """Test that all 13 pages are processed."""
     pages_processed = []
 
@@ -155,13 +156,13 @@ def test_thirteen_page_iteration():
         mock_client.get.side_effect = mock_get
         C.return_value.__enter__.return_value = mock_client
 
-        out = snapshot_static_signals(week=99, rule_version="t")
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
 
     # Should have processed all pages from targets.yaml
     assert len(out["pages"]) >= 13
     assert len(pages_processed) >= 13
 
-def test_signal_extraction_correctness():
+def test_signal_extraction_correctness(iso_snapshots):
     """Test comprehensive signal extraction from realistic HTML."""
     html_with_signals = """
     <html>
@@ -188,7 +189,7 @@ def test_signal_extraction_correctness():
 
     with patch("geo.fetch.site_signals.httpx.Client") as C:
         C.return_value.__enter__.return_value.get.return_value = fake_response
-        out = snapshot_static_signals(week=99, rule_version="t")
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
 
     pg = out["pages"][0]
 
@@ -201,7 +202,7 @@ def test_signal_extraction_correctness():
     # Check that structural data was extracted
     assert "h_counts" in pg or "table_count" in pg or "ul_count" in pg
 
-def test_http_status_codes():
+def test_http_status_codes(iso_snapshots):
     """Test different HTTP status codes."""
     status_responses = [404, 500, 200, 403, 301]
 
@@ -216,13 +217,13 @@ def test_http_status_codes():
         mock_client.get.side_effect = mock_get
         C.return_value.__enter__.return_value = mock_client
 
-        out = snapshot_static_signals(week=99, rule_version="t")
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
 
     # Should have various status codes
     status_codes = [p.get("http_status") for p in out["pages"]]
     assert len(set(status_codes)) > 1  # Multiple different status codes
 
-def test_missing_signals():
+def test_missing_signals(iso_snapshots):
     """Test pages with missing canonical, schema, viewport."""
     minimal_html = "<html><head><title>Minimal Page</title></head><body><h1>Title</h1></body></html>"
 
@@ -230,7 +231,7 @@ def test_missing_signals():
 
     with patch("geo.fetch.site_signals.httpx.Client") as C:
         C.return_value.__enter__.return_value.get.return_value = fake_response
-        out = snapshot_static_signals(week=99, rule_version="t")
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
 
     pg = out["pages"][0]
 
@@ -239,7 +240,7 @@ def test_missing_signals():
     assert pg["schema_types"] == []  # No schema types found
     assert pg.get("canonical") is None or pg.get("canonical") == ""
 
-def test_empty_html():
+def test_empty_html(iso_snapshots):
     """Test with empty/invalid HTML."""
     empty_html = ""
 
@@ -247,14 +248,14 @@ def test_empty_html():
 
     with patch("geo.fetch.site_signals.httpx.Client") as C:
         C.return_value.__enter__.return_value.get.return_value = fake_response
-        out = snapshot_static_signals(week=99, rule_version="t")
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
 
     # Should still create a record without crashing
     assert len(out["pages"]) >= 1
     pg = out["pages"][0]
     assert pg["http_status"] == 200
 
-def test_https_detection():
+def test_https_detection(iso_snapshots):
     """Test HTTPS vs HTTP detection."""
     with patch("geo.fetch.site_signals.httpx.Client") as C:
         with patch("geo.fetch.site_signals.settings") as S:
@@ -265,13 +266,13 @@ def test_https_detection():
             C.return_value.__enter__.return_value.get.return_value = MagicMock(
                 status_code=200, text="<html><head></head></html>"
             )
-            out = snapshot_static_signals(week=99, rule_version="t")
+            out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
 
     pg = out["pages"][0]
     assert pg["https"] is True
     assert pg["url"].startswith("https://")
 
-def test_snapshot_structure():
+def test_snapshot_structure(iso_snapshots):
     """Test overall snapshot structure and metadata."""
     fake_response = MagicMock(status_code=200, text="<html><head></head></html>")
 

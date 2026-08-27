@@ -5,6 +5,7 @@ from datetime import date, datetime
 from pathlib import Path
 import yaml
 from geo.shared.config import REPO, settings
+from geo.shared.weeks import validate_production_week
 from geo.generate.brand import load_brand, slugify, run_bootstrap
 from geo.generate.topics import suggest_topics
 from geo.generate.kimi import playbook_digest, generate_draft, skeleton_draft
@@ -179,7 +180,7 @@ def main() -> None:
     elif a.mark_published:
         print(run_mark_published(a.mark_published, url=a.url, override=a.override, reason=a.reason))
     elif a.topic:
-        res = run_generate(a.topic, a.page_type, a.week,
+        res = run_generate(a.topic, a.page_type, validate_production_week(a.week),
                            allow_no_playbook=a.allow_no_playbook, kimi=not a.no_kimi)
         print(res)
         if res["validation"] == "flagged":

@@ -4,6 +4,7 @@ import json, logging, shutil, time
 from pathlib import Path
 from geo.shared.config import REPO
 from geo.shared.io_utils import atomic_write_text
+from geo.shared.weeks import validate_production_week
 from geo.research.corpus import build_corpus
 from geo.research.sample import select_topn, fetch_topn
 from geo.research.features import aggregate
@@ -107,4 +108,4 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--week", type=int, default=1)
     ap.add_argument("--no-kimi", action="store_true")
     a = ap.parse_args()
-    print(run_research(a.week, kimi_enabled=not a.no_kimi))
+    print(run_research(validate_production_week(a.week), kimi_enabled=not a.no_kimi))
