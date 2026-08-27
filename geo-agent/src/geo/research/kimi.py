@@ -29,7 +29,8 @@ def synthesize(aggregates: FeatureAggregates, examples: list[dict], *, chat_fn=_
         raw = chat_fn([{"role":"system","content":_SYS_SYNTH},{"role":"user","content":user}])
         data = json.loads(raw)
     except Exception as e:
-        log.warning("synthesize failed (%s); returning []", e)
+        log.warning("synthesize failed (%s: %s); returning [] — run_research 将走草稿不覆写正式文件",
+                    type(e).__name__, e)
         return []
     sample_bound = aggregates.coverage.l3_resolved or 0
     out = []
