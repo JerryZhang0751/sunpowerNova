@@ -83,7 +83,7 @@ def fetch_source(url: str, fetcher_kimi=True, transport=None) -> L3Source:
             pass   # 存量毒化条目(异常路径从不带 status)→ 视为 miss 重抓
         else:
             return cached
-    t0 = time.time(); status = None; text = ""; js_only = False; structural = {}
+    status = None; text = ""; js_only = False; structural = {}
     try:
         r = _safe_get(url, transport); status = r.status_code
         if not (200 <= status < 300):

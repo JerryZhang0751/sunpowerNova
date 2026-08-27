@@ -62,9 +62,13 @@ def _fetch_sitemap_urls(c, site: str) -> tuple[bool, list[str]]:
 def snapshot_static_signals(week:int, rule_version:str) -> dict:
     out_path = snapshot_dir(week)/"static_signals.json"
     if out_path.exists():                       # 存在即冻结(无 degraded 概念,2026-08-27 P1④)
-        prev = json.loads(out_path.read_text(encoding="utf-8"))
-        log.info("w%s static_signals 快照已存在,跳过重取(冻结)", week)
-        return prev
+        try:
+            prev = json.loads(out_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            log.warning("w%s static_signals 快照损坏,视为缺失重取", week); prev = None
+        if prev is not None:
+            log.info("w%s static_signals 快照已存在,跳过重取(冻结)", week)
+            return prev
     site = settings.targets["site"]["url"]; pages = settings.targets["site"]["pages"]
     out = {"week":week, "rule_version":rule_version, "site":site, "pages":[]}
     with httpx.Client(timeout=20.0, follow_redirects=True, proxy=settings.proxy) as c:

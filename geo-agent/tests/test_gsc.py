@@ -95,3 +95,16 @@ def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots):
     with patch("geo.fetch.gsc._build_service", return_value=svc):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is False and out["rows"] == [{"keys": ["ok"]}]
+
+def test_gsc_corrupted_snapshot_treated_as_miss(iso_snapshots):
+    """损坏快照(截断/非法 JSON)不得让守卫抛 JSONDecodeError 硬停管线——视为缺失重取并覆写。"""
+    import json as _json
+    from geo.fetch.gsc import snapshot_dir
+    p = snapshot_dir(TEST_WEEK) / "gsc.json"
+    p.write_text('{"trunc', encoding="utf-8")   # 截断的非法 JSON
+    svc = MagicMock()
+    svc.searchanalytics().query().execute.return_value = {"rows": [{"keys": ["ok"]}]}
+    with patch("geo.fetch.gsc._build_service", return_value=svc):
+        out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
+    assert out["degraded"] is False and out["rows"] == [{"keys": ["ok"]}]   # 重取到新数据
+    assert _json.loads(p.read_text(encoding="utf-8"))["rows"] == [{"keys": ["ok"]}]   # 文件被合法 JSON 覆写

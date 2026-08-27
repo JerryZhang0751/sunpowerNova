@@ -37,8 +37,11 @@ def _gsc_site_url() -> str:
 def snapshot_gsc(week:int, rule_version:str, days=28) -> dict:
     out_path = snapshot_dir(week)/"gsc.json"
     if out_path.exists():                       # 冻结守卫(2026-08-27 P1④)
-        prev = json.loads(out_path.read_text(encoding="utf-8"))
-        if not prev.get("degraded"):
+        try:
+            prev = json.loads(out_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            log.warning("w%s gsc 快照损坏,视为缺失重取", week); prev = None
+        if prev is not None and not prev.get("degraded"):
             if prev.get("rule_version") != rule_version:
                 log.warning("w%s gsc 快照已存在(规则版本 %s ≠ 请求 %s),按冻结语义跳过重取",
                             week, prev.get("rule_version"), rule_version)
