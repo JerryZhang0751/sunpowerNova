@@ -9,6 +9,16 @@ from geo.shared.storage import sha1_url, source_dir, l1_path, snapshot_dir
 from bs4 import BeautifulSoup
 import json
 
+@pytest.fixture(autouse=True)
+def _iso_storage_repo(tmp_path, monkeypatch):
+    """Task4 评审移交:本文件多测直调 source_dir/snapshot_dir/l1_path(自带 mkdir
+    副作用),全量跑会在生产 data/ 下反复建出 data/snapshots/w5 等空目录、破坏冻结
+    不变量。patch storage.REPO 到 tmp(同 test_integration_assemble_render 先例)——
+    不 patch snapshot_dir 本身:test_storage_path_generation 断言的恰是路径串,
+    patch REPO 只挪根,断言对象与路径结构不变。"""
+    import geo.shared.storage as _storage
+    monkeypatch.setattr(_storage, "REPO", tmp_path)
+
 HTML = """<html><head><link rel="canonical" href="https://x.com/a"/>
 <script type="application/ld+json">{"@type":"FAQPage"}</script></head>
 <body><h1>T</h1><h2>A</h2><table><tr><td>1</td></tr></table></body></html>"""
