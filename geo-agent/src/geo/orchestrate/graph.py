@@ -10,6 +10,7 @@ from geo.fetch.gsc import snapshot_gsc
 from geo.fetch.site_signals import snapshot_static_signals
 from geo.assess.analyst import assemble
 from geo.report.reporter import render
+from geo.shared.weeks import validate_production_week
 
 class S(TypedDict): week: int
 
@@ -110,6 +111,7 @@ def build_graph():
     return g.compile(checkpointer=SqliteSaver(conn))
 
 def run_pipeline(week: int, next_week: bool = False, force_new_run: bool = False):
+    validate_production_week(week)
     from datetime import datetime
 
     if force_new_run:

@@ -10,3 +10,6 @@
 # Virtual environments & dependencies（防 git add -A 误纳；untracked 本就不推送）
 .venv/
 node_modules/
+
+# research 晋升备份(run_research _promote 自动生成)
+geo-agent/knowledge/.history/

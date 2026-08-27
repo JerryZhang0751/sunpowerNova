@@ -1,9 +1,12 @@
 from __future__ import annotations
-import json, httpx
+import json, logging, httpx
 from bs4 import BeautifulSoup
 from geo.shared.config import settings
 from geo.shared.storage import snapshot_dir
+from geo.shared.io_utils import atomic_write_text
 from geo.fetch.fetcher import extract_structural
+
+log = logging.getLogger("fetch.site_signals")
 
 def _robots_allows_ai(robots_txt: str) -> dict:
     def allows(bot):
@@ -57,6 +60,15 @@ def _fetch_sitemap_urls(c, site: str) -> tuple[bool, list[str]]:
 
 
 def snapshot_static_signals(week:int, rule_version:str) -> dict:
+    out_path = snapshot_dir(week)/"static_signals.json"
+    if out_path.exists():                       # 存在即冻结(无 degraded 概念,2026-08-27 P1④)
+        try:
+            prev = json.loads(out_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            log.warning("w%s static_signals 快照损坏,视为缺失重取", week); prev = None
+        if prev is not None:
+            log.info("w%s static_signals 快照已存在,跳过重取(冻结)", week)
+            return prev
     site = settings.targets["site"]["url"]; pages = settings.targets["site"]["pages"]
     out = {"week":week, "rule_version":rule_version, "site":site, "pages":[]}
     with httpx.Client(timeout=20.0, follow_redirects=True, proxy=settings.proxy) as c:
@@ -80,5 +92,5 @@ def snapshot_static_signals(week:int, rule_version:str) -> dict:
             except Exception as e:
                 rec["http_status"]=None; rec["error"]=f"{type(e).__name__}: {e}"
             out["pages"].append(rec)
-    (snapshot_dir(week)/"static_signals.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(out_path, json.dumps(out, ensure_ascii=False, indent=2))
     return out

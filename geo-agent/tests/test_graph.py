@@ -548,3 +548,11 @@ def test_collect_node_legacy_week_without_manifest_passes():
          patch.object(G, "collection_health",
                       return_value={"manifest": False, "per_model": {}, "min_success_rate": None}):
         assert G.collect_node({"week": 1}) == {"week": 1}
+
+
+def test_run_pipeline_rejects_test_band_week(monkeypatch, tmp_path):
+    """入口接线:测试保留带周号在生产入口被拒。"""
+    import geo.orchestrate.graph as G
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    with pytest.raises(ValueError, match="测试保留带"):
+        G.run_pipeline(901)

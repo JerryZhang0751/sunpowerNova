@@ -1,12 +1,15 @@
 from __future__ import annotations
-import json, time
+import json, time, logging
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from google_auth_httplib2 import AuthorizedHttp
 from geo.shared.config import settings, REPO
 from geo.shared.storage import snapshot_dir
+from geo.shared.io_utils import atomic_write_text
 import httplib2
 from urllib.parse import urlparse
+
+log = logging.getLogger("fetch.gsc")
 
 SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
@@ -32,6 +35,17 @@ def _gsc_site_url() -> str:
     return f"sc-domain:{urlparse(site_cfg['url']).hostname}"
 
 def snapshot_gsc(week:int, rule_version:str, days=28) -> dict:
+    out_path = snapshot_dir(week)/"gsc.json"
+    if out_path.exists():                       # 冻结守卫(2026-08-27 P1④)
+        try:
+            prev = json.loads(out_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            log.warning("w%s gsc 快照损坏,视为缺失重取", week); prev = None
+        if prev is not None and not prev.get("degraded"):
+            if prev.get("rule_version") != rule_version:
+                log.warning("w%s gsc 快照已存在(规则版本 %s ≠ 请求 %s),按冻结语义跳过重取",
+                            week, prev.get("rule_version"), rule_version)
+            return prev                         # 干净快照=历史基线,不可被今日窗口重冻结
     site = _gsc_site_url()
     end = time.strftime("%Y-%m-%d", time.gmtime()); start = time.strftime("%Y-%m-%d", time.gmtime(time.time()-days*86400))
     out = {"week":week, "rule_version":rule_version, "site":site, "rows":[], "degraded":False}
@@ -42,5 +56,5 @@ def snapshot_gsc(week:int, rule_version:str, days=28) -> dict:
         out["rows"] = res.get("rows", [])
     except Exception as e:
         out["degraded"] = True; out["error"] = f"{type(e).__name__}: {e}"
-    (snapshot_dir(week)/"gsc.json").write_text(json.dumps(out, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(out_path, json.dumps(out, ensure_ascii=False, indent=2))
     return out

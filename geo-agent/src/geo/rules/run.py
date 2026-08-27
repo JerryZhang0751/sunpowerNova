@@ -5,6 +5,7 @@ import json, shutil
 from pathlib import Path
 import yaml
 from geo.shared.config import REPO, settings
+from geo.shared.weeks import validate_production_week
 from geo.rules.keeper import iterate
 from geo.assess.analyst import assemble
 
@@ -84,6 +85,8 @@ def main() -> None:
     p3 = sub.add_parser("rollback"); p3.add_argument("--to", required=True)
     sub.add_parser("show")
     a = ap.parse_args()
+    if a.cmd in ("iterate", "recalc"):
+        validate_production_week(a.week)
     if a.cmd == "iterate":
         print(json.dumps(iterate(a.week), ensure_ascii=False, indent=2))
     elif a.cmd == "recalc":

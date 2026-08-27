@@ -35,12 +35,14 @@ def _feedback_section(feed: dict | None) -> list[str]:
     L.append("- ⚠️ 收录有延迟、单周样本小;对照为观察性相关,非因果归因。")
     return L
 
-def render_playbook(conclusions: list[PlaybookConclusion], aggregates: FeatureAggregates, week: int, feed: dict | None = None) -> str:
+def render_playbook(conclusions: list[PlaybookConclusion], aggregates: FeatureAggregates, week: int, feed: dict | None = None, banner: str = "") -> str:
     c = aggregates.coverage
     L = [f"# SunHestia GEO Playbook · w{week}",
          f"> rule_version {_rule_version(feed)} | L1={c.total_l1} | 被引源分析 sample_n={c.l3_resolved}(缺失{c.l3_missing}/js_only{c.l3_js_only})",
          "> ⚠️ 观察性相关非因果，低置信项已标注。结论由确定性聚合 + Kimi 综合生成。\n",
          "## 1. 被引格式特征"]
+    if banner:
+        L.insert(1, banner)          # 标题正下方、元信息行之上
     fmt_concl = [x for x in conclusions if x.category=="format"]
     for b in aggregates.formats:
         label = _FMT_LABEL.get(b.key, b.key)
@@ -59,8 +61,10 @@ def render_playbook(conclusions: list[PlaybookConclusion], aggregates: FeatureAg
     L += _feedback_section(feed)
     return "\n".join(L) + "\n"
 
-def render_profiles(platforms_metrics: dict, verified_facts: dict, week: int) -> str:
+def render_profiles(platforms_metrics: dict, verified_facts: dict, week: int, banner: str = "") -> str:
     L = [f"# 平台引用画像 · w{week}", ""]
+    if banner:
+        L.insert(1, banner)
     names = {"qwen":"Qwen · qwen3.7-plus (阿里 DashScope)",
              "doubao":"Doubao · doubao-seed-2-1-pro (字节 Ark)",
              "zhipu":"Zhipu · glm-5.2 (BigModel)"}

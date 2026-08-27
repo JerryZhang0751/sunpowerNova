@@ -1,8 +1,10 @@
 # src/geo/research/run.py
 from __future__ import annotations
-import json, logging
+import json, logging, shutil, time
 from pathlib import Path
 from geo.shared.config import REPO
+from geo.shared.io_utils import atomic_write_text
+from geo.shared.weeks import validate_production_week
 from geo.research.corpus import build_corpus
 from geo.research.sample import select_topn, fetch_topn
 from geo.research.features import aggregate
@@ -60,15 +62,40 @@ def run_research(week: int, kimi_enabled: bool = True, *, synth_fn=None, web_fn=
         except Exception as e: log.warning("web_search failed: %s", e)
 
     (repo/"data"/"analysis"/f"w{week}").mkdir(parents=True, exist_ok=True)
-    (repo/"data"/"analysis"/f"w{week}"/"research_aggregates.json").write_text(
-        json.dumps(_agg_jsonable(agg), ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_text(repo/"data"/"analysis"/f"w{week}"/"research_aggregates.json",
+                      json.dumps(_agg_jsonable(agg), ensure_ascii=False, indent=2))
     (repo/"knowledge").mkdir(parents=True, exist_ok=True)
-    (repo/"knowledge"/"playbook.md").write_text(render_playbook(conclusions, agg, week, feed=feed), encoding="utf-8")
-    (repo/"knowledge"/"platform-profiles.md").write_text(
-        render_profiles(agg.platforms, verified, week), encoding="utf-8")
-    return {"playbook": str(repo/"knowledge"/"playbook.md"),
-            "profiles": str(repo/"knowledge"/"platform-profiles.md"),
-            "conclusions": len(conclusions), "verified_platforms": len(verified)}
+    pb_path = repo/"knowledge"/"playbook.md"; pf_path = repo/"knowledge"/"platform-profiles.md"
+    pb_degraded = kimi_enabled and not conclusions
+    pf_degraded = kimi_enabled and not any((v or {}).get("answer") for v in verified.values())
+    ts = time.strftime("%Y-%m-%d %H:%M:%SZ", time.gmtime())
+    pb_banner = (f"> ⚠️ 本轮 Kimi 综合不可用（{ts}），结论为空——确定性聚合仍有效。"
+                 "此为草稿，未晋升；正式 playbook 保持上一成功轮。") if pb_degraded else \
+                ("> 确定性模式（--no-kimi）：本 playbook 未含 Kimi 综合结论。" if not kimi_enabled else "")
+    pf_banner = (f"> ⚠️ 本轮联网查证不可用（{ts}）——画像为确定性数据+草稿，未晋升。"
+                 ) if pf_degraded else ""
+    _promote(pb_path, render_playbook(conclusions, agg, week, feed=feed, banner=pb_banner),
+             week=week, draft=pb_degraded, repo=repo)
+    _promote(pf_path, render_profiles(agg.platforms, verified, week, banner=pf_banner),
+             week=week, draft=pf_degraded, repo=repo)
+    drafts = [str(p) for p, d in ((pb_path, pb_degraded), (pf_path, pf_degraded)) if d
+              for p in [p.parent / (p.name + ".draft")]]
+    return {"playbook": str(pb_path), "profiles": str(pf_path),
+            "conclusions": len(conclusions), "verified_platforms": len(verified),
+            "degraded": pb_degraded or pf_degraded, "drafts": drafts}
+
+def _promote(target: Path, text: str, *, week: int, draft: bool, repo: Path) -> Path:
+    """draft=True → 写 <name>.draft 不动正式文件;否则晋升(旧文件备份 knowledge/.history/)。"""
+    out = target.parent / (target.name + ".draft") if draft else target
+    if not draft:
+        if target.exists():
+            hist = repo / "knowledge" / ".history"; hist.mkdir(parents=True, exist_ok=True)
+            ts = time.strftime("%Y%m%d-%H%M%S")
+            shutil.copy2(target, hist / f"{target.stem}-w{week}-{ts}{target.suffix}")
+        stale = target.parent / (target.name + ".draft")
+        if stale.exists(): stale.unlink()
+    atomic_write_text(out, text)
+    return out
 
 def _agg_jsonable(a):
     return {"week":a.week,"coverage":a.coverage.__dict__,
@@ -81,4 +108,4 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser(); ap.add_argument("--week", type=int, default=1)
     ap.add_argument("--no-kimi", action="store_true")
     a = ap.parse_args()
-    print(run_research(a.week, kimi_enabled=not a.no_kimi))
+    print(run_research(validate_production_week(a.week), kimi_enabled=not a.no_kimi))

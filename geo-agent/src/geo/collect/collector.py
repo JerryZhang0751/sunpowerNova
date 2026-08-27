@@ -5,6 +5,7 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 from geo.shared.config import settings
 from geo.shared.models import L1Record, L2Record, RunRecord, PromptRow
 from geo.shared.storage import l1_path, append_run_records, read_run_records
+from geo.shared.weeks import validate_production_week
 from geo.collect.prompts import load_prompts, PROMPT_SET_VERSION
 from geo.collect.qwen_client import collect_qwen
 from geo.collect.doubao_client import collect_doubao
@@ -121,4 +122,4 @@ def run_collection(week:int, models:list[str], prompt_ids:list[str]|None, runs:i
     return recs
 
 if __name__ == "__main__":
-    run_collection(settings.run.week, settings.run.providers, None, settings.run.runs, settings.run.rule_version)
+    run_collection(validate_production_week(settings.run.week), settings.run.providers, None, settings.run.runs, settings.run.rule_version)
