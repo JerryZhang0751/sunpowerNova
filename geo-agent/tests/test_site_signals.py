@@ -297,3 +297,17 @@ def test_snapshot_structure(iso_snapshots):
     assert "path" in pg
     assert "https" in pg
     assert "http_status" in pg
+
+
+# ---- 2026-08-27 P1④ 快照冻结守卫:static_signals 无 degraded 概念,存在即冻结 ----
+
+def test_static_signals_existing_snapshot_frozen(iso_snapshots):
+    import json as _json
+    from geo.fetch.site_signals import snapshot_dir   # iso_snapshots 已 patch → tmp
+    p = snapshot_dir(TEST_WEEK) / "static_signals.json"
+    p.write_text(_json.dumps({"week": TEST_WEEK, "rule_version": "t", "site": "s",
+                              "pages": [{"url": "FROZEN"}]}), encoding="utf-8")
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    C.assert_not_called()                                  # 不发任何请求
+    assert out["pages"] == [{"url": "FROZEN"}]

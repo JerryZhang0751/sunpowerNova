@@ -63,3 +63,35 @@ def test_gsc_proxy_applied_when_set():
 
                     # Verify proxy_info_from_url was NOT called (no proxy)
                     mock_proxy_info.assert_not_called()
+
+
+# ---- 2026-08-27 P1④ 快照冻结守卫:干净快照不可重冻结 --------------------
+
+def test_gsc_clean_snapshot_is_frozen(iso_snapshots):
+    """干净快照不可重冻结——GSC 28 天窗口会移动,重冻结=毁历史基线。"""
+    import json as _json
+    from geo.fetch.gsc import snapshot_dir   # iso_snapshots 已 patch → tmp
+    p = snapshot_dir(TEST_WEEK) / "gsc.json"
+    p.write_text(_json.dumps({"week": TEST_WEEK, "rule_version": "geo-seo-v2",
+                              "site": "sc-domain:x", "rows": [{"keys": ["frozen"]}], "degraded": False}),
+                 encoding="utf-8")
+    svc = MagicMock()
+    svc.searchanalytics().query().execute.return_value = {"rows": [{"keys": ["NEW!"]}]}
+    with patch("geo.fetch.gsc._build_service", return_value=svc):
+        out = snapshot_gsc(week=TEST_WEEK, rule_version="geo-seo-v2")
+    assert out["rows"] == [{"keys": ["frozen"]}]          # 返回现有,未重取
+    svc.searchanalytics().query().execute.assert_not_called()
+
+def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots):
+    """08-13 的 SSLEOFError 合法重跑 = degraded 例外口径:degraded 快照必须允许重取。"""
+    import json as _json
+    from geo.fetch.gsc import snapshot_dir
+    p = snapshot_dir(TEST_WEEK) / "gsc.json"
+    p.write_text(_json.dumps({"week": TEST_WEEK, "rule_version": "t", "site": "s",
+                              "rows": [], "degraded": True, "error": "SSLEOFError"}),
+                 encoding="utf-8")
+    svc = MagicMock()
+    svc.searchanalytics().query().execute.return_value = {"rows": [{"keys": ["ok"]}]}
+    with patch("geo.fetch.gsc._build_service", return_value=svc):
+        out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
+    assert out["degraded"] is False and out["rows"] == [{"keys": ["ok"]}]
