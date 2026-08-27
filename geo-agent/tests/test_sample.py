@@ -23,3 +23,17 @@ def test_select_topn_excludes_already_fetched():
     # But example.com/missing has no meta.json → not fetched → included
     urls = select_topn(_corpus(), n=40, brand_host="sunhestia.com", repo=FIX)
     assert urls == ["https://example.com/missing"]
+
+def test_fetch_topn_counts_js_only(monkeypatch):
+    from geo.research.sample import fetch_topn
+    from unittest.mock import MagicMock
+    # 三个 URL 依序返回: js_only / 正常 / 抛错(失败)
+    results = [MagicMock(js_only=True), MagicMock(js_only=False), None]
+    it = iter(results)
+    def fake(u):
+        v = next(it)
+        if v is None: raise RuntimeError("x")
+        return v
+    monkeypatch.setattr("geo.fetch.fetcher.fetch_source", fake)
+    st = fetch_topn(["a/js", "b/doc", "c/dead"])
+    assert st.requested == 3 and st.fetched == 2 and st.failed == 1 and st.js_only == 1

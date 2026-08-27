@@ -4,8 +4,12 @@ from bs4 import BeautifulSoup
 from geo.shared.config import settings
 from geo.shared.models import L3Source
 from geo.shared.storage import sha1_url, source_dir
+from geo.shared.io_utils import atomic_write_text
 from geo.fetch.meta_llm import extract_semantic
 from geo.fetch.url_guard import UnsafeURLError, resolve_safe_ips, MAX_REDIRECTS
+
+class FetchError(RuntimeError):
+    """传输失败或非 2xx 终态:不落缓存、上抛,下次运行自然重试(2026-08-27 P1②)。"""
 
 def extract_structural(soup: BeautifulSoup) -> dict:
     # On-page text signals the SEO scorer needs; captured at snapshot/fetch time
@@ -72,24 +76,31 @@ def _safe_get(url: str, transport=None) -> httpx.Response:
 def fetch_source(url: str, fetcher_kimi=True, transport=None) -> L3Source:
     sha = sha1_url(url); sd = source_dir(sha)
     text_path = sd/"text.md"; meta_path = sd/"meta.json"
-    if text_path.exists():               # 跨周去重：已抓过直接读
+    if text_path.exists():
         import json
-        return L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
+        cached = L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
+        if cached.js_only and cached.http_status is None:
+            pass   # 存量毒化条目(异常路径从不带 status)→ 视为 miss 重抓
+        else:
+            return cached
     t0 = time.time(); status = None; text = ""; js_only = False; structural = {}
     try:
         r = _safe_get(url, transport); status = r.status_code
+        if not (200 <= status < 300):
+            raise FetchError(f"HTTP {status}: {url}")
         text = trafilatura.extract(r.text) or ""
         if not text.strip(): js_only = True
         structural = extract_structural(BeautifulSoup(r.text, "lxml"))
-    except UnsafeURLError:
-        # 安全拦截必须上抛且不落盘——落盘空文本会既污染缓存又掩盖攻击面
+    except (UnsafeURLError, FetchError):
+        # UnsafeURLError=安全拦截、FetchError=传输/HTTP失败:均上抛且不落盘。
+        # 落盘空文本会永久毒化缓存(2026-08-24 审查 P1-2)。
         raise
-    except Exception:
-        js_only = True
+    except Exception as e:
+        raise FetchError(f"{type(e).__name__}: {e} ({url})") from e
     semantic = extract_semantic(text) if (fetcher_kimi and text.strip()) else {}
     rec = L3Source(url=url, sha1=sha, http_status=status, text=text,
                    structural=structural, semantic=semantic, js_only=js_only,
                    fetched_iso=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
-    text_path.write_text(text, encoding="utf-8")
-    import json; meta_path.write_text(rec.model_dump_json(), encoding="utf-8")
+    atomic_write_text(sd/"text.md", text)  # text 用原子写;meta 同
+    import json; atomic_write_text(meta_path, rec.model_dump_json())
     return rec

@@ -2,7 +2,8 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
-from geo.fetch.fetcher import extract_structural, fetch_source
+from geo.fetch.fetcher import extract_structural, fetch_source, FetchError
+import httpx as _httpx  # 2026-08-27 P1② 失败不落缓存测试用
 from geo.fetch.meta_llm import extract_semantic
 from geo.shared.storage import sha1_url, source_dir, l1_path, snapshot_dir
 from bs4 import BeautifulSoup
@@ -276,37 +277,39 @@ def test_structural_comprehensive():
     assert s["ul_count"] == 2  # Both <ul> and <ol> counted
 
 def test_fetch_source_http_error_handling():
-    """Test fetch_source handles HTTP errors gracefully via cached error state."""
+    """Fix(2026-08-27 P1②): 旧语义"错误态缓存为 js_only 常驻"已废弃——存量毒化
+    条目(js_only+http_status None)视为 miss 重抓;重抓仍失败则上抛 FetchError,
+    且失败路径不落盘,毒化 meta 原样保留留给下次运行再试。"""
     url = "https://example.com/error"
 
-    # Create pre-fetched cached data that simulates HTTP error state
+    # Create pre-fetched cached data that simulates the legacy poisoned error state
     sha = sha1_url(url)
     sd = source_dir(sha)
     sd.mkdir(parents=True, exist_ok=True)
 
-    cached_meta = {
+    poisoned_meta = {
         "url": url,
         "sha1": sha,
-        "http_status": None,  # No status due to error
-        "text": "",  # Empty text due to error
+        "http_status": None,  # legacy异常路径从不带 status
+        "text": "",
         "structural": {},
         "semantic": {},
-        "js_only": True,  # JS-only flag set due to error
+        "js_only": True,
         "fetched_iso": "2026-08-02T12:00:00Z"
     }
 
     (sd / "text.md").write_text("", encoding="utf-8")
-    (sd / "meta.json").write_text(json.dumps(cached_meta), encoding="utf-8")
+    (sd / "meta.json").write_text(json.dumps(poisoned_meta), encoding="utf-8")
 
-    # Test cache read of error state
-    result = fetch_source(url, fetcher_kimi=False)
+    # 毒化条目触发重抓,重抓又遇 HTTP 403 → 上抛 FetchError
+    r = MagicMock(status_code=403, text="<html>forbidden</html>")
+    with patch("geo.fetch.fetcher._safe_get", return_value=r):
+        with pytest.raises(FetchError, match="403"):
+            fetch_source(url, fetcher_kimi=False)
 
-    # Assert error handling characteristics
-    assert result.js_only is True
-    assert result.url == url
-    assert result.http_status is None
-    assert result.text == ""
-    assert result.structural == {}
+    # 失败路径不覆写磁盘:毒化 meta 原样保留,下次运行自然再试自愈
+    on_disk = json.loads((sd / "meta.json").read_text(encoding="utf-8"))
+    assert on_disk["http_status"] is None and on_disk["js_only"] is True
 
     # Clean up
     (sd / "text.md").unlink()
@@ -417,3 +420,54 @@ def test_fetch_pins_each_redirect_hop_with_port_in_host_header():
     assert seen[0][0] == "93.184.216.34" and seen[1][0] == "93.184.216.34"
     assert seen[0][1] == "pin-hop.example:8443", "非默认端口 Host 头须带端口"
     _cleanup(url)
+
+
+# ---- Fix(2026-08-27 P1②): 失败不落缓存 + 存量毒化自愈 --------------------
+
+def _clean(url):
+    import shutil
+    sd = source_dir(sha1_url(url))
+    shutil.rmtree(sd, ignore_errors=True)
+    return sd
+
+def test_transport_error_raises_no_cache():
+    url = "https://transient.example/x"
+    sd = _clean(url)
+    with patch("geo.fetch.fetcher._safe_get", side_effect=_httpx.ConnectError("net down")):
+        with pytest.raises(FetchError):
+            fetch_source(url, fetcher_kimi=False)
+    assert not (sd/"text.md").exists() and not (sd/"meta.json").exists()
+
+def test_http_error_raises_no_cache():
+    url = "https://blocked.example/y"
+    sd = _clean(url)
+    r = MagicMock(status_code=403, text="<html>forbidden</html>")
+    with patch("geo.fetch.fetcher._safe_get", return_value=r):
+        with pytest.raises(FetchError, match="403"):
+            fetch_source(url, fetcher_kimi=False)
+    assert not (sd/"meta.json").exists()
+
+def test_200_empty_body_caches_js_only():
+    url = "https://jsshell.example/z"
+    sd = _clean(url)
+    r = MagicMock(status_code=200, text="<html><body><div id='app'></div></body></html>")
+    with patch("geo.fetch.fetcher._safe_get", return_value=r):
+        rec = fetch_source(url, fetcher_kimi=False)
+    assert rec.js_only is True and rec.http_status == 200
+    assert (sd/"meta.json").exists()          # 真 JS-only 照常缓存
+
+def test_poisoned_cache_entry_is_refetched():
+    """存量毒化条目(js_only+http_status None)命中时视为 miss 重抓。"""
+    url = "https://poisoned.example/p"
+    sd = _clean(url)
+    sd.mkdir(parents=True, exist_ok=True)
+    (sd/"text.md").write_text("", encoding="utf-8")
+    (sd/"meta.json").write_text(json.dumps(
+        {"url": url, "sha1": sha1_url(url), "http_status": None, "text": "",
+         "structural": {}, "semantic": {}, "js_only": True, "fetched_iso": "2026-08-01T00:00:00Z"}),
+        encoding="utf-8")
+    r = MagicMock(status_code=200, text="<html><body><p>Real article text paragraph.</p></body></html>")
+    with patch("geo.fetch.fetcher._safe_get", return_value=r):
+        rec = fetch_source(url, fetcher_kimi=False)
+    assert rec.http_status == 200 and rec.js_only is False   # 已被新结果覆写
+    _clean(url)
