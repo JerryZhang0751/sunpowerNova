@@ -399,7 +399,8 @@ def test_fetch_source_rejects_internal_url_immediately():
 # 原主机;每一跳都 pin。MockTransport 下 pin 的可观测面 = 请求 URL host 与 Host 头。
 
 def test_fetch_pins_connection_to_validated_ip():
-    """请求必须打到已验证 IP(而非按主机名二次解析),Host 头保留原域名。"""
+    """直连(代理关闭): 请求必须打到已验证 IP,Host 头保留原域名。"""
+    from types import SimpleNamespace
     url = "https://pin-target.example/a"
     _cleanup(url)
     seen = {}
@@ -407,7 +408,8 @@ def test_fetch_pins_connection_to_validated_ip():
         seen["host"] = request.url.host
         seen["Host"] = request.headers.get("host")
         return httpx.Response(200, text=BODY)
-    with _patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
+    with _patch("geo.fetch.fetcher.settings", SimpleNamespace(proxy=None)), \
+         _patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
         rec = fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
     assert rec.http_status == 200
     assert seen["host"] == "93.184.216.34", "连接目标必须是防线验过的 IP"
@@ -415,7 +417,8 @@ def test_fetch_pins_connection_to_validated_ip():
     _cleanup(url)
 
 def test_fetch_pins_each_redirect_hop_with_port_in_host_header():
-    """重定向第二跳同样 pin;非默认端口的 Host 头需带端口。"""
+    """直连: 重定向第二跳同样 pin;非默认端口的 Host 头需带端口。"""
+    from types import SimpleNamespace
     url = "https://pin-hop.example:8443/start"
     _cleanup(url)
     seen = []
@@ -424,11 +427,91 @@ def test_fetch_pins_each_redirect_hop_with_port_in_host_header():
         if request.url.path == "/start":
             return httpx.Response(301, headers={"location": "https://pin-hop.example:8443/final"})
         return httpx.Response(200, text=BODY)
-    with _patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
+    with _patch("geo.fetch.fetcher.settings", SimpleNamespace(proxy=None)), \
+         _patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
         rec = fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
     assert rec.http_status == 200
     assert seen[0][0] == "93.184.216.34" and seen[1][0] == "93.184.216.34"
     assert seen[0][1] == "pin-hop.example:8443", "非默认端口 Host 头须带端口"
+    _cleanup(url)
+
+
+# ---- Fix(2026-08-28 w2 实跑): 代理模式发域名;直连 pin 优先 IPv4 -------------
+# w2 是 r2 IP-pin(08-26)后首个真实 research 跑: top-40 抓取 40/40 全灭、
+# research sample_n 崩至 4。根因双重: (a)域名分流代理(xray/Clash)收到裸 IP
+# CONNECT 会绕过域名路由规则,外站被直连拒收;(b)getaddrinfo IPv6 优先 + 网络
+# IPv6 出口不通,双栈域名全灭。语义改为: 代理=每跳仍过防线校验,但发原始域名
+# 交代理路由(残余 rebinding 窗口=受信本地代理二次解析,已接受并注明);
+# 直连(含 transport 注入)=保留 pin,优先 IPv4,无 A 记录才用 IPv6。
+
+_V6 = _ipa.ip_address("2620:127:f00f:5::")
+_V4D = _ipa.ip_address("23.227.38.65")
+
+def test_proxy_mode_sends_domain_not_pinned_ip():
+    """代理模式: 请求 URL 必须是原域名(交代理按域名路由),不做 Host/SNI 改写。"""
+    from types import SimpleNamespace
+    url = "https://proxy-target.example/a"
+    _cleanup(url)
+    seen = {}
+    def handler(request):
+        seen["host"] = request.url.host
+        seen["Host"] = request.headers.get("host")
+        return httpx.Response(200, text=BODY)
+    fake_settings = SimpleNamespace(proxy="http://127.0.0.1:7890")
+    with _patch("geo.fetch.fetcher.settings", fake_settings), \
+         _patch("geo.fetch.url_guard._resolve_ips", return_value=[_V6, _V4D]):
+        rec = fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
+    assert rec.http_status == 200
+    assert seen["host"] == "proxy-target.example", "代理模式必须发域名,不得 pin IP"
+    assert seen["Host"] == "proxy-target.example", "代理模式不得改写 Host"
+    _cleanup(url)
+
+def test_proxy_mode_still_validates_each_hop():
+    """代理模式安全门不撤: 解析出内网地址照旧拒绝、不落缓存。"""
+    from types import SimpleNamespace
+    url = "https://proxy-unsafe.example/a"
+    _cleanup(url)
+    fake_settings = SimpleNamespace(proxy="http://127.0.0.1:7890")
+    with _patch("geo.fetch.fetcher.settings", fake_settings), \
+         _patch("geo.fetch.url_guard._resolve_ips",
+                return_value=[_ipa.ip_address("10.0.0.7")]):
+        with pytest.raises(UnsafeURLError):
+            fetch_source(url, fetcher_kimi=False,
+                         transport=httpx.MockTransport(lambda r: httpx.Response(200, text=BODY)))
+    sd = source_dir(sha1_url(url))
+    assert not (sd / "meta.json").exists() and not (sd / "text.md").exists()
+    _cleanup(url)
+
+def test_direct_pin_prefers_ipv4_over_ipv6():
+    """直连 pin: 同批地址里有 v4 就用 v4(v6 优先序 + v6 出口不通曾致全灭)。"""
+    from types import SimpleNamespace
+    url = "https://dualstack.example/a"
+    _cleanup(url)
+    seen = {}
+    def handler(request):
+        seen["host"] = request.url.host
+        return httpx.Response(200, text=BODY)
+    with _patch("geo.fetch.fetcher.settings", SimpleNamespace(proxy=None)), \
+         _patch("geo.fetch.url_guard._resolve_ips", return_value=[_V6, _V4D]):
+        rec = fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
+    assert rec.http_status == 200
+    assert seen["host"] == "23.227.38.65", "必须优先 pin IPv4"
+    _cleanup(url)
+
+def test_direct_pin_ipv6_when_no_v4():
+    """v6-only 域名: 无 A 记录时仍 pin v6(不因修 v4 偏好而退化)。"""
+    from types import SimpleNamespace
+    url = "https://v6only.example/a"
+    _cleanup(url)
+    seen = {}
+    def handler(request):
+        seen["host"] = request.url.host
+        return httpx.Response(200, text=BODY)
+    with _patch("geo.fetch.fetcher.settings", SimpleNamespace(proxy=None)), \
+         _patch("geo.fetch.url_guard._resolve_ips", return_value=[_V6]):
+        rec = fetch_source(url, fetcher_kimi=False, transport=httpx.MockTransport(handler))
+    assert rec.http_status == 200
+    assert seen["host"] == "2620:127:f00f:5::"
     _cleanup(url)
 
 
