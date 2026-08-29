@@ -341,7 +341,11 @@ def test_v1_yaml_membership_matches_registry():
     from geo.rules.loader import load_rules
     for name, reg in (("geo", GEO_SIGNALS), ("seo", SEO_SIGNALS)):
         r = load_rules(name)
-        assert r.entries == []
+        # 2026-08-28 w2 起真实迭代会向出厂文件写 entries:不再要求为空,
+        # 改为校验每条 entry 的 signal 已注册且 status 属合法状态机取值。
+        for e in r.entries:
+            assert e["signal"] in reg, f"{name} entry {e['signal']} 未注册"
+            assert e["status"] in {"draft", "active", "rejected", "retired"}, f"{name} entry 非法状态: {e}"
         for dim, ids in r.signals.items():
             assert ids, f"{name}.{dim} 成员为空"
             assert all(i in reg for i in ids), f"{name}.{dim} 含未注册信号"

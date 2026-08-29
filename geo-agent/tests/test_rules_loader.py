@@ -45,9 +45,16 @@ def test_load_with_version_reads_history(tmp_path):
         L.RULES_DIR = orig
 
 
-def test_entries_default_empty():
-    r = load_rules("geo")
-    assert r.entries == []            # v1 文件尚无 entries → 默认空
+def test_entries_default_empty(tmp_path, monkeypatch):
+    """loader 对无 entries 键的规则文件默认空列表(密闭:临时 RULES_DIR)。
+    2026-08-28 w2 起真实迭代会向出厂文件写 entries,不再断言仓库现状为空。"""
+    import geo.rules.loader as L
+    (tmp_path / "geo-rules.yaml").write_text(yaml.safe_dump({
+        "version": "t", "composite": "geo",
+        "weights": {"citability": 25}, "signals": {"citability": ["has_definition_segment"]}}))
+    monkeypatch.setattr(L, "RULES_DIR", tmp_path)
+    r = L.load_rules("geo")
+    assert r.entries == []
 
 
 # ---- Fix(2026-08-25 二次审查#6): 报告版本标签必须与实际加载的规则一致 -----------

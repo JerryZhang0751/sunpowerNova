@@ -1,4 +1,4 @@
-version: geo-seo-v2
+version: geo-seo-v3
 composite: seo
 weights:
   crawlability_index: 20
@@ -7,11 +7,49 @@ weights:
   content_eeat: 25
   authority: 20
 signals:
-  crawlability_index: [http_200, in_sitemap, robots_not_blocked, canonical_self, https]
-  technical_foundation: [https, mobile_viewport, http2, renderable_static]
-  on_page: [unique_title, title_len_ok, meta_desc_present, single_h1, heading_hierarchy_ok]
-  content_eeat: [word_count_band, has_author_byline, has_publish_date, cites_external_sources]
-  authority: [gsc_impressions, gsc_clicks, gsc_ctr, backlinks_est]
-severity_bands: {critical: [0,39], poor: [40,59], fair: [60,74], good: [75,89], excellent: [90,100]}
-p2plus_missing: [backlinks_est]   # P2+ unknown 降级
+  crawlability_index:
+  - http_200
+  - in_sitemap
+  - robots_not_blocked
+  - canonical_self
+  - https
+  technical_foundation:
+  - https
+  - mobile_viewport
+  - http2
+  - renderable_static
+  on_page:
+  - unique_title
+  - title_len_ok
+  - meta_desc_present
+  - single_h1
+  - heading_hierarchy_ok
+  content_eeat:
+  - word_count_band
+  - has_author_byline
+  - has_publish_date
+  - cites_external_sources
+  authority:
+  - gsc_impressions
+  - gsc_clicks
+  - gsc_ctr
+  - backlinks_est
+severity_bands:
+  critical:
+  - 0
+  - 39
+  poor:
+  - 40
+  - 59
+  fair:
+  - 60
+  - 74
+  good:
+  - 75
+  - 89
+  excellent:
+  - 90
+  - 100
+p2plus_missing:
+- backlinks_est
 entries: []
