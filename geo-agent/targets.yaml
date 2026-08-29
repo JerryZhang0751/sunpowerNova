@@ -15,4 +15,4 @@ site:
     - /legal/privacy
     - /legal/terms
   brand_terms: [SunHestia, sunhestia.com]
-  proxy: http://127.0.0.1:7890  # GSC 中国访问代理 (Clash); null=直连
+  proxy: http://127.0.0.1:10808  # GSC/抓取代理 (v2rayN/xray; 2026-08-28 由 Clash 7890 迁移); null=直连
