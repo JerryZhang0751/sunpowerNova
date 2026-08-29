@@ -1,0 +1,258 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline:
+    "Solar Panels Only vs Solar + Battery Storage: Side-by-Side Comparison for European Homes",
+  description:
+    "A side-by-side comparison of rooftop solar PV alone versus solar PV paired with a home battery, focused on self-consumption for European homeowners of detached houses.",
+  inLanguage: "en",
+  mainEntityOfPage: "https://sunhestia.com/news/solar-only-vs-solar-plus-battery-storage/",
+  author: { "@type": "Organization", name: "SunHestia", url: "https://sunhestia.com" },
+  publisher: { "@type": "Organization", name: "SunHestia", url: "https://sunhestia.com" },
+  about: [
+    { "@type": "Thing", name: "Residential solar self-consumption" },
+    { "@type": "Thing", name: "Home battery storage" },
+  ],
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Do I need a battery with solar panels?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Solar works without a battery, but without storage most daytime surplus is exported to the grid. A battery lets you keep and use that energy yourself, which is usually better value than selling low and buying back high.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How big should my battery be?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Battery size should match your evening electricity use. A common starting point for a detached home is 5–10 kWh, stackable to around 15 kWh. Sizing should be based on your actual consumption, not a generic figure.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How long does installation take?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "For a typical detached home, the physical installation is often completed within a day once the system is designed and the hardware is on site.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What warranty do you offer?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "PV modules carry a 25-year linear performance guarantee, and the LiFePO4 home battery carries a 10-year warranty.",
+      },
+    },
+  ],
+};
+---
+<Layout
+  title="Solar Panels Only vs Solar + Battery Storage"
+  description="A side-by-side comparison of rooftop solar PV alone versus solar PV paired with a home battery, focused on self-consumption for European homeowners of detached houses."
+  path="news/solar-only-vs-solar-plus-battery-storage"
+  jsonLd={[articleSchema, faqSchema]}
+>
+  <section class="section">
+    <div class="wrap prose">
+      <div style="color:var(--c-ink-soft); font-size:.9rem">2026-08 · SunHestia</div>
+      <h1>Solar Panels Only vs Solar + Battery Storage: Side-by-Side Comparison</h1>
+
+      <blockquote>
+        <strong>Self-consumption</strong> is the share of the electricity your
+        solar panels produce that you use in your own home, rather than
+        exporting to the grid. It is the figure that most influences the value
+        of a residential solar system — and it is the core difference between
+        the two configurations compared here.
+      </blockquote>
+
+      <p>
+        Solar works without a battery, but without storage most daytime surplus
+        is exported to the grid. A battery lets you keep and use that energy
+        yourself, which is usually better value than selling low and buying
+        back high.
+      </p>
+
+      <h2>At a Glance: Solar Only vs Solar + Battery</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Solar PV only</th>
+              <th>Solar PV + SunHestia Home Battery</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Daytime surplus</td>
+              <td>Exported to the grid</td>
+              <td>Stored in the battery for use after dark</td>
+            </tr>
+            <tr>
+              <td>Evening and night supply</td>
+              <td>Home draws from the grid</td>
+              <td>Home uses stored solar first; grid only when needed</td>
+            </tr>
+            <tr>
+              <td>Self-consumption</td>
+              <td>Lower — surplus leaves the home</td>
+              <td>Sharply increased — storage shifts surplus to when it is needed</td>
+            </tr>
+            <tr>
+              <td>Power outages</td>
+              <td>No backup</td>
+              <td>Backup-capable for short outages via the hybrid inverter</td>
+            </tr>
+            <tr>
+              <td>Time-of-use scheduling</td>
+              <td>Not applicable</td>
+              <td>Supported by the hybrid inverter</td>
+            </tr>
+            <tr>
+              <td>Monitoring</td>
+              <td>Real-time app monitoring of production</td>
+              <td>Real-time app monitoring of production, storage and consumption</td>
+            </tr>
+            <tr>
+              <td>Main hardware</td>
+              <td>PV modules + hybrid inverter</td>
+              <td>PV modules + hybrid inverter + home battery</td>
+            </tr>
+            <tr>
+              <td>Energy flow</td>
+              <td>Panels → home → grid</td>
+              <td>Inverter routes power between panels, battery, home and grid</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Key Specifications</h2>
+
+      <h3>SunHestia Solar PV Modules</h3>
+      <ul>
+        <li><strong>Power output:</strong> 400–450 W per module, high-efficiency monocrystalline cells</li>
+        <li><strong>Performance guarantee:</strong> 25-year linear performance guarantee</li>
+        <li><strong>Design:</strong> Black, low-profile aesthetic for pitched roofs</li>
+        <li><strong>Durability:</strong> Resistant to salt mist and ammonia — suited to coastal and rural sites</li>
+      </ul>
+
+      <h3>SunHestia Home Battery</h3>
+      <ul>
+        <li><strong>Capacity:</strong> Modular from 5 kWh, stackable to 15 kWh (5–15 kWh range)</li>
+        <li><strong>Chemistry:</strong> LiFePO4 (lithium iron phosphate), cobalt-free — thermally stable and designed for thousands of charge cycles</li>
+        <li><strong>Warranty:</strong> 10-year warranty</li>
+        <li><strong>Mounting:</strong> Wall or floor mounted, indoor or covered outdoor</li>
+      </ul>
+
+      <h3>Hybrid Inverter &amp; Energy Manager</h3>
+      <ul>
+        <li><strong>Function:</strong> Converts solar DC power for the home and routes power between panels, battery, home and grid, drawing from the grid only when needed</li>
+        <li><strong>Monitoring:</strong> Real-time app monitoring of production, storage and consumption</li>
+        <li><strong>Backup:</strong> Backup-capable for short outages</li>
+        <li><strong>Scheduling:</strong> Supports time-of-use scheduling</li>
+      </ul>
+
+      <h2>Which Configuration Fits You?</h2>
+
+      <h3>Solar PV only may fit if you:</h3>
+      <ul>
+        <li>Use most of your electricity during daylight hours</li>
+        <li>Want the simplest possible hardware setup</li>
+        <li>Are comfortable exporting surplus to the grid</li>
+      </ul>
+
+      <h3>Solar PV + battery may fit if you:</h3>
+      <ul>
+        <li>Use most of your electricity in the evening and at night</li>
+        <li>Want to keep and use your own solar energy rather than selling low and buying back high</li>
+        <li>Want backup capability for short outages</li>
+        <li>Want time-of-use scheduling to manage when you draw from the grid</li>
+      </ul>
+
+      <h2>Frequently asked questions</h2>
+
+      <h3>Do I need a battery with solar panels?</h3>
+      <p>
+        Solar works without a battery, but without storage most daytime surplus
+        is exported to the grid. A battery lets you keep and use that energy
+        yourself, which is usually better value than selling low and buying
+        back high.
+      </p>
+
+      <h3>How big should my battery be?</h3>
+      <p>
+        Battery size should match your evening electricity use. A common
+        starting point for a detached home is 5–10 kWh, stackable to around
+        15 kWh. Sizing should be based on your actual consumption, not a
+        generic figure.
+      </p>
+
+      <h3>How long does installation take?</h3>
+      <p>
+        For a typical detached home, the physical installation is often
+        completed within a day once the system is designed and the hardware is
+        on site.
+      </p>
+
+      <h3>What warranty do you offer?</h3>
+      <p>
+        PV modules carry a 25-year linear performance guarantee, and the
+        LiFePO4 home battery carries a 10-year warranty.
+      </p>
+
+      <p>
+        Want the full walkthrough? Read
+        <a href="/news/self-consumption-guide/">Solar Self-Consumption: The
+        Homeowner's Guide</a>.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .prose blockquote {
+    margin: 1.5rem 0;
+    padding: 1rem 1.25rem;
+    border-left: 3px solid var(--c-sun);
+    background: var(--c-bg-alt);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--c-ink);
+  }
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+  .prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .prose th,
+  .prose td {
+    text-align: left;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .prose th {
+    background: var(--c-bg-alt);
+    color: var(--c-ink);
+    font-weight: 600;
+  }
+  .prose h3 {
+    margin-top: 1.5rem;
+    font-size: 1.05rem;
+  }
+</style>

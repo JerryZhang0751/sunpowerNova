@@ -1,0 +1,19 @@
+version: geo-seo-v2
+composite: geo
+weights:        # 和 = 100
+  citability: 25
+  brand: 20
+  eeat: 20
+  technical_geo: 15
+  schema: 10
+  platform: 10
+signals:        # 成员 = 代码实际计算集(2026-08-19 校正,语义无操作)
+  citability: [has_definition_segment, faq_block_count, table_count, datapoint_count, list_count]
+  brand: [mention_count, cited_count, sov_share, entity_known]
+  eeat: [has_author_byline, has_publish_date, cites_external_sources, org_or_person_schema]
+  technical_geo: [robots_gptbot, robots_claudebot, https, canonical_present]
+  schema: [schema_type_count, has_faqpage, has_product, has_organization, has_article]
+  platform: [on_youtube, on_reddit, on_wikipedia, on_linkedin]
+severity_bands: {critical: [0,39], poor: [40,59], fair: [60,74], good: [75,89], excellent: [90,100]}
+p2plus_missing: []   # Wikidata/KG，本期 unknown 降级
+entries: []
