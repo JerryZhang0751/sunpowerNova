@@ -134,7 +134,7 @@ def iterate(week: int, *, repo: Path = REPO) -> dict:
                       if prev_ri.exists() else None)
     deltas = persisted_deltas(strengths, prev_strengths, geo_raw["weights"])   # v1.1:2 周同向
     w_before = dict(geo_raw["weights"])
-    w_after = apply_deltas(w_before, deltas) if deltas else w_before
+    w_after = apply_deltas(w_before, deltas, strengths) if deltas else w_before
 
     changed = any(d.change in ("promoted", "rejected", "retired", "draft") for d in decisions) \
         or bool(deltas)
