@@ -1,8 +1,8 @@
-week: 2
+week: 3
 mode: audit
 scope: core
 runs: 1
-rule_version: geo-seo-v3
+rule_version: geo-seo-v4
 augment_citation_prompt: false
 providers:
 - qwen
