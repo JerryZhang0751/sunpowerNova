@@ -147,7 +147,7 @@ def run_suggest(week: int, *, repo: Path = REPO) -> dict:
         dims = sorted({s["detail"].split("=")[0] for s in suppressed if s["source"] == "eval_gap"})
         note = f"（覆盖弱维度: {', '.join(dims)}）" if dims else ""
         print(f"ℹ️ 已抑制 {len(suppressed)} 条与已发布/草稿重复的建议{note}")
-    if not out:
+    if not out and not suppressed:
         print("（无建议——检查 eval_report/gsc 数据源）")
     return {"suggestions": out, "missing": missing, "suppressed": suppressed}
 

@@ -125,3 +125,30 @@ def test_run_suggest_prints_suppression_summary(tmp_path, capsys):
     out_text = capsys.readouterr().out
     assert len(res["suppressed"]) == 1
     assert "已抑制 1 条" in out_text and "content_eeat" in out_text
+
+def test_run_suggest_all_suppressed_no_misleading_empty_msg(tmp_path, capsys):
+    """全部建议被精确去重抑制时,不打印误导性的"无建议——检查数据源"
+    (真实成因 = 全被抑制,抑制行已给足信息)。"""
+    import shutil
+    fix = Path(__file__).parent / "fixtures" / "generate"
+    er_dst = tmp_path / "data" / "analysis" / "w1" / "eval_report.json"
+    er_dst.parent.mkdir(parents=True)
+    rep = json.loads((fix / "data/analysis/w1/eval_report.json").read_text(encoding="utf-8"))
+    for sec in ("self_geo", "self_seo"):
+        for d in rep.get(sec, {}).get("dims", []):
+            d["score"] = 60.0                                  # 无弱维度 → 无 eval_gap 建议
+    er_dst.write_text(json.dumps(rep), encoding="utf-8")
+    gsc_dst = tmp_path / "data" / "snapshots" / "w1" / "gsc.json"
+    gsc_dst.parent.mkdir(parents=True)
+    shutil.copy(fix / "data/snapshots/w1/gsc.json", gsc_dst)
+    pub = tmp_path / "content" / "published"
+    pub.mkdir(parents=True)
+    for name, topic in [("a.md", "lifepo4 battery"), ("b.md", "photovoltaic self consumption"),
+                        ("c.md", "hestia solar")]:              # GSC 3 条全发布过
+        (pub / name).write_text(f"---\ntopic: {topic}\npage_type: guide\n---\n", encoding="utf-8")
+    from geo.generate.run import run_suggest
+    res = run_suggest(1, repo=tmp_path)
+    out_text = capsys.readouterr().out
+    assert res["suggestions"] == [] and len(res["suppressed"]) == 3
+    assert "已抑制 3 条" in out_text
+    assert "无建议" not in out_text

@@ -70,15 +70,18 @@ def test_iterate_isolated_delta_moves_weights(tmp_path):
     for b in agg["formats"]:
         b["unique_cited_n"] = 36; b["unique_n"] = 40                 # citability 0.9
     agg["sources"]["unique_n"] = 40
-    agg["sources"]["schema_unique"] = {"BreadcrumbList": 20}         # schema 0.5
+    agg["sources"]["schema_unique"] = {"BreadcrumbList": 19}         # schema 0.475
     (ana2 / "research_aggregates.json").write_text(json.dumps(agg, ensure_ascii=False))
     ev = json.loads((ana1 / "eval_report.json").read_text(encoding="utf-8"))
-    ev["gap"]["metrics"]["mention_rate"] = 0.46                       # brand (0.46+0.5)/2=0.48
+    ev["gap"]["metrics"]["mention_rate"] = 0.5                        # brand (0.5+0.5)/2=0.5
     ev["gap"]["metrics"]["citation_rate"] = 0.5
     (ana2 / "eval_report.json").write_text(json.dumps(ev, ensure_ascii=False))
     (ana1 / "rules_iteration.json").write_text(json.dumps(           # 上期同向记录
         {"dimension_strengths": {"citability": 0.8, "schema": 0.5, "brand": 0.48}}))
     it = iterate(2, repo=repo)
     assert it["weights_before"] != it["weights_after"]
-    assert it["weights_after"] == {**it["weights_before"], "citability": 26, "brand": 19}
+    # strengths {citability 0.9, schema 0.475, brand 0.5} → delta 仅 citability +1;
+    # diff=-1 补偿只动零-delta 维 → 测量最弱者 schema 0.475 让权(10→9);
+    # 若丢 strengths 传参,名字 ASCII 兜底会落 brand(用例即失效)。
+    assert it["weights_after"] == {**it["weights_before"], "citability": 26, "schema": 9}
     assert it["to_version"] is not None                              # 权重动了 → 升版
