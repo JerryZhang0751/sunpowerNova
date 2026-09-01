@@ -106,3 +106,22 @@ def test_run_mark_published_rejects_rejected_drafts(tmp_path, capsys):
     assert draft_path.exists(), "Draft file should still exist after rejected publish attempt"
     fm = yaml.safe_load(draft_path.read_text(encoding="utf-8").split("---")[1])
     assert fm["status"] == "rejected", "Draft status should remain rejected"
+
+def test_run_suggest_prints_suppression_summary(tmp_path, capsys):
+    import shutil
+    from pathlib import Path
+    fix = Path(__file__).parent / "fixtures" / "generate"
+    for src in ("data/analysis/w1/eval_report.json", "data/snapshots/w1/gsc.json"):
+        dst = tmp_path / src
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(fix / src, dst)
+    pub = tmp_path / "content" / "published"
+    pub.mkdir(parents=True)
+    (pub / "deep.md").write_text(
+        "---\ntopic: Deep-dive article with dates, sources and concrete data points\n"
+        "page_type: guide\n---\n", encoding="utf-8")
+    from geo.generate.run import run_suggest
+    res = run_suggest(1, repo=tmp_path)
+    out_text = capsys.readouterr().out
+    assert len(res["suppressed"]) == 1
+    assert "已抑制 1 条" in out_text and "content_eeat" in out_text
