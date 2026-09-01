@@ -22,6 +22,14 @@ REQUEST_TIMEOUT_S = 300.0
 TOTAL_BUDGET_S = 600.0
 
 
+class QwenAPIError(RuntimeError):
+    """DashScope 流内错误块(code 非 200,如 AllocationQuota.FreeTierOnly 额度耗尽)。
+
+    2026-09-01 w3 实跑:额度耗尽时 DashScope 0.2s 返回单个 code=Unknown 错误块,
+    message 里才是真实错误码;旧代码将其按普通块聚合成空答案,collector 只能报
+    "返回空答案",账号侧根因被吞。此异常原样透传真实错误供 runs.jsonl 记录。"""
+
+
 def _mm_text(content) -> str:
     """Extract text from multimodal content (strings/dicts/lists)."""
     if isinstance(content, str):
@@ -96,6 +104,11 @@ def collect_qwen(prompt: str, model: str = "qwen3.7-plus") -> dict[str, Any]:
                         TOTAL_BUDGET_S)
             timed_out = True
             break
+        # 错误块守卫:成功流块 code=200(或无 code 属性,见 tests/_Chunk);错误块
+        # (code=Unknown 等)的 message 才是真实错误码,必须上抛而非聚合成空答案。
+        code = getattr(r, "code", None)
+        if code and code not in (200, "200"):
+            raise QwenAPIError(f"DashScope API 错误(code={code}): {getattr(r, 'message', '')}")
         out = getattr(r, "output", None)
         o = out if isinstance(out, dict) else {}
 

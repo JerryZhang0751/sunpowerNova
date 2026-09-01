@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 # Import functions we'll implement
-from geo.collect.qwen_client import parse_qwen_response, _mm_text, collect_qwen
+from geo.collect.qwen_client import parse_qwen_response, _mm_text, collect_qwen, QwenAPIError
 
 FX = Path(__file__).parent / "fixtures/raw"
 
@@ -117,6 +117,40 @@ def test_collect_qwen_passes_request_timeout():
         out = collect_qwen("hello")
     assert mm.call.call_args.kwargs.get("request_timeout") == 300
     assert out["answer"] == "ok"
+
+
+def test_collect_qwen_raises_api_error_chunk():
+    """流首错误块(如额度耗尽)必须抛 QwenAPIError 透传真实错误码,不得聚合成空答案。
+
+    2026-09-01 w3 实跑:DashScope 免费额度中途耗尽,每题 0.2s 返回 code=Unknown +
+    message 含 AllocationQuota.FreeTierOnly 的错误块;旧代码把它当普通块聚合成
+    空答案,collector 只报"qwen 返回空答案",真实原因(账号额度)被吞。
+    """
+    class _ErrChunk:
+        code = "Unknown"
+        message = ('{"request_id":"x","code":"AllocationQuota.FreeTierOnly",'
+                   '"message":"Free quota exhausted."}')
+        output = {}
+
+    mm = MagicMock()
+    mm.call.return_value = iter([_ErrChunk()])
+    with patch("geo.collect.qwen_client.MultiModalConversation", mm):
+        with pytest.raises(QwenAPIError, match="AllocationQuota.FreeTierOnly"):
+            collect_qwen("hello")
+
+
+def test_collect_qwen_error_chunk_after_content_still_raises():
+    """错误块出现在内容块之后(流中途失败)同样要抛,不得返回残缺答案当成功。"""
+    class _ErrChunk:
+        code = "InvalidParameter"
+        message = "bad thing"
+        output = {}
+
+    mm = MagicMock()
+    mm.call.return_value = iter([_Chunk("partial answer"), _ErrChunk()])
+    with patch("geo.collect.qwen_client.MultiModalConversation", mm):
+        with pytest.raises(QwenAPIError, match="InvalidParameter"):
+            collect_qwen("hello")
 
 
 def test_collect_qwen_enforces_total_budget(monkeypatch):
