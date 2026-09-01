@@ -60,3 +60,25 @@ def test_iterate_no_change_no_bump(tmp_path):
     it2 = iterate(1, repo=repo)                            # 同周重跑 → 幂等,无变更不升版
     assert it2["to_version"] is None
     assert yaml.safe_load((repo / "run.yaml").read_text())["rule_version"] == "geo-seo-v2"
+
+def test_iterate_isolated_delta_moves_weights(tmp_path):
+    repo = _mk_repo(tmp_path)
+    ana1 = repo / "data" / "analysis" / "w1"
+    ana2 = repo / "data" / "analysis" / "w2"
+    ana2.mkdir(parents=True)
+    agg = json.loads((ana1 / "research_aggregates.json").read_text(encoding="utf-8"))
+    for b in agg["formats"]:
+        b["unique_cited_n"] = 36; b["unique_n"] = 40                 # citability 0.9
+    agg["sources"]["unique_n"] = 40
+    agg["sources"]["schema_unique"] = {"BreadcrumbList": 20}         # schema 0.5
+    (ana2 / "research_aggregates.json").write_text(json.dumps(agg, ensure_ascii=False))
+    ev = json.loads((ana1 / "eval_report.json").read_text(encoding="utf-8"))
+    ev["gap"]["metrics"]["mention_rate"] = 0.46                       # brand (0.46+0.5)/2=0.48
+    ev["gap"]["metrics"]["citation_rate"] = 0.5
+    (ana2 / "eval_report.json").write_text(json.dumps(ev, ensure_ascii=False))
+    (ana1 / "rules_iteration.json").write_text(json.dumps(           # 上期同向记录
+        {"dimension_strengths": {"citability": 0.8, "schema": 0.5, "brand": 0.48}}))
+    it = iterate(2, repo=repo)
+    assert it["weights_before"] != it["weights_after"]
+    assert it["weights_after"] == {**it["weights_before"], "citability": 26, "brand": 19}
+    assert it["to_version"] is not None                              # 权重动了 → 升版

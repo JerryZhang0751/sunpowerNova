@@ -1,7 +1,9 @@
 # src/geo/rules/weights.py
 """权重证据强度公式:delta = round(STEP*(S_i - S̄)),夹值 [W_MIN,W_MAX],
-最大余数式归一到恰好 100(确定性:按 |原始delta| 降序、同名 ASCII 升序消化余量)。
-v1.1:persisted_deltas 施加 2 周同向持续性——观察性证据无对照基线,单周方向不作数。"""
+最大余数式归一到恰好 100(确定性)。
+v1.2 补偿语义:总和校正只动零-delta 维——有证据裁决的维度不被染指;
+零-delta 池内有测量强度者优先于无流维;diff<0 弱者让权(强度升序)、diff>0 强者受益(降序);
+同分名字 ASCII 兜底。孤立 ±delta 不再被自身吃回(2026-09-01 缺口修复)。"""
 from __future__ import annotations
 
 STEP = 3
@@ -33,13 +35,19 @@ def _clamp(w: int) -> int:
     return max(W_MIN, min(W_MAX, w))
 
 
-def apply_deltas(weights: dict[str, int], deltas: dict[str, int]) -> dict[str, int]:
+def apply_deltas(weights: dict[str, int], deltas: dict[str, int],
+                 strengths: dict[str, float | None] | None = None) -> dict[str, int]:
     raw = {k: weights[k] + deltas.get(k, 0) for k in weights}
     out = {k: _clamp(v) for k, v in raw.items()}
     diff = 100 - sum(out.values())
     if diff:
-        # 按 |原始 delta| 降序、名升序逐维度 ±1,直到和恰 100(跳过已到边界的维度)
-        order = sorted(out, key=lambda k: (-abs(deltas.get(k, 0)), k))
+        measured = {k: v for k, v in (strengths or {}).items()
+                    if v is not None and k in weights}
+        sign = 1.0 if diff < 0 else -1.0     # 减→强度升序(弱者先让);加→强度降序(强者先得)
+        order = sorted(weights, key=lambda k: (deltas.get(k, 0) != 0,      # 零-delta 优先
+                                               k not in measured,           # 有流优先于无流
+                                               sign * measured.get(k, 0.0),
+                                               k))
         step = 1 if diff > 0 else -1
         i = 0
         while diff != 0 and order:
