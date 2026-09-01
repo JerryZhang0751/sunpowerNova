@@ -76,6 +76,26 @@ def test_render_playbook_feedback_section():
     md2 = render_playbook([], agg, 2, feed=None)
     assert "无对照" in md2
 
+def test_render_playbook_feedback_section_tolerates_null_metrics():
+    """w3 实跑回归(2026-09-01): w2 eval_report 的 gap=None(竞品 L3 缺失致 gap 跳过)
+    → latest(=w2) 三指标为 null;prev(=w1) 有值 → Δ 减法 NoneType-float TypeError。
+    w3 是首个 latest/prev 同时存在的周,首次踩中。反馈节必须容忍任一侧缺失。"""
+    agg = FeatureAggregates(week=1,
+        coverage=type("C", (), {"total_l1": 45, "total_cited_sources": 1469, "l3_resolved": 134,
+                                "l3_missing": 1315, "l3_js_only": 20})(),
+        formats=[], sources={}, platforms={}, problem_space={})
+    feed = {"published": [],
+            "latest": {"week": 2, "mention_rate": None, "citation_rate": None,
+                       "sov": None, "self_geo": 41.2, "self_seo": 49.9},
+            "prev": {"week": 1, "mention_rate": 0.133, "citation_rate": 0.089,
+                     "sov": 3.78, "self_geo": 43.4, "self_seo": 49.8},
+            "rule_version": "geo-seo-v3"}
+    md = render_playbook([], agg, 3, feed=feed)  # 不得 raise
+    assert "## 6. 上期动作→指标对照" in md
+    assert "41.2" in md and "43.4" in md          # 仍有值的行照常展示
+    assert "数据缺失" in md                        # null 行明确标注,不静默不崩
+
+
 def test_render_playbook_rule_version_live():
     from geo.research.render import render_playbook
     from geo.research.models import FeatureAggregates

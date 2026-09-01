@@ -25,9 +25,14 @@ def _feedback_section(feed: dict | None) -> list[str]:
     def row(k, label):
         if lat is None:
             return f"- {label}: 无数据"
-        v = lat[k]
+        v = lat.get(k)
         if prev:
-            return f"- {label}: {v} → 前期 {prev[k]}(Δ{round(v - prev[k], 1):+})"
+            p = prev.get(k)
+            # w3 实跑(2026-09-01):w2 gap=None(竞品 L3 缺失期)→ latest 指标为 null,
+            # Δ 减法 None-float 直接 TypeError。任一侧缺失时展示原值并标注,不崩不静默。
+            if v is None or p is None:
+                return f"- {label}: {v} → 前期 {p}(Δ不可算:某期数据缺失)"
+            return f"- {label}: {v} → 前期 {p}(Δ{round(v - p, 1):+})"
         return f"- {label}: {v}(首期基线,无环比)"
     L += [row("mention_rate", "mention_rate"), row("citation_rate", "citation_rate"),
           row("sov", "sov"), row("self_geo", "self_geo"), row("self_seo", "self_seo")]
