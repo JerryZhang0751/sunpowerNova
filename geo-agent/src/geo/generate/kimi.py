@@ -43,7 +43,9 @@ def playbook_digest(playbook_text: str) -> dict:
     return {"week": int(m.group(1)) if m else None, "formats": formats,
             "templates_note": "高被引骨架：对比表 / 定义段 / 规格卡（见 playbook §5）"}
 
-def _kimi_chat(messages: list[dict], tools=None, timeout: int = 180) -> str:
+def _kimi_chat(messages: list[dict], tools=None, timeout: int = 300) -> str:
+    # 300s:草稿生成为长补全,Kimi 实测响应 50–215s(见模型记录);180s 在 w3 实跑
+    # (2026-09-01)连续两次掐死正常生成。研究层短调用不受影响(各自独立超时)。
     from openai import OpenAI
     c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url, timeout=timeout)
     r = c.chat.completions.create(model="kimi-k3", messages=messages, temperature=1,

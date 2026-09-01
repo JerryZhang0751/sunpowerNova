@@ -62,3 +62,18 @@ def test_skeleton_draft_deterministic():
     assert d1 == d2
     assert "LiFePO4" in d1["body_md"]
     assert d1["frontmatter"]["page_type"] == "spec"
+
+
+def test_kimi_chat_timeout_covers_documented_tail():
+    """generate 草稿是长补全,Kimi 实测响应 50–215s(模型记录);180s 默认超时在
+    w3 实跑(2026-09-01)连续两次掐死正常生成。默认超时须 ≥300s 覆盖已记录长尾。"""
+    from unittest.mock import patch, MagicMock
+    from geo.generate.kimi import _kimi_chat
+    with patch("openai.OpenAI") as oi:
+        resp = MagicMock()
+        resp.choices[0].message.content = "ok"
+        oi.return_value.chat.completions.create.return_value = resp
+        out = _kimi_chat([{"role": "user", "content": "hi"}])
+    assert out == "ok"
+    assert oi.call_args.kwargs.get("timeout") >= 300, \
+        f"timeout={oi.call_args.kwargs.get('timeout')} 低于实测长尾 215s"
