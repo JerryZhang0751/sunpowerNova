@@ -55,16 +55,16 @@ def test_7_sections_present(tmp_path):
     out = render(REPORT, out=tmp_path/"report.html")
     html = out.read_text(encoding="utf-8")
 
-    # Check for the 7 sections mentioned in the brief
+    # Check for the 7 report sections in the redesigned Chinese dashboard.
     required_sections = [
-        "执行摘要",  # ①执行摘要
-        "GEO",       # ②自审 GEO6维雷达
-        "SEO",       # ②自审 SEO5支柱
-        "3 模型横向对比",  # ③3模型横向对比
-        "竞品",      # ④竞品差值热图
-        "规则",      # ⑤规则迭代摘要
-        "优化",      # ⑥优化建议
-        "附录"       # ⑦数据附录
+        "执行摘要",
+        "GEO 六维表现",
+        "SEO 五项表现",
+        "模型横向对比",
+        "竞品差距",
+        "规则迭代摘要",
+        "本周优化建议",
+        "数据附录",
     ]
 
     for section in required_sections:
@@ -88,9 +88,9 @@ def test_rules_iteration_section_rendered(tmp_path):
     out2 = render(rep, tmp_path / "b.html")
     html = out1.read_text(encoding="utf-8")
     assert out1.read_bytes() == out2.read_bytes()               # 字节级确定性
-    assert "geo-seo-v1</code> → <code>geo-seo-v2" in html
-    assert "has_breadcrumblist" in html and "promoted" in html
-    assert "25→26" not in html and "(无)" in html          # v1.1:首周持续性门 → 权重不变
+    assert "geo-seo-v1" in html and "geo-seo-v2" in html
+    assert "面包屑结构化数据" in html and "已生效" in html
+    assert "本期权重未调整" in html          # v1.1:首周持续性门 → 权重不变
     assert "本期休眠" in html and "持续性" in html
 
 def test_rules_iteration_section_absent_graceful(tmp_path):
@@ -108,12 +108,32 @@ def test_collection_gate_visible(tmp_path):
     rep["collection_gate"] = {"manifest": True, "threshold": 0.95,
                               "min_success_rate": 0.667, "ok": False}
     html = render(rep, tmp_path / "gate.html").read_text(encoding="utf-8")
-    assert "采集门" in html
+    assert "质量门" in html
     assert "66.7%" in html                       # 最低成功率可见
-    assert "未达" in html                        # 门未过要明说,不再虚假健康
-    assert "<td>15</td>" in html and "<td>10</td>" in html and "<td>5</td>" in html  # planned/valid/failed
+    assert "未通过质量门" in html                 # 门未过要明说,不再虚假健康
+    assert "计划 15 · 有效 10 · 失败 5" in html  # planned/valid/failed
 
 def test_collection_gate_absent_graceful(tmp_path):
     """旧报告/最小 dict(无新键)渲染不崩。"""
     html = render(REPORT, tmp_path / "old.html").read_text(encoding="utf-8")
-    assert "采集门" not in html or "legacy" in html
+    assert "数据完整性未记录" not in html and "完整性待确认" in html
+
+
+def test_dashboard_structure_and_interactions(tmp_path):
+    """The approved layout and core interactions remain present in future reports."""
+    html = render(REPORT, tmp_path / "dashboard.html").read_text(encoding="utf-8")
+    assert '<html lang="zh-CN">' in html
+    assert 'class="sidebar"' in html
+    assert 'id="week-select"' in html
+    assert ".select-wrap::after" in html and "appearance: none" in html
+    assert 'class="data-status"' not in html and 'class="pulse-dot"' not in html
+    assert 'id="print-report"' not in html and "导出报告" not in html
+    assert 'class="info-dot"' not in html
+    assert '<a href="#geo-seo-analysis">GEO / SEO 分析</a>' in html
+    assert '<a href="#diagnostics">竞品差距 / 规则迭代</a>' in html
+    assert not any(index in html for index in "①②③④⑤⑥⑦")
+    assert 'data-chart-mode' not in html and 'class="segmented"' not in html
+    assert "metricText" in html and " 分 / " in html
+    assert html.count('<span class="card-subtitle">得分 / 权重</span>') == 2
+    assert '<details class="card appendix section"' in html
+    assert "品牌提及率" in html and "声量占比" in html

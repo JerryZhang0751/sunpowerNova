@@ -174,8 +174,8 @@ def test_assemble_render_seam_real_l3(tmp_path):
         render(report, out)
         assert out.exists()
         html = out.read_text(encoding="utf-8")
-        assert "评测报告" in html
-        assert "GEO总分" in html
+        assert "周度评测" in html
+        assert "GEO 综合得分" in html
 
 
 def test_reporter_degrades_none_scores_without_crashing(tmp_path):
