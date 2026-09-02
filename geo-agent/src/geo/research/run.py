@@ -60,6 +60,10 @@ def run_research(week: int, kimi_enabled: bool = True, *, synth_fn=None, web_fn=
             items = [{"platform":p,"fact":"crawler_and_inclusion"} for p in PLATFORMS_TO_VERIFY + BROADER]
             verified = web_search_verify(items, chat_fn=web_fn) if web_fn else web_search_verify(items)
         except Exception as e: log.warning("web_search failed: %s", e)
+    # D5(2026-09-02)：预算耗尽的平台统一汇总（kimi_enabled=False 时 verified={} → 空表）。
+    exhausted = sorted(p for p, v in (verified or {}).items() if v.get("budget_exhausted"))
+    if exhausted:
+        log.warning("平台查证预算耗尽（降级「外部未验证」）：%s", exhausted)
 
     (repo/"data"/"analysis"/f"w{week}").mkdir(parents=True, exist_ok=True)
     atomic_write_text(repo/"data"/"analysis"/f"w{week}"/"research_aggregates.json",
@@ -82,7 +86,8 @@ def run_research(week: int, kimi_enabled: bool = True, *, synth_fn=None, web_fn=
               for p in [p.parent / (p.name + ".draft")]]
     return {"playbook": str(pb_path), "profiles": str(pf_path),
             "conclusions": len(conclusions), "verified_platforms": len(verified),
-            "degraded": pb_degraded or pf_degraded, "drafts": drafts}
+            "degraded": pb_degraded or pf_degraded, "drafts": drafts,
+            "budget_exhausted": exhausted}
 
 def _promote(target: Path, text: str, *, week: int, draft: bool, repo: Path) -> Path:
     """draft=True → 写 <name>.draft 不动正式文件;否则晋升(旧文件备份 knowledge/.history/)。"""
