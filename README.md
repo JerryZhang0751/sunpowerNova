@@ -18,11 +18,14 @@ SunHestia GEO 实验 + 多 Agent GEO/SEO 平台（双线一体）。
 是 GSC 与外站抓取的硬依赖。
 
 ```bash
-# 1) 安装依赖（二选一；requirements.lock 为 CI 使用的完整锁）
+# 1) 安装依赖：requirements.lock 只装第三方依赖（CI 用的完整锁），不含 geo 包本身
 python3.11 -m pip install -r geo-agent/requirements.lock
-python3.11 -m pip install -e "geo-agent[dev]"   # 开发安装（editable + pytest）
 
-# 2) 跑测试（全新机器：装好上面依赖后直接 pytest）
+#    周迭代入口还需要 geo 包本身（src-layout）——editable 安装（推荐，顺带装 pytest）：
+python3.11 -m pip install -e "geo-agent[dev]"
+#    或者不安装，跑管线命令时加前缀 PYTHONPATH=geo-agent/src
+
+# 2) 跑测试（pytest 配置已带 pythonpath=src，装好依赖即可直接跑）
 cd geo-agent && pytest tests/
 
 #    本机当前约定（.venv 被沙箱封锁的临时替代：依赖装在 /tmp/pylibs312）：
@@ -30,6 +33,7 @@ cd geo-agent && PYTHONPATH=/tmp/pylibs312 python3.12 -m pytest tests/ \
     -p no:cacheprovider --timeout=120
 
 # 3) 跑一次周迭代（仓库根目录；week 等参数读 geo-agent/run.yaml）
+#    前提：geo 已 editable 安装，或命令前加 PYTHONPATH=geo-agent/src
 python3.11 -m geo.orchestrate.graph
 python3.11 -m geo.orchestrate.graph --week 4     # 指定周
 

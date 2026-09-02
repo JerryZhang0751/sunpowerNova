@@ -31,11 +31,11 @@ cd site
 npm run check && npm run build     # check gate: 0 errors / 0 warnings / 0 hints
 
 # one-time: create the Pages project
-CLOUDFLARE_API_TOKEN=$(cat .cf_token) CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID> \
+CLOUDFLARE_API_TOKEN=$(cat .cf_token) CLOUDFLARE_ACCOUNT_ID="<CLOUDFLARE_ACCOUNT_ID>" \
 npx wrangler pages project create sunhestia --production-branch main
 
 # deploy the already-built output
-CLOUDFLARE_API_TOKEN=$(cat .cf_token) CLOUDFLARE_ACCOUNT_ID=<CLOUDFLARE_ACCOUNT_ID> \
+CLOUDFLARE_API_TOKEN=$(cat .cf_token) CLOUDFLARE_ACCOUNT_ID="<CLOUDFLARE_ACCOUNT_ID>" \
 npx wrangler pages deploy dist --project-name sunhestia --branch main
 ```
 
