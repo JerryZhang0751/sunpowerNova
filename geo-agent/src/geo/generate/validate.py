@@ -45,7 +45,11 @@ def resolve_path(brand: dict, path: str):
             return _MISSING
     return cur
 
-def validate_draft(draft: dict, brand: dict) -> ValidationResult:
+def validate_draft(draft: dict, brand: dict, expected_url: str | None = None) -> ValidationResult:
+    """expected_url(codex w3 修改六,2026-09-02):传入时对 Article 校验
+    mainEntityOfPage——字符串须等于 expected_url,WebPage 对象的 @id 须等于;
+    缺失也拒。不传则不做 URL 校验(独立调用/历史行为兼容)。校验器不读全局
+    settings,URL 由调用方传入以保持测试隔离。"""
     issues: list[str] = []
     rows: list[tuple[str, str, bool]] = []      # (claim 文本, anchor 展示, ok)
     fm = draft.get("frontmatter", {})
@@ -115,6 +119,23 @@ def validate_draft(draft: dict, brand: dict) -> ValidationResult:
         for k in JSONLD_REQUIRED[t]:
             if not obj.get(k):
                 issues.append(f"json_ld[{i}] {t} 缺必填键: {k}")
+        # codex w3 修改六:真实发布路径是 /news/<slug>/,模型生成 <slug> 或
+        # /compare/<slug> 都曾 validation passed(w2/w3 两篇草稿均中)——canonical
+        # 必须与最终 URL 一致。仅 Article 适用;FAQPage/Product 等不套此规则。
+        if t == "Article" and expected_url:
+            mep = obj.get("mainEntityOfPage")
+            if isinstance(mep, str):
+                got = mep
+            elif isinstance(mep, dict):
+                got = mep.get("@id")
+            else:
+                got = None
+            if got is None:
+                issues.append(f"json_ld[{i}] Article 缺 mainEntityOfPage(或 WebPage.@id),"
+                              f"须为 {expected_url}")
+            elif got != expected_url:
+                issues.append(f"json_ld[{i}] Article mainEntityOfPage={got!r} 与最终 URL"
+                              f" 不符,须为 {expected_url}")
 
     body = draft.get("body_md", "")
     for name, pat in BANNED_PATTERNS.items():

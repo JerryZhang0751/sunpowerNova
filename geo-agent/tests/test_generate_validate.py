@@ -180,3 +180,42 @@ def test_validate_accepts_matching_thousands():
                               "value": "1,500"}])
     r = validate_draft(d, brand2)
     assert r.ok, r.issues
+
+
+# ---- codex w3 修改六(2026-09-02): Article canonical URL 必须与最终新闻路径一致 ----
+_EXPECTED = "https://sunhestia.com/news/how-to-size-a-home-battery/"
+
+def test_validate_flags_article_missing_mainentity_with_expected_url():
+    """expected_url 传入时,Article 缺 mainEntityOfPage 必须 flagged
+    (w2/w3 两篇草稿均生成 https://sunhestia.com/<slug> 缺 /news/ 前缀)。"""
+    r = validate_draft(_draft(), BRAND, expected_url=_EXPECTED)
+    assert not r.ok and any("mainEntityOfPage" in i for i in r.issues)
+
+def test_validate_flags_article_wrong_path():
+    for bad in ("https://sunhestia.com/how-to-size-a-home-battery",
+                "https://sunhestia.com/compare/how-to-size-a-home-battery/"):
+        d = _draft(json_ld=[{"@type": "Article", "headline": "h", "mainEntityOfPage": bad}])
+        r = validate_draft(d, BRAND, expected_url=_EXPECTED)
+        assert not r.ok, f"{bad} 须被拒"
+
+def test_validate_accepts_news_path_string_and_webpage_id():
+    d = _draft(json_ld=[{"@type": "Article", "headline": "h", "mainEntityOfPage": _EXPECTED}])
+    assert validate_draft(d, BRAND, expected_url=_EXPECTED).ok
+    d2 = _draft(json_ld=[{"@type": "Article", "headline": "h",
+                          "mainEntityOfPage": {"@type": "WebPage", "@id": _EXPECTED}}])
+    assert validate_draft(d2, BRAND, expected_url=_EXPECTED).ok
+
+def test_validate_flags_webpage_object_wrong_id():
+    d = _draft(json_ld=[{"@type": "Article", "headline": "h",
+                         "mainEntityOfPage": {"@type": "WebPage", "@id": "https://sunhestia.com/x"}}])
+    r = validate_draft(d, BRAND, expected_url=_EXPECTED)
+    assert not r.ok and any("mainEntityOfPage" in i for i in r.issues)
+
+def test_validate_faqpage_not_subject_to_article_url_rule():
+    d = _draft(json_ld=[{"@type": "FAQPage", "mainEntity": [{"@type": "Question"}]}])
+    r = validate_draft(d, BRAND, expected_url=_EXPECTED)
+    assert r.ok, r.issues                     # FAQPage 不套 Article URL 规则
+
+def test_validate_without_expected_url_keeps_legacy_behavior():
+    """不传 expected_url(独立调用/历史测试)不做 URL 校验——向后兼容。"""
+    assert validate_draft(_draft(), BRAND).ok

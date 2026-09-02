@@ -7,7 +7,7 @@ import yaml
 from geo.shared.config import REPO, settings
 from geo.shared.weeks import validate_production_week
 from geo.generate.brand import load_brand, slugify, run_bootstrap
-from geo.generate.topics import suggest_topics
+from geo.generate.topics import suggest_topics, near_duplicate_issues, _published_index
 from geo.generate.kimi import playbook_digest, generate_draft, skeleton_draft
 from geo.generate.validate import validate_draft
 
@@ -33,6 +33,34 @@ def _latest_review(repo: Path, slug: str) -> dict | None:
             latest = rec                     # append-only,最后一条 = 最新
     return latest
 
+def _site_url() -> str:
+    return ((settings.targets.get("site") or {}).get("url") or "https://sunhestia.com").rstrip("/")
+
+
+def _article_urls(text: str) -> tuple[list, bool]:
+    """从草稿 Markdown 的 ```json fence 提取 Article.mainEntityOfPage
+    (字符串或 WebPage.@id;缺失记 None)。返回 (urls, has_article);
+    无 Article/坏 JSON → has_article=False(URL 一致性校验不适用)。"""
+    import re as _re
+    urls: list = []
+    has = False
+    for m in _re.finditer(r"```json\n(.*?)```", text, _re.S):
+        try:
+            obj = json.loads(m.group(1))
+        except Exception:
+            continue
+        if isinstance(obj, dict) and obj.get("@type") == "Article":
+            has = True
+            mep = obj.get("mainEntityOfPage")
+            if isinstance(mep, str):
+                urls.append(mep)
+            elif isinstance(mep, dict):
+                urls.append(mep.get("@id"))
+            else:
+                urls.append(None)
+    return urls, has
+
+
 def run_generate(topic: str, page_type: str = "guide", week: int = 1,
                  allow_no_playbook: bool = False, kimi: bool = True,
                  chat_fn=None, repo: Path = REPO, today: str = None) -> dict:
@@ -56,8 +84,18 @@ def run_generate(topic: str, page_type: str = "guide", week: int = 1,
           "created": today or date.today().isoformat(),
           "playbook_week": digest["week"], "brand_version": brand["version"],
           "status": "draft", "validation": "pending"}
-    result = validate_draft({**draft, "frontmatter": {**fm}}, brand)
-    fm["validation"] = "passed" if result.ok else "flagged"
+    # codex w3 修改六(2026-09-02):默认 canonical = {site}/news/{slug}/,写盘前在
+    # 结构化 json_ld 上规范化(禁止生成后再用正则改 JSON code fence)——w2/w3
+    # 连续两篇草稿缺 /news/ 前缀的生成器偏差从源头消除。
+    expected_url = f"{_site_url()}/news/{fm['slug']}/"
+    for obj in draft.get("json_ld", []) or []:
+        if isinstance(obj, dict) and obj.get("@type") == "Article":
+            obj["mainEntityOfPage"] = expected_url
+    result = validate_draft({**draft, "frontmatter": {**fm}}, brand, expected_url=expected_url)
+    # codex w3 修改五(2026-09-02):Kimi 改写主题后可能与已发布页近同题(w3 根因)
+    # → 近重复只做阻断提示(草稿照常写盘、validation=flagged),人工 override 裁决。
+    issues = list(result.issues) + near_duplicate_issues(fm["slug"], _published_index(repo))
+    fm["validation"] = "passed" if not issues else "flagged"
     blocks = ["---", yaml.safe_dump(fm, allow_unicode=True, sort_keys=False).strip(), "---", ""]
     if digest["week"] is None:
         blocks.append("> ⚠️ 未经研究校准（--allow-no-playbook）：本草稿未使用 playbook 被引特征。")
@@ -73,7 +111,7 @@ def run_generate(topic: str, page_type: str = "guide", week: int = 1,
     out = out_dir / f"{fm['slug']}.md"
     out.write_text("\n".join(blocks), encoding="utf-8")
     summary = {"path": str(out), "validation": fm["validation"],
-               "issues": result.issues, "playbook_week": digest["week"]}
+               "issues": issues, "playbook_week": digest["week"]}
     log.info("draft 写入 %s validation=%s issues=%d", out, fm["validation"], len(result.issues))
     return summary
 
@@ -118,6 +156,17 @@ def run_mark_published(slug: str, *, url: str | None = None, override: bool = Fa
             f"{(review or {}).get('verdict', '无')})——先 --review 再归档")
     if fm.get("validation") == "flagged" and not (override and reason):
         raise SystemExit(f"草稿 {slug} validation=flagged:需 --override 且 --reason 显式放行")
+    # codex w3 修改六(2026-09-02):归档前核对 Article canonical 与最终 URL 一致——
+    # 不一致失败关闭、保留原草稿提示先修正(发布函数不用正则改写归档内容)。
+    # 不传 url 时以 /news/{slug}/ 默认值为权威。
+    final_url = url or f"{_site_url()}/news/{slug}/"
+    urls, has_article = _article_urls(text)
+    if has_article:
+        bad = [u for u in urls if u != final_url]
+        if bad:
+            raise SystemExit(
+                f"草稿 {slug} 的 Article mainEntityOfPage {bad} 与最终 URL {final_url} "
+                f"不一致——先修正草稿 JSON-LD 再归档(发布函数不改写内容)")
     updates = {"status": "published",
                "published_at": now or datetime.now().isoformat(timespec="seconds")}
     if url:

@@ -46,3 +46,20 @@ def test_flagged_needs_override_with_reason(tmp_path):
     run_mark_published("x", repo=tmp_path, override=True, reason="人工核对数字无误")   # ok
     fm = yaml.safe_load((tmp_path / "content" / "published" / "x.md").read_text(encoding="utf-8").split("---")[1])
     assert fm.get("override_reason") == "人工核对数字无误"
+
+def test_mark_published_default_url_fail_closed(tmp_path, capsys):
+    """codex w3 修改六: 不传 --url 时以 /news/<slug>/ 默认值为权威校验——
+    草稿 Article 指向别的路径 → 拒绝归档、草稿保留、提示修正。"""
+    import json as _json
+    _mk_draft(tmp_path, "x")
+    _review(tmp_path, "x", "pass", "2026-09-02T10:00:00")
+    # 在草稿里补一段指向错误路径的 Article JSON-LD
+    p = tmp_path / "content" / "drafts" / "x.md"
+    fence = ("## Suggested JSON-LD\n\n```json\n"
+             + _json.dumps({"@type": "Article", "headline": "t",
+                            "mainEntityOfPage": "https://sunhestia.com/x"})
+             + "\n```\n")
+    p.write_text(p.read_text(encoding="utf-8") + "\n" + fence, encoding="utf-8")
+    with pytest.raises(SystemExit, match="mainEntityOfPage"):
+        run_mark_published("x", repo=tmp_path)
+    assert p.exists(), "不一致时草稿必须保留"

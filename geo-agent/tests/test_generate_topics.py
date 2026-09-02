@@ -81,3 +81,57 @@ def test_suggest_unrelated_pass_through(tmp_path):
     ])
     out, _, suppressed = suggest_topics(1, repo=repo)
     assert suppressed == [] and len(out) == 6                            # 3 eval_gap + 3 gsc 全通过
+
+
+# ---- codex w3 修改五(2026-09-02): suppressed_reason + 规范化匹配 + 近重复 ----
+
+def test_suggest_marks_suppressed_reason(tmp_path):
+    """被抑制的建议必须带 suppressed_reason 指向已发布 slug(不静默丢弃,可审计)。"""
+    repo = _repo_with_content(tmp_path, [
+        ("published", "deep.md",
+         f"topic: {_EVAL_GAP_TOPIC}\npage_type: guide\nslug: deep-dive-article"),
+    ])
+    out, missing, suppressed = suggest_topics(1, repo=repo)
+    assert len(suppressed) == 1
+    assert "duplicate:deep-dive-article" in suppressed[0].get("suppressed_reason", "")
+
+def test_suggest_normalized_topic_match(tmp_path):
+    """规范化匹配:大小写/标点变体的同一 topic(slugify 归一)也算重复——
+    精确字符串匹配漏掉 "LiFePo4 Battery" vs "lifepo4 battery"。"""
+    repo = _repo_with_content(tmp_path, [
+        ("published", "a.md", "topic: LiFePo4 Battery\npage_type: guide\nslug: unrelated-slug"),
+    ])
+    out, _, suppressed = suggest_topics(1, repo=repo)
+    assert "lifepo4 battery" not in [s["topic"] for s in out]
+    assert any(s["topic"] == "lifepo4 battery" for s in suppressed)
+
+def test_suggest_normalized_slug_match(tmp_path):
+    """已发布 slug 与建议 topic 的 slugify 形相同 → 也算重复。"""
+    repo = _repo_with_content(tmp_path, [
+        ("published", "a.md", "topic: Some other headline\npage_type: guide\nslug: lifepo4-battery"),
+    ])
+    out, _, suppressed = suggest_topics(1, repo=repo)
+    assert "lifepo4 battery" not in [s["topic"] for s in out]
+
+def test_near_duplicate_slug_flagged():
+    """w2/w3 近同题案例:solar-only-vs-solar-plus-battery 与 -storage 版
+    Jaccard=5/6≈0.83 ≥0.8 → 识别为近重复。"""
+    from geo.generate.topics import near_duplicate_issues
+    pub = [{"topic": "t", "page_type": "comparison",
+            "slug": "solar-only-vs-solar-plus-battery-storage",
+            "published_url": "https://sunhestia.com/news/solar-only-vs-solar-plus-battery-storage/"}]
+    issues = near_duplicate_issues("solar-only-vs-solar-plus-battery", pub)
+    assert len(issues) == 1
+    assert "near_duplicate:solar-only-vs-solar-plus-battery-storage" in issues[0]
+
+def test_near_duplicate_identical_slug_flagged():
+    from geo.generate.topics import near_duplicate_issues
+    pub = [{"topic": "t", "page_type": "guide", "slug": "same-slug", "published_url": ""}]
+    assert near_duplicate_issues("same-slug", pub)      # 同 slug = Jaccard 1.0 → 拦
+
+def test_near_duplicate_unrelated_slug_passes():
+    from geo.generate.topics import near_duplicate_issues
+    pub = [{"topic": "t", "page_type": "comparison",
+            "slug": "solar-only-vs-solar-plus-battery-storage", "published_url": ""}]
+    assert near_duplicate_issues("battery-sizing", pub) == []
+    assert near_duplicate_issues("lifepo4-battery-faq", pub) == []

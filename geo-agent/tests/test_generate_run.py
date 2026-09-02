@@ -152,3 +152,62 @@ def test_run_suggest_all_suppressed_no_misleading_empty_msg(tmp_path, capsys):
     assert res["suggestions"] == [] and len(res["suppressed"]) == 3
     assert "已抑制 3 条" in out_text
     assert "无建议" not in out_text
+
+def test_run_generate_flags_near_duplicate_draft(tmp_path):
+    """codex w3 修改五: Kimi 改写主题后与已发布页近重复(Jaccard≥0.8) → 草稿
+    照常写盘但 validation=flagged,issue 写明 near_duplicate:<已发布 slug>;
+    不自动删除,人工经既有 review/override 流程裁决。"""
+    repo = _mini_repo(tmp_path)
+    pub = repo / "content" / "published"
+    pub.mkdir(parents=True)
+    (pub / "solar-only-vs-solar-plus-battery-storage.md").write_text(
+        "---\ntopic: Solar only vs solar plus battery storage\npage_type: comparison\n"
+        "slug: solar-only-vs-solar-plus-battery-storage\n---\n\n# body\n", encoding="utf-8")
+
+    def chat_dup(messages, tools=None, timeout=120):
+        return json.dumps({
+            "frontmatter": {"topic": "Solar only vs solar plus battery",
+                            "page_type": "comparison",
+                            "slug": "solar-only-vs-solar-plus-battery"},
+            "title": "Solar only vs solar plus battery",
+            "body_md": "# Solar only vs solar plus battery\n\nStart at 5–15 kWh with a 10-year warranty.",
+            "json_ld": [{"@context": "https://schema.org", "@type": "Article",
+                         "headline": "Solar only vs solar plus battery"}],
+            "fact_anchors": [
+                {"claim": "5–15 kWh", "path": "products[home-battery].specs.capacity_kwh", "value": "5–15"},
+                {"claim": "10-year warranty", "path": "products[home-battery].specs.warranty_years", "value": "10"}],
+        }, ensure_ascii=False)
+
+    res = run_generate("Solar only vs solar plus battery", page_type="comparison",
+                       chat_fn=chat_dup, repo=repo, today="2026-09-02")
+    assert res["validation"] == "flagged"
+    assert any("near_duplicate:solar-only-vs-solar-plus-battery-storage" in i
+               for i in res["issues"])
+    assert Path(res["path"]).exists(), "近重复草稿必须写盘(不自动删除)"
+
+def test_run_generate_normalizes_article_url_to_news_path(tmp_path):
+    """codex w3 修改六: 生成器在结构化 json_ld 写盘前把 Article.mainEntityOfPage
+    规范化为 /news/<slug>/ 最终 URL(禁止生成后用正则改 JSON code fence)——
+    w2/w3 连续两篇草稿缺 /news/ 前缀的生成器已知偏差从此源头消除。"""
+    repo = _mini_repo(tmp_path)
+    res = run_generate("battery sizing", chat_fn=_chat_ok, repo=repo, today="2026-09-02")
+    text = Path(res["path"]).read_text(encoding="utf-8")
+    assert '"mainEntityOfPage": "https://sunhestia.com/news/battery-sizing/"' in text
+    assert res["validation"] == "passed"
+
+def test_run_mark_published_rejects_url_mismatch_then_archives_consistent(tmp_path):
+    """codex w3 修改六: --url 与草稿 Article URL 不一致 → 失败关闭保留原草稿、
+    提示先修正;一致 → 归档 Markdown 的 JSON-LD 与 published_url 完全相同。"""
+    repo = _mini_repo(tmp_path)
+    run_generate("battery sizing", chat_fn=_chat_ok, repo=repo, today="2026-09-02")
+    run_review("battery-sizing", "pass", repo=repo, now="2026-09-02T10:00:00")
+    with pytest.raises(SystemExit, match="mainEntityOfPage"):
+        run_mark_published("battery-sizing", url="https://sunhestia.com/news/somewhere-else/",
+                           repo=repo)
+    assert (repo / "content" / "drafts" / "battery-sizing.md").exists()   # 草稿保留
+    run_mark_published("battery-sizing", url="https://sunhestia.com/news/battery-sizing/",
+                       repo=repo)
+    pub = (repo / "content" / "published" / "battery-sizing.md").read_text(encoding="utf-8")
+    assert '"mainEntityOfPage": "https://sunhestia.com/news/battery-sizing/"' in pub
+    fm = yaml.safe_load(pub.split("---")[1])
+    assert fm["published_url"] == "https://sunhestia.com/news/battery-sizing/"
