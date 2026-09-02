@@ -64,3 +64,39 @@ def test_run_cache_invalidates_on_same_mtime_tick_rewrite(tmp_path, monkeypatch)
     monkeypatch.setattr(pathlib.Path, "stat", fake_stat)
 
     assert s.run.week == 4                  # 旧键(仅 st_mtime)在此会命中缓存返回 3
+
+
+# ---- 回归锁(2026-09-02 审核缺口 A3): MODELS 单一事实源 ----
+def test_collector_model_defaults_match_registry():
+    """A3-①: 三个 collector 的 model 默认值必须逐一等于 MODELS 注册表 api_code
+    (默认值在 import 期固化,两边漂移即在此暴露)。"""
+    import inspect
+    from geo.shared.config import MODELS
+    from geo.collect.qwen_client import collect_qwen
+    from geo.collect.doubao_client import collect_doubao
+    from geo.collect.zhipu_client import collect_zhipu
+    for fn, key in ((collect_qwen, "qwen"), (collect_doubao, "doubao"),
+                    (collect_zhipu, "zhipu")):
+        params = inspect.signature(fn).parameters
+        assert "model" in params, f"{fn.__name__} 缺 model 参数"
+        assert params["model"].default == MODELS[key]["api_code"], \
+            f"{fn.__name__} 的 model 默认值与 MODELS['{key}']['api_code'] 不一致"
+
+
+def test_no_bare_api_code_literals_outside_registry():
+    """A3-②: src/geo 全部 .py(注册表 shared/config.py 除外)不得出现裸 api_code
+    字面量——新增/改名模型只能改 MODELS,漂移即红。"""
+    import geo
+    from pathlib import Path
+    from geo.shared.config import MODELS
+    root = Path(geo.__file__).parent
+    literals = sorted({MODELS[k]["api_code"] for k in MODELS})
+    assert len(literals) >= 4                       # 注册表本体健全(qwen/doubao/zhipu/kimi)
+    offenders = []
+    for p in sorted(root.rglob("*.py")):
+        if p.relative_to(root).as_posix() == "shared/config.py":
+            continue                                # 唯一事实源豁免
+        text = p.read_text(encoding="utf-8")
+        offenders += [f"{p.relative_to(root).as_posix()}: {lit}"
+                      for lit in literals if lit in text]
+    assert not offenders, f"api_code 字面量越出 MODELS 注册表: {offenders}"

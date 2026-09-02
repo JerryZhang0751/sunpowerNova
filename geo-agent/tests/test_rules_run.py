@@ -57,3 +57,25 @@ def test_recalc_writes_separate_file_never_overwrites(repo, monkeypatch):
     assert out["rule_version"] == "geo-seo-v1"
     assert (ana / "eval_report.recalc-geo-seo-v1.json").exists()
     assert json.loads((ana / "eval_report.json").read_text())["self_geo"]["total"] == 50.0  # 原件未动
+
+
+# ---- 回归锁(2026-09-02 审核缺口 A2): do_rollback 的 run.yaml 必须走原子写 ----
+def test_rollback_writes_run_yaml_atomically(repo, monkeypatch):
+    """do_rollback 升版后写 run.yaml 必须经 atomic_write_text(同 io_utils 既有锁模式;
+    两调用点均为函数体内 from-import → 拦截点只能在源模块命名空间)。"""
+    import geo.shared.io_utils as io_utils
+    calls = []
+    real = io_utils.atomic_write_text
+
+    def spy(path, text):
+        calls.append((path, text))
+        real(path, text)                       # 真写,盘上内容一并可断言
+    monkeypatch.setattr(io_utils, "atomic_write_text", spy)
+
+    do_rollback(repo, "geo-seo-v1")
+
+    assert len(calls) == 1, "rollback 恰好一次 run.yaml 落盘,且必须走 atomic_write_text"
+    path, text = calls[0]
+    assert path.name == "run.yaml" and path.parent == repo
+    assert yaml.safe_load(text)["rule_version"] == "geo-seo-v3"       # 写入内容 = 新版本
+    assert yaml.safe_load((repo / "run.yaml").read_text())["rule_version"] == "geo-seo-v3"
