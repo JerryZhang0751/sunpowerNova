@@ -67,7 +67,7 @@ def run_research(week: int, kimi_enabled: bool = True, *, synth_fn=None, web_fn=
 
     (repo/"data"/"analysis"/f"w{week}").mkdir(parents=True, exist_ok=True)
     atomic_write_text(repo/"data"/"analysis"/f"w{week}"/"research_aggregates.json",
-                      json.dumps(_agg_jsonable(agg), ensure_ascii=False, indent=2))
+                      json.dumps(_agg_jsonable(agg, exhausted), ensure_ascii=False, indent=2))
     (repo/"knowledge").mkdir(parents=True, exist_ok=True)
     pb_path = repo/"knowledge"/"playbook.md"; pf_path = repo/"knowledge"/"platform-profiles.md"
     pb_degraded = kimi_enabled and not conclusions
@@ -102,10 +102,13 @@ def _promote(target: Path, text: str, *, week: int, draft: bool, repo: Path) -> 
     atomic_write_text(out, text)
     return out
 
-def _agg_jsonable(a):
+def _agg_jsonable(a, budget_exhausted: list[str] | None = None):
+    # §11(2026-09-02)：既有五字段不动,追加 budget_exhausted 平台名清单
+    # （§11 落盘补全,复用 run_research 已算 exhausted;无预算事件常态 []）。
     return {"week":a.week,"coverage":a.coverage.__dict__,
             "formats":[b.__dict__ for b in a.formats],"sources":a.sources,
-            "platforms":a.platforms,"problem_space":a.problem_space}
+            "platforms":a.platforms,"problem_space":a.problem_space,
+            "budget_exhausted": list(budget_exhausted or [])}
 
 if __name__ == "__main__":
     import argparse, logging

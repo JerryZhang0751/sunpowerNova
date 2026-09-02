@@ -196,3 +196,34 @@ def test_degraded_events_zero_or_absent_graceful(tmp_path):
     rep["degraded_events"] = {k: 0 for k in DEGRADED_KEYS}
     html_zero = render(rep, tmp_path / "zero.html").read_text(encoding="utf-8")
     assert "数据降级事件" not in html_zero
+
+
+# ---- §9(2026-09-02): static robots 未知(degraded)呈现——flag 置位才改写 0.0 分格 ----
+def _rep_with_robots_dim():
+    """带 technical_geo 维度(含 robots 两信号)的最小报告;其余字段同 REPORT。"""
+    rep = json.loads(json.dumps(REPORT))
+    rep["self_geo"] = {"total": 40.0, "dims": [{
+        "name": "technical_geo", "score": 40.0, "weight": 15,
+        "signals": {"canonical_present": 100.0, "https": 100.0,
+                    "robots_claudebot": 0.0, "robots_gptbot": 0.0}}]}
+    return rep
+
+
+def test_robots_unknown_label_when_flag_set(tmp_path):
+    """static_robots_unknown 置位 → robots 信号显示「未知(degraded)」而非 0.0 分格。"""
+    rep = _rep_with_robots_dim()
+    rep["static_robots_unknown"] = True
+    html = render(rep, tmp_path / "unknown.html").read_text(encoding="utf-8")
+    assert "允许 GPTBot <strong>未知(degraded)</strong>" in html
+    assert "允许 ClaudeBot <strong>未知(degraded)</strong>" in html
+    assert "允许 GPTBot <strong>0.0</strong>" not in html
+    assert "允许 ClaudeBot <strong>0.0</strong>" not in html
+    assert "HTTPS 可用 <strong>100.0</strong>" in html   # 非 robots 信号呈现不受影响
+
+
+def test_robots_render_unchanged_without_flag(tmp_path):
+    """无 flag(旧报告/正常快照)→ 渲染不变:仍是 0.0 分格,无「未知(degraded)」字样。"""
+    html = render(_rep_with_robots_dim(), tmp_path / "normal.html").read_text(encoding="utf-8")
+    assert "未知(degraded)" not in html
+    assert "允许 GPTBot <strong>0.0</strong>" in html
+    assert "允许 ClaudeBot <strong>0.0</strong>" in html

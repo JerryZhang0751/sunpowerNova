@@ -148,6 +148,38 @@ def test_run_research_reports_budget_exhausted(tmp_path, monkeypatch):
     assert res["budget_exhausted"] == ["ChatGPT", "Doubao"]   # sorted
 
 
+def test_run_research_aggregates_persist_budget_exhausted(tmp_path, monkeypatch):
+    # §11(2026-09-02)：research_aggregates.json 落盘补 budget_exhausted 平台清单
+    # （复用 run_research 已算 exhausted；两类原因 global/platform 都进清单）。
+    import json
+    import geo.research.run as R
+    repo = _mini_repo(tmp_path)
+    def fake_verify(items, **kw):
+        return {"Qwen": {"answer": "x", "sources": ["https://a.com"], "confidence": "mid"},
+                "Doubao": {"answer": "", "sources": [], "confidence": "外部未验证",
+                           "budget_exhausted": "global"},
+                "ChatGPT": {"answer": "", "sources": [], "confidence": "外部未验证",
+                            "budget_exhausted": "platform"}}
+    monkeypatch.setattr(R, "web_search_verify", fake_verify)
+    res = R.run_research(1, kimi_enabled=True, synth_fn=lambda m, **k: _SYNTH_OK,
+                         fetch_n=0, repo=repo)
+    assert res["budget_exhausted"] == ["ChatGPT", "Doubao"]
+    agg = json.loads((repo / "data" / "analysis" / "w1" / "research_aggregates.json")
+                     .read_text(encoding="utf-8"))
+    assert agg["budget_exhausted"] == ["ChatGPT", "Doubao"]   # sorted 平台名清单
+
+
+def test_run_research_aggregates_budget_exhausted_empty_when_no_kimi(tmp_path):
+    # 无预算事件（kimi_enabled=False）→ 落盘清单为 []（键在、值为空,与五字段风格一致）。
+    import json
+    from geo.research.run import run_research
+    repo = _mini_repo(tmp_path)
+    run_research(1, kimi_enabled=False, fetch_n=0, repo=repo)
+    agg = json.loads((repo / "data" / "analysis" / "w1" / "research_aggregates.json")
+                     .read_text(encoding="utf-8"))
+    assert agg["budget_exhausted"] == []
+
+
 def test_run_research_budget_exhausted_empty_when_no_kimi(tmp_path):
     from geo.research.run import run_research
     repo = _mini_repo(tmp_path)

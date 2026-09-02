@@ -816,3 +816,26 @@ def test_semantic_healthy_keeps_p0_flag_false():
                               dims=[DimScore(name="on_page", score=50.0, weight=100.0, signals={})])
     _assemble_t13(fake_seo=fake_seo)
     assert captured["p0_content_degraded"] is False
+
+
+# ---- §9(2026-09-02): 快照 robots_ai=None(D3 fail-closed)→ static_robots_unknown 可见 ----
+# 评分路径(registry None→0)不动,评分数值零变化;仅报告层布尔呈现。
+
+def test_static_robots_unknown_flag_when_robots_ai_none():
+    """快照 robots_ai=None → 顶层 static_robots_unknown=True(报告层可见)。"""
+    rep = _assemble_t13(static={"site": "https://sunhestia.com", "robots_ai": None, "pages": []})
+    assert rep.get("static_robots_unknown") is True
+
+
+def test_no_flag_when_robots_ai_dict():
+    """对照:robots_ai 为全 Allow dict(w1-w3 盘上形态)→ 不写该键(重算输出零漂移)。"""
+    rep = _assemble_t13(static={"site": "https://sunhestia.com",
+                                "robots_ai": {"GPTBot": True, "ClaudeBot": True},
+                                "pages": []})
+    assert "static_robots_unknown" not in rep
+
+
+def test_no_flag_when_snapshot_missing():
+    """快照整体缺失(loader 返回 {})→ 维持现状,不写该键。"""
+    rep = _assemble_t13(static={})
+    assert "static_robots_unknown" not in rep

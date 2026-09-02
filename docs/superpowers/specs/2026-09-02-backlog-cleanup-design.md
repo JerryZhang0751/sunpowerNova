@@ -181,3 +181,22 @@
 - **§11**：预算截断产生的"外部未验证（预算）"结论与真查无结论在 playbook 中以原因字段区分，避免混淆置信度语义。
 - **通用**：不动采集层契约（RunRecord/runs.jsonl）、不动 rules 评分权重与门槛、不跑真实采集/Kimi/发布、不 rewrite git 历史、不动 research 单次超时值。
 - 工作量评估：19 项 ≈ 12-14 个 TDD 任务，两阶段一次分支交付；任何一项实施中发现与盘点证据不符（行号漂移正常，语义不符例外）→ 停下回spec 补修订记录再继续。
+
+---
+
+## 15. 验收审核修订记录（2026-09-02 晚）
+
+2026-09-02 晚对 merge 3b5e0ab 做了独立验收审核（spec §2-§12 逐条对照 + 完成门硬验证复跑）：19 项核心语义全部落地；本地全量 540/0 failures/2 skipped、黄金锁 2 passed（43.4/49.8）、w1-w3 冻结产物 shasum 零漂移、CI 双绿。审核发现 6 处测试覆盖缺口与 3 处裁量偏差，另本批自披露 1 处语义边界（见下节末条），经用户批准于分支 audit-gap-fixes 一次收口（本节即 §14「回补修订记录」纪律的补账）：
+
+**已补齐（2026-09-02 晚第二批）：**
+
+1. 六项回归锁：①`_new_run_conn` WAL/busy_timeout 连接参数断言（tests/test_graph.py）②do_rollback/iterate 两处 run.yaml 原子路径锁——拦截点为 `geo.shared.io_utils.atomic_write_text`（两调用点为函数体内 from-import，patch 调用方模块命名空间是静默 no-op；tests/test_rules_run.py / test_rules_keeper.py）③MODELS 单源锁（三 collector 签名默认值==MODELS api_code + src/geo 全包裸字面量零例外扫描，kimi_client.py docstring 同步去字面量；tests/test_config_models.py）④iter_l1 残缺告警 caplog 断言（tests/test_l1_iter.py）⑤`--suggest --week 901` CLI 端到端拦截（tests/test_generate_run.py）⑥L3 迁移幂等脚本 `scripts/migrate_sources_to_week.py`（stdlib-only）+ 子进程三遍收敛锁（tests/test_sources_migration.py）。
+2. §9 报告层呈现补全：eval_report 增布 `static_robots_unknown`（仅快照 robots_ai 为 None/缺失时置位写键，w1-w3 快照均含全 True dict 故历史重算零漂移）；report.html.j2 robots 呈现位置位时显示「未知(degraded)」替代 0.0 分格；评分数值零变化（黄金锁证明）。
+3. §11 可见性补全：`research_aggregates.json` 增 `budget_exhausted` 平台清单键（复用 run_research 既有 exhausted 计算，常态 []）；platform-profiles.md 的「外部未验证」在结论带 budget_exhausted 键时追加「（预算耗尽:global|platform）」后缀（render._conf_disp，分平台段+附录两处），与真查无从原因上区分。
+
+**维持的裁量偏差（审核后确认接受）：**
+
+- §10 changelog.md 不追加非版本条目：断点口径标注维持落在报告模板+测试锁（report.html.j2 SEO 区注记 + test_reporter 锁），规则版本账本纯净性优先。
+- §8 source_dir 实签名 `(week, sha1)`（repo 走模块级 REPO、url 由调用方 sha1_url）＝plan Task 9 既定裁量，路径公式与周维度语义不变；存量迁移为一次性 shell 执行，幂等性现由 scripts/migrate_sources_to_week.py + 测试固化。
+- §6 生成放行旗标名 `--allow-published-overwrite`（spec 字面 `--override --reason` 归属 run_mark_published 归档覆写门），两通道语义等价。
+- §11 `_conf_disp` 后缀不限定 confidence=外部未验证：high+platform 后验标记同样呈现（诚实呈现预算事实，已披露语义边界）。

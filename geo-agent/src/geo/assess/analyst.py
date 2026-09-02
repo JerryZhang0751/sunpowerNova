@@ -448,6 +448,13 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         "authority_gap_note": "权威分基于 P0 代理；外部权威(backlinks/DA)未计入"
     }
 
+    # §9(2026-09-02): static 快照 robots_ai=None(D3 fail-closed)→ 报告层布尔可见,
+    # 供模板把 robots 信号 0.0 分格呈现为「未知(degraded)」。仅置位时写键:
+    # w1-w3 快照 robots_ai 为全 True dict、快照整体缺失(loader 返回 {})均不写 ——
+    # 存量 eval_report 重算输出零漂移。评分路径(registry None→0)不动,数值零变化。
+    if static_signals and static_signals.get("robots_ai") is None:
+        report["static_robots_unknown"] = True
+
     # 成本呈现(2026-09-02 §10):token 用量按模型汇总 L1 usage——记录呈现、
     # 不折价不考核(spec v1.1)。字段名跨 provider 归一(DashScope input/output,
     # Ark prompt/completion);total_tokens 缺失时以 input+output 兜底。

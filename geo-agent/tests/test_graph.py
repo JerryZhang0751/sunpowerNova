@@ -634,3 +634,18 @@ def test_run_pipeline_closes_own_conn(tmp_path, monkeypatch):
         G.run_pipeline(9)
     assert held == [real_conn]
     assert_closed()
+
+
+# ---- 回归锁(2026-09-02 审核缺口 A1): _new_run_conn 必须开 WAL + busy_timeout ----
+def test_new_run_conn_enables_wal_and_busy_timeout(tmp_path, monkeypatch):
+    """生产 checkpoint 连接工厂必须设 PRAGMA journal_mode=wal(崩溃不损 checkpoint)
+    与 busy_timeout=5000(并发写不炸)。tmp 库验证,不触碰生产 state/runs.sqlite。"""
+    import geo.orchestrate.graph as G
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    conn = G._new_run_conn()
+    try:
+        assert (tmp_path / "state" / "runs.sqlite").exists()
+        assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+        assert conn.execute("PRAGMA busy_timeout").fetchone()[0] == 5000
+    finally:
+        conn.close()

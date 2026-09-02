@@ -85,3 +85,27 @@ def test_iterate_isolated_delta_moves_weights(tmp_path):
     # 若丢 strengths 传参,名字 ASCII 兜底会落 brand(用例即失效)。
     assert it["weights_after"] == {**it["weights_before"], "citability": 26, "schema": 9}
     assert it["to_version"] is not None                              # 权重动了 → 升版
+
+
+# ---- 回归锁(2026-09-02 审核缺口 A2): iterate 升版的 run.yaml 必须走原子写 ----
+def test_iterate_writes_run_yaml_atomically(tmp_path, monkeypatch):
+    """iterate 升版路径写 run.yaml 必须经 atomic_write_text(函数体内 from-import,
+    拦截点 = 源模块 geo.shared.io_utils;spy 真写,调用参数与盘上内容双断言)。"""
+    import geo.shared.io_utils as io_utils
+    repo = _mk_repo(tmp_path)
+    calls = []
+    real = io_utils.atomic_write_text
+
+    def spy(path, text):
+        calls.append((path, text))
+        real(path, text)
+    monkeypatch.setattr(io_utils, "atomic_write_text", spy)
+
+    it = iterate(1, repo=repo)               # fixture 证据 → breadcrumblist 转正升版
+
+    assert it["to_version"] == "geo-seo-v2"
+    assert len(calls) == 1, "iterate 升版恰好一次 run.yaml 落盘,且必须走 atomic_write_text"
+    path, text = calls[0]
+    assert path.name == "run.yaml" and path.parent == repo
+    assert yaml.safe_load(text)["rule_version"] == "geo-seo-v2"       # 写入内容 = 升版后
+    assert yaml.safe_load((repo / "run.yaml").read_text())["rule_version"] == "geo-seo-v2"

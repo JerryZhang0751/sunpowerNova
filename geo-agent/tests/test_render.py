@@ -30,6 +30,34 @@ def test_render_profiles_data_and_web_sections():
     assert "Qwen" in md and "阿里云搜索" in md
     assert "置信度" in md and "mid" in md
 
+def test_render_profiles_budget_exhausted_suffix():
+    """§11(2026-09-02): 结论 dict 带 budget_exhausted（global/platform，D5）时,
+    「外部未验证」呈现追加「（预算耗尽:原因）」后缀,与真查无从原因上区分;
+    附录 Tier2 行同样带原因。"""
+    vf = {"Qwen": {"answer": "", "sources": [], "confidence": "外部未验证",
+                   "budget_exhausted": "global"},
+          "Doubao": {"answer": "", "sources": [], "confidence": "外部未验证",
+                     "budget_exhausted": "platform"},
+          "ChatGPT": {"answer": "", "sources": [], "confidence": "外部未验证",
+                      "budget_exhausted": "global"}}
+    mets = {"qwen": {"n": 1, "mention_rate": 0.0, "citation_rate": 0.0},
+            "doubao": {"n": 1, "mention_rate": 0.0, "citation_rate": 0.0}}
+    md = render_profiles(mets, vf, week=1)
+    assert "置信度：外部未验证（预算耗尽:global）" in md      # Qwen 全局预算耗尽
+    assert "置信度：外部未验证（预算耗尽:platform）" in md    # Doubao 平台预算耗尽
+    # 附录 Tier2 同带原因（answer="" 渲染为空是既有行为,本任务只加置信度后缀）
+    assert "- ChatGPT:  [外部未验证（预算耗尽:global）]" in md
+
+
+def test_render_profiles_no_budget_key_bytes_unchanged():
+    """无 budget_exhausted 键（真查无/正常查证）渲染逐字节不变。"""
+    vf = {"Qwen": {"answer": "阿里云搜索", "sources": ["https://help.aliyun.com/x"],
+                   "confidence": "mid"}}
+    md = render_profiles({"qwen": {"n": 1, "mention_rate": 0.0, "citation_rate": 0.0}}, vf, week=1)
+    assert "预算耗尽" not in md
+    assert "- 爬虫名/收录(联网查证): 阿里云搜索\n  来源：https://help.aliyun.com/x | 置信度：mid\n" in md
+
+
 def test_render_playbook_per_bucket_matching():
     """Test that format conclusions match to buckets by bucket_key, not id prefix."""
     # Two buckets, two conclusions with different bucket_keys

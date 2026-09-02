@@ -249,3 +249,34 @@ def test_mark_published_refuses_existing_published(tmp_path):
     fm = yaml.safe_load((pub / "battery-sizing.md").read_text(encoding="utf-8").split("---")[1])
     assert fm["status"] == "published" and fm["override_reason"] == "人工确认重发布"
     assert not (repo / "content" / "drafts" / "battery-sizing.md").exists()
+
+# ---- 回归锁(2026-09-02 审核缺口 A5): --suggest 的 901 拦截必须接到 CLI 入口 ----
+def test_cli_suggest_rejects_test_band_week_end_to_end(monkeypatch):
+    """--suggest --week 901 走 main() 全链路:入口校验(validate_production_week)必须
+    在 run_suggest 之前拦截 → ValueError;run_suggest 若被触达即测试失败
+    (防测试带周号误触真实 API)。库函数级门另见 tests/test_weeks.py。"""
+    import sys
+    import geo.generate.run as GR
+
+    def boom(*a, **k):
+        raise AssertionError("run_suggest 不得被测试保留带周号触达")
+    monkeypatch.setattr(GR, "run_suggest", boom)
+    monkeypatch.setattr(sys, "argv", ["geo.generate.run", "--suggest", "--week", "901"])
+    with pytest.raises(ValueError, match="测试保留带"):
+        GR.main()
+
+
+def test_cli_suggest_passes_production_week_to_run_suggest(monkeypatch):
+    """对照组: --suggest --week 3 过校验且 week=3 原样传入 run_suggest
+    (patch 捕获,禁真实 API)。"""
+    import sys
+    import geo.generate.run as GR
+    seen = {}
+
+    def fake_suggest(week, **k):
+        seen["week"] = week
+        return {"suggestions": [], "missing": [], "suppressed": []}
+    monkeypatch.setattr(GR, "run_suggest", fake_suggest)
+    monkeypatch.setattr(sys, "argv", ["geo.generate.run", "--suggest", "--week", "3"])
+    GR.main()
+    assert seen["week"] == 3
