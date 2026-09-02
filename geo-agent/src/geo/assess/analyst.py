@@ -4,7 +4,6 @@ from __future__ import annotations
 import csv
 import json
 from dataclasses import dataclass
-from pathlib import Path
 from geo.shared.config import REPO, settings
 from geo.shared.models import L1Record, L2Record, L3Source, CompositeScore
 from geo.shared.l1 import iter_l1

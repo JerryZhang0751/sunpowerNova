@@ -31,8 +31,10 @@ def test_structural_p0():
     assert s["h_counts"]["h1"] == 1 and s["table_count"] == 1
 
 def test_sha1_dedup():
-    """Test SHA1 URL deduplication consistency."""
-    assert sha1_url("https://x.com/a") == sha1_url("https://x.com/a")
+    """T5(2026-09-02): 原断言同字面量调两次恒真;改为确定性+判别性真断言。"""
+    u = "https://x.com/a"
+    assert sha1_url(u) == sha1_url(u)                  # 确定性: 同 URL 两次独立调用同键
+    assert sha1_url(u) != sha1_url("https://x.com/b")  # 不同 URL 不同键
 
 def test_sha1_consistency():
     """Test SHA1 produces consistent hashes for identical URLs."""

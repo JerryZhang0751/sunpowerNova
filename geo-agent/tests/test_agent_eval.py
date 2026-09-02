@@ -265,17 +265,17 @@ class TestNormalization:
         assert normalized["params"]["model"] == "glm-5.2"
         assert len(normalized["params"]["tools"]) == 1
 
-    def test_normalize_kimi(self):
-        """Kimi requests should be normalized correctly."""
+    def test_normalize_kimi_falls_to_unknown(self):
+        """T5(2026-09-02): kimi 归一化分支已删——kimi 属分析层,BFCL(采集层评测)
+        不应识别它;非采集层 provider 一律落入 unknown fallback。"""
         raw_request = {
             "model": "kimi-k3",
             "tools": []
         }
         normalized = _normalize("kimi", raw_request)
 
-        assert normalized["function"] == "POST /messages"
-        assert normalized["params"]["model"] == "kimi-k3"
-        assert normalized["params"]["tools"] == []
+        assert normalized["function"] == "unknown"
+        assert normalized["params"] == raw_request
 
     def test_normalize_unknown_provider(self):
         """Unknown provider should return fallback format."""
@@ -385,6 +385,28 @@ class TestEvaluation:
         # At least some categories should be present
         if results["total_fixtures"] > 0:
             assert len(found_categories) > 0 or results["total_fixtures"] > 0
+
+    def test_bfcl_provider_scope_collection_only(self):
+        """T5(2026-09-02) §4-bis: BFCL 只评采集层三客户端 {qwen, doubao, zhipu};
+        kimi 属分析层,归一化死分支已删。锁 fixture 覆盖集 + 评估层归一化行为双面。"""
+        from geo.shared.config import REPO
+
+        fx_dir = REPO / "tests" / "fixtures" / "bfcl"
+        if not fx_dir.exists():
+            pytest.skip("BFCL fixtures directory not found")
+
+        providers = set()
+        for fixture_path in sorted(fx_dir.glob("*.json")):
+            data = json.loads(fixture_path.read_text(encoding="utf-8"))
+            providers.add(data.get("provider", ""))
+
+        assert providers, "BFCL fixture 覆盖集不应为空"
+        assert providers <= {"qwen", "doubao", "zhipu"}, \
+            "BFCL 只评采集层客户端,fixture 不得引入分析层 provider(如 kimi)"
+
+        # 评估层归一化同样不识别 kimi: 落入 unknown fallback 而非独立分支
+        raw = {"model": "kimi-k3", "tools": []}
+        assert _normalize("kimi", raw) == {"function": "unknown", "params": raw}
 
 
 class TestEdgeCases:
