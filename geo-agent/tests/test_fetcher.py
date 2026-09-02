@@ -143,10 +143,11 @@ def test_extract_semantic_graceful_fallback():
     """Test meta_llm graceful fallback - mocked Kimi failure should return {} without crashing."""
     text = "Some page text content"
 
-    # Mock OpenAI client to raise exception
-    with patch('geo.fetch.meta_llm.OpenAI') as mock_openai:
+    # T4(2026-09-02): meta_llm 的 client 构造已合一至 shared.make_kimi_client,
+    # mock 缝隙从 OpenAI 类换成 meta_llm 命名空间里的 make_kimi_client 工厂。
+    with patch('geo.fetch.meta_llm.make_kimi_client') as mock_factory:
         mock_client = Mock()
-        mock_openai.return_value = mock_client
+        mock_factory.return_value = mock_client
 
         # Mock Kimi API call to fail
         mock_client.chat.completions.create.side_effect = Exception("Kimi API error")
@@ -159,20 +160,20 @@ def test_extract_semantic_graceful_fallback():
 
 def test_extract_semantic_empty_input():
     """Test meta_llm with empty input - should return {} without calling API."""
-    with patch('geo.fetch.meta_llm.OpenAI') as mock_openai:
+    with patch('geo.fetch.meta_llm.make_kimi_client') as mock_factory:
         result = extract_semantic("   ")
 
     # Should return {} for empty text without calling API
     assert result == {}
-    mock_openai.assert_not_called()
+    mock_factory.assert_not_called()
 
 def test_extract_semantic_success():
     """Test meta_llm successful semantic extraction."""
     text = "This is a product page with specifications and technical details."
 
-    with patch('geo.fetch.meta_llm.OpenAI') as mock_openai:
+    with patch('geo.fetch.meta_llm.make_kimi_client') as mock_factory:
         mock_client = Mock()
-        mock_openai.return_value = mock_client
+        mock_factory.return_value = mock_client
 
         # Mock successful Kimi response
         mock_response = Mock()

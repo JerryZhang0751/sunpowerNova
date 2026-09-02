@@ -5,7 +5,8 @@ import re
 import yaml
 from collections import Counter
 from pathlib import Path
-from geo.shared.config import MODELS, REPO, settings
+from geo.shared.config import MODELS, REPO
+from geo.shared.kimi_client import make_kimi_client
 
 REQUIRED_KEYS = ("entity", "products", "faqs", "glossary", "banned")
 
@@ -165,8 +166,8 @@ _SYS_BOOT = (
 )
 
 def _kimi_chat(messages: list[dict], tools=None, timeout: int = 120) -> str:
-    from openai import OpenAI
-    c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url, timeout=timeout)
+    # T4(2026-09-02): client 构造合一至 shared.make_kimi_client(默认 SDK 重试=2 保留)。
+    c = make_kimi_client(timeout=timeout)
     r = c.chat.completions.create(model=MODELS["kimi"]["api_code"], messages=messages, temperature=1,
                                   response_format={"type": "json_object"})
     return r.choices[0].message.content or ""

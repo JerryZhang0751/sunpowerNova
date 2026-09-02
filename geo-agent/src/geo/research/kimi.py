@@ -14,13 +14,10 @@ _SYS_SYNTH = (
 )
 
 def _kimi_chat(messages: list[dict], tools: list | None = None, timeout: int = 120) -> str:
-    from openai import OpenAI
-    c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url, timeout=timeout)
-    kwargs = dict(model=MODELS["kimi"]["api_code"], messages=messages, temperature=1)  # kimi 强制 temp=1
-    if tools: kwargs["tools"] = tools
-    if not tools: kwargs["response_format"] = {"type": "json_object"}
-    r = c.chat.completions.create(**kwargs)
-    return r.choices[0].message.content or ""
+    # T4(2026-09-02): 实现合一至 shared/kimi_client——本模块名/签名保留(synthesize 的
+    # chat_fn=_kimi_chat 默认参数不受影响)。max_retries 不传 = shared 默认 2 = SDK 默认。
+    from geo.shared.kimi_client import kimi_chat as _shared_chat
+    return _shared_chat(messages, tools=tools, timeout=timeout)
 
 def synthesize(aggregates: FeatureAggregates, examples: list[dict], *, chat_fn=_kimi_chat) -> list[PlaybookConclusion]:
     user = "AGGREGATES:\n" + json.dumps(_agg_to_dict(aggregates), ensure_ascii=False) + \

@@ -9,7 +9,7 @@ crashed on ``None.total`` at render time.
 
 The test exercises the REAL ``fetch_source`` → REAL ``assemble`` → REAL
 ``render`` path. Only the network (``httpx``) and the external Kimi LLM
-(``meta_llm.OpenAI``) are mocked — those are not the seam under test. It does
+(``meta_llm.make_kimi_client``, T4 合一后的 client 构造缝隙) are mocked — those are not the seam under test. It does
 NOT patch ``_load_l3_source`` and does NOT mock the analyst or reporter nodes.
 """
 
@@ -89,8 +89,8 @@ def test_assemble_render_seam_real_l3(tmp_path):
         with patch("geo.fetch.url_guard._resolve_ips",
                    return_value=[_ipa.ip_address("93.184.216.34")]), \
              patch("httpx.Client", return_value=_mock_httpx()), \
-             patch("geo.fetch.meta_llm.OpenAI") as mock_openai:
-            mock_openai.return_value.chat.completions.create.side_effect = _kimi_response
+             patch("geo.fetch.meta_llm.make_kimi_client") as mock_factory:
+            mock_factory.return_value.chat.completions.create.side_effect = _kimi_response
             brand_l3 = fetch_source(BRAND_URL, fetcher_kimi=True)
             fetch_source(COMP_URL, fetcher_kimi=True)
 

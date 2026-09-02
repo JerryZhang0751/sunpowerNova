@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json
-from openai import OpenAI
-from geo.shared.config import MODELS, settings
+from geo.shared.config import MODELS
+from geo.shared.kimi_client import make_kimi_client
 
 _SYS = ("Extract semantic metadata from the page text as JSON ONLY. Keys: "
         "page_type (product|faq|blog|comparison|spec|forum|qa|news|other), "
@@ -11,7 +11,7 @@ _SYS = ("Extract semantic metadata from the page text as JSON ONLY. Keys: "
 def extract_semantic(text: str) -> dict:
     if not text.strip(): return {}
     try:
-        c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url, timeout=120)
+        c = make_kimi_client(timeout=120)   # T4(2026-09-02): client 构造合一至 shared
         r = c.chat.completions.create(
             model=MODELS["kimi"]["api_code"],
             messages=[{"role":"system","content":_SYS},
