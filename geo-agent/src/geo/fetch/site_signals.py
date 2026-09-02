@@ -49,9 +49,10 @@ def _group_allows(rules: list[tuple[str, str]]) -> bool:
 
 def _robots_allows_ai(robots_txt: str) -> dict:
     groups = _parse_robots_groups(robots_txt)
+    groups_lc = {k.lower(): v for k, v in groups.items()}   # REP:UA 名大小写不敏感(仅查询侧折叠)
     out = {}
     for b in ("GPTBot", "ClaudeBot", "PerplexityBot", "Googlebot"):
-        rules = next((groups[k] for k in (b, "*") if k in groups), None)  # bot 专属组优先于 *
+        rules = next((groups_lc[k] for k in (b.lower(), "*") if k in groups_lc), None)  # 专属组优先于 *
         out[b] = True if rules is None else _group_allows(rules)
     return out
 
@@ -114,7 +115,12 @@ def snapshot_static_signals(week:int, rule_version:str) -> dict:
     out = {"week":week, "rule_version":rule_version, "site":site, "pages":[]}
     robots_failed = False
     with httpx.Client(timeout=20.0, follow_redirects=True, proxy=settings.proxy) as c:
-        try: robots = c.get(f"{site}/robots.txt").text
+        try:
+            r = c.get(f"{site}/robots.txt")
+            # 5xx=服务器错误页(HTML body,httpx 不 raise)≠真实 robots → 拉取失败进 degraded;
+            # 4xx(如 404)=REP 合法"无限制"→ 读 body(空/HTML 无组)→ 全允许,不算失败
+            robots_failed = r.status_code >= 500
+            robots = r.text
         except Exception:
             robots = None; robots_failed = True      # D3:未知≠允许,robots_ai=None→评分记 0
         out["robots_ai"] = None if robots_failed else _robots_allows_ai(robots)

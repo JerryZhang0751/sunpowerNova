@@ -109,6 +109,13 @@ def test_robots_substring_not_overreach():
     txt = "User-agent: GPTBot\nDisallow: /private\n"
     assert _robots_allows_ai(txt)["GPTBot"] is True
 
+def test_robots_agent_lookup_case_insensitive():
+    """REP:user-agent 名大小写不敏感——小写 'gptbot' 组也须命中 GPTBot 专属组。"""
+    txt = "User-agent: gptbot\nDisallow: /\n"
+    r = _robots_allows_ai(txt)
+    assert r["GPTBot"] is False
+    assert r["ClaudeBot"] is True        # 其他 bot 不受该专属组影响
+
 def test_sitemap_presence_and_parsing(iso_snapshots):
     """Test sitemap.xml presence and URL parsing."""
     sitemap_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -408,3 +415,48 @@ def test_snapshot_robots_fetch_fail_marks_degraded(iso_snapshots):
         out2 = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
     assert isinstance(out2["robots_ai"], dict)
     assert out2["degraded"] is False
+
+def test_snapshot_robots_5xx_marks_degraded(iso_snapshots):
+    """robots.txt 返回 5xx(错误 HTML 页,httpx 不 raise)→ 同样视为拉取失败:
+    robots_ai=None + degraded=true;修复后(200)重取恢复 dict。"""
+    ok_html = "<html><head></head></html>"
+
+    def robots_500(url):
+        if url.endswith("robots.txt"):
+            return MagicMock(status_code=500, text="<html>Server Error</html>")
+        return MagicMock(status_code=200, text=ok_html)
+
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        m = MagicMock()
+        m.get.side_effect = robots_500
+        C.return_value.__enter__.return_value = m
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    assert out["robots_ai"] is None
+    assert out["degraded"] is True
+
+    # 修复后(200)重取 → robots_ai 恢复 dict,degraded 消解
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        m2 = MagicMock()
+        m2.get.return_value = MagicMock(status_code=200, text="User-agent: *\nDisallow: /\n")
+        C.return_value.__enter__.return_value = m2
+        out2 = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    assert out2["robots_ai"]["GPTBot"] is False
+    assert out2["degraded"] is False
+
+def test_snapshot_robots_404_means_unrestricted(iso_snapshots):
+    """404 robots.txt = REP 合法"无限制"→ 全允许且快照干净(区别于 5xx 拉取失败)。"""
+    ok_html = "<html><head></head></html>"
+
+    def robots_404(url):
+        if url.endswith("robots.txt"):
+            return MagicMock(status_code=404, text="<html>Not Found</html>")
+        return MagicMock(status_code=200, text=ok_html)
+
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        m = MagicMock()
+        m.get.side_effect = robots_404
+        C.return_value.__enter__.return_value = m
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    assert out["robots_ai"] == {"GPTBot": True, "ClaudeBot": True,
+                                "PerplexityBot": True, "Googlebot": True}
+    assert out["degraded"] is False
