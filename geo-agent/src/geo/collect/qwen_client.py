@@ -99,16 +99,26 @@ def collect_qwen(prompt: str, model: str = "qwen3.7-plus") -> dict[str, Any]:
     seen_urls = set()
 
     for r in stream:
+        # 1) API 错误优先于一切(2026-09-02 codex w3 修改一):dashscope==1.27.1 契约
+        #    status_code==200 为成功;错误可为 status_code=429,code=""(HTTP 层)或
+        #    status_code=200,code="Unknown"(业务层,真实错误码在 message)。
+        #    先于总预算判断——预算耗尽后到达的错误块不能被改报为超时。
+        status_code = getattr(r, "status_code", None)
+        code = getattr(r, "code", None)
+        status_error = status_code is not None and status_code not in (200, "200")
+        code_error = code not in (None, "", 200, "200")
+        if status_error or code_error:
+            raise QwenAPIError(
+                f"DashScope API 错误(status_code={status_code}, code={code}): "
+                f"{getattr(r, 'message', '')}"
+            )
+        # 2) 总预算(慢滴流硬墙钟):仅在无错误时判定
         if time.time() - t0 >= TOTAL_BUDGET_S:
             log.warning("qwen total budget %.0fs exceeded — returning partial answer",
                         TOTAL_BUDGET_S)
             timed_out = True
             break
-        # 错误块守卫:成功流块 code=200(或无 code 属性,见 tests/_Chunk);错误块
-        # (code=Unknown 等)的 message 才是真实错误码,必须上抛而非聚合成空答案。
-        code = getattr(r, "code", None)
-        if code and code not in (200, "200"):
-            raise QwenAPIError(f"DashScope API 错误(code={code}): {getattr(r, 'message', '')}")
+        # 3) 聚合内容/引用/usage
         out = getattr(r, "output", None)
         o = out if isinstance(out, dict) else {}
 

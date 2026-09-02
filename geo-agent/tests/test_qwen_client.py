@@ -6,6 +6,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
+from dashscope.api_entities.dashscope_response import DashScopeAPIResponse
+
 # Import functions we'll implement
 from geo.collect.qwen_client import parse_qwen_response, _mm_text, collect_qwen, QwenAPIError
 
@@ -150,6 +152,65 @@ def test_collect_qwen_error_chunk_after_content_still_raises():
     mm.call.return_value = iter([_Chunk("partial answer"), _ErrChunk()])
     with patch("geo.collect.qwen_client.MultiModalConversation", mm):
         with pytest.raises(QwenAPIError, match="InvalidParameter"):
+            collect_qwen("hello")
+
+
+# ---- codex w3 修改一(2026-09-02): status_code 与 code 双校验 ------------------
+# dashscope==1.27.1 契约:成功流块 status_code==200;错误响应可为
+# status_code=429,code=""(HTTP 层错误)或 status_code=200,code="Unknown"
+# (业务层错误,真实错误码在 message JSON 里)。两者都必须上抛。
+
+def _sdk_chunk(status_code=200, code="", message="", text=None, usage=None):
+    """用 DashScope SDK 真实响应类型构造流块——不得用缺 status_code 的伪块,
+    否则测不到 status_code 校验路径(自定义 _Chunk 无该属性恒过)。"""
+    output = None
+    if text is not None:
+        output = {"choices": [{"message": {"content": [{"text": text}]}}]}
+    return DashScopeAPIResponse(status_code=status_code, code=code, message=message,
+                                output=output, usage=usage)
+
+
+def test_collect_qwen_raises_when_status_code_is_error_and_code_empty():
+    """HTTP 层错误形态(status_code=429, code="")必须抛 QwenAPIError,
+    不得因 code 为空漏判、把错误块聚合成空答案。"""
+    mm = MagicMock()
+    mm.call.return_value = iter([_sdk_chunk(status_code=429, code="", message="quota")])
+    with patch("geo.collect.qwen_client.MultiModalConversation", mm):
+        with pytest.raises(QwenAPIError) as ei:
+            collect_qwen("hello")
+    assert "429" in str(ei.value) and "quota" in str(ei.value)
+
+
+def test_collect_qwen_accepts_status_200_with_empty_code():
+    """成功流块(status_code=200, code="")不受双校验影响,正常聚合。"""
+    mm = MagicMock()
+    mm.call.return_value = iter([_sdk_chunk(status_code=200, code="", message="",
+                                            text="ok", usage={"total_tokens": 3})])
+    with patch("geo.collect.qwen_client.MultiModalConversation", mm):
+        out = collect_qwen("hello")
+    assert out["answer"] == "ok" and out["usage"] == {"total_tokens": 3}
+    assert out["timeout"] is False
+
+
+def test_collect_qwen_raises_business_error_even_when_status_200():
+    """业务层错误形态(status_code=200, code="Unknown")=w3 实际额度耗尽形态。"""
+    mm = MagicMock()
+    mm.call.return_value = iter([_sdk_chunk(status_code=200, code="Unknown",
+                                            message='{"code":"AllocationQuota.FreeTierOnly"}')])
+    with patch("geo.collect.qwen_client.MultiModalConversation", mm):
+        with pytest.raises(QwenAPIError, match="Unknown"):
+            collect_qwen("hello")
+
+
+def test_collect_qwen_error_has_priority_over_total_budget(monkeypatch):
+    """错误与总预算同时成立时必须报真实 API 错误——预算判断不能把错误块
+    改报为 timeout=True(旧序:先预算后守卫,预算耗尽后到达的错误被吞)。"""
+    from geo.collect import qwen_client
+    monkeypatch.setattr(qwen_client, "TOTAL_BUDGET_S", 0.0, raising=False)
+    mm = MagicMock()
+    mm.call.return_value = iter([_sdk_chunk(status_code=429, code="", message="quota")])
+    with patch("geo.collect.qwen_client.MultiModalConversation", mm):
+        with pytest.raises(QwenAPIError, match="429"):
             collect_qwen("hello")
 
 

@@ -142,3 +142,24 @@ def test_collection_health_no_manifest(tmp_path, monkeypatch):
     from geo.collect.collector import collection_health
     h = collection_health(95)
     assert h["manifest"] is False and h["min_success_rate"] is None
+
+def test_qwen_api_error_preserved_in_manifest(tmp_path, monkeypatch):
+    """codex w3 修改一(2026-09-02): QwenAPIError(如额度耗尽 AllocationQuota.
+    FreeTierOnly)经 tenacity 重试用尽后,runs.jsonl failed.error 必须保留真实
+    错误码——不得降格为"返回空答案"吞掉账号侧根因。"""
+    from geo.collect.qwen_client import QwenAPIError
+
+    def quota_dead(prompt, **k):
+        raise QwenAPIError("DashScope API 错误(status_code=429, code=): "
+                           "AllocationQuota.FreeTierOnly")
+    _iso(tmp_path, monkeypatch, clients={"qwen": quota_dead})
+    recs = run_collection(week=96, models=["qwen"], prompt_ids=["C01"], runs=1,
+                          rule_version="t")
+    failed = [r for r in recs if r.status == "failed"]
+    assert failed and "AllocationQuota.FreeTierOnly" in failed[0].error
+    assert "空答案" not in failed[0].error
+    # manifest 落盘同查
+    from geo.shared.storage import read_run_records
+    lines = read_run_records(96)
+    assert any(l.model == "qwen" and l.status == "failed"
+               and "AllocationQuota.FreeTierOnly" in l.error for l in lines)
