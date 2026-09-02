@@ -12,16 +12,20 @@ def test_dag_order(tmp_path):
         def f(state): calls.append(name); return state
         return f
     # Patch before building the graph so LangGraph uses the mocked functions
-    with patch("geo.orchestrate.graph.collect_node", mk("collect")), \
-         patch("geo.orchestrate.graph.fetch_node", mk("fetch")), \
-         patch("geo.orchestrate.graph.snapshot_node", mk("snapshot")), \
-         patch("geo.orchestrate.graph.assess_node", mk("assess")), \
-         patch("geo.orchestrate.graph.research_node", mk("research")), \
-         patch("geo.orchestrate.graph.generate_node", mk("generate")), \
-         patch("geo.orchestrate.graph.rules_node", mk("rules")), \
-         patch("geo.orchestrate.graph.report_node", mk("report")):
-        g = build_graph()
-        g.invoke({"week":99}, config={"configurable": {"thread_id": "test_w99"}})
+    conn = sqlite3.connect(tmp_path / "t.sqlite", check_same_thread=False)
+    try:
+        with patch("geo.orchestrate.graph.collect_node", mk("collect")), \
+             patch("geo.orchestrate.graph.fetch_node", mk("fetch")), \
+             patch("geo.orchestrate.graph.snapshot_node", mk("snapshot")), \
+             patch("geo.orchestrate.graph.assess_node", mk("assess")), \
+             patch("geo.orchestrate.graph.research_node", mk("research")), \
+             patch("geo.orchestrate.graph.generate_node", mk("generate")), \
+             patch("geo.orchestrate.graph.rules_node", mk("rules")), \
+             patch("geo.orchestrate.graph.report_node", mk("report")):
+            g = build_graph(conn)
+            g.invoke({"week":99}, config={"configurable": {"thread_id": "test_w99"}})
+    finally:
+        conn.close()
     assert calls == ["collect","fetch","snapshot","assess","research","generate","rules","report"]
 
 
@@ -52,12 +56,11 @@ def test_checkpoint_resume_behavior(tmp_path):
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
         # Mock the database creation in build_graph to use our test database
-        with patch("sqlite3.connect", return_value=conn):
-            g = build_graph()
+        g = build_graph(conn)
 
-            # First complete run
-            execution_log.clear()
-            g.invoke({"week": 42}, config={"configurable": {"thread_id": "test_w42"}})
+        # First complete run
+        execution_log.clear()
+        g.invoke({"week": 42}, config={"configurable": {"thread_id": "test_w42"}})
 
     first_run_calls = execution_log.copy()
     assert first_run_calls == ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]
@@ -72,6 +75,8 @@ def test_checkpoint_resume_behavior(tmp_path):
     assert "channel_values" in checkpoint_data
     assert "week" in checkpoint_data["channel_values"]
 
+    conn.close()
+
 
 def test_state_passing_between_nodes(tmp_path):
     """Test that state (week) flows correctly through all nodes."""
@@ -84,17 +89,21 @@ def test_state_passing_between_nodes(tmp_path):
             return state
         return f
 
-    with patch("geo.orchestrate.graph.collect_node", mk_state_tracker("collect")), \
-         patch("geo.orchestrate.graph.fetch_node", mk_state_tracker("fetch")), \
-         patch("geo.orchestrate.graph.snapshot_node", mk_state_tracker("snapshot")), \
-         patch("geo.orchestrate.graph.assess_node", mk_state_tracker("assess")), \
-         patch("geo.orchestrate.graph.research_node", mk_state_tracker("research")), \
-         patch("geo.orchestrate.graph.generate_node", mk_state_tracker("generate")), \
-         patch("geo.orchestrate.graph.rules_node", mk_state_tracker("rules")), \
-         patch("geo.orchestrate.graph.report_node", mk_state_tracker("report")):
+    conn = sqlite3.connect(tmp_path / "t.sqlite", check_same_thread=False)
+    try:
+        with patch("geo.orchestrate.graph.collect_node", mk_state_tracker("collect")), \
+             patch("geo.orchestrate.graph.fetch_node", mk_state_tracker("fetch")), \
+             patch("geo.orchestrate.graph.snapshot_node", mk_state_tracker("snapshot")), \
+             patch("geo.orchestrate.graph.assess_node", mk_state_tracker("assess")), \
+             patch("geo.orchestrate.graph.research_node", mk_state_tracker("research")), \
+             patch("geo.orchestrate.graph.generate_node", mk_state_tracker("generate")), \
+             patch("geo.orchestrate.graph.rules_node", mk_state_tracker("rules")), \
+             patch("geo.orchestrate.graph.report_node", mk_state_tracker("report")):
 
-        g = build_graph()
-        g.invoke({"week": 123}, config={"configurable": {"thread_id": "test_w123"}})
+            g = build_graph(conn)
+            g.invoke({"week": 123}, config={"configurable": {"thread_id": "test_w123"}})
+    finally:
+        conn.close()
 
     # Verify week=123 propagated through all nodes
     assert len(state_snapshots) == 8
@@ -126,11 +135,10 @@ def test_checkpoint_persistence(tmp_path):
          patch("geo.orchestrate.graph.rules_node", mk_simple("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_simple("report")):
 
-        with patch("sqlite3.connect", return_value=conn):
-            g = build_graph()
+        g = build_graph(conn)
 
-            # Run to completion
-            g.invoke({"week": 77}, config={"configurable": {"thread_id": "test_w77"}})
+        # Run to completion
+        g.invoke({"week": 77}, config={"configurable": {"thread_id": "test_w77"}})
 
     # Verify checkpoint exists and contains expected data
     config = {"configurable": {"thread_id": "test_w77"}}
@@ -146,6 +154,8 @@ def test_checkpoint_persistence(tmp_path):
     checkpoint2 = checkpointer.get(config)
     assert checkpoint2 is not None
     assert checkpoint2["channel_values"].get("week") == 77
+
+    conn.close()
 
 
 def test_partial_run_then_resume(tmp_path):
@@ -172,11 +182,10 @@ def test_partial_run_then_resume(tmp_path):
          patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
-        with patch("sqlite3.connect", return_value=conn):
-            g = build_graph()
+        g = build_graph(conn)
 
-            # Run complete workflow
-            g.invoke({"week": 88}, config={"configurable": {"thread_id": "test_w88"}})
+        # Run complete workflow
+        g.invoke({"week": 88}, config={"configurable": {"thread_id": "test_w88"}})
 
     first_run_calls = execution_log.copy()
     assert "collect" in first_run_calls
@@ -204,11 +213,10 @@ def test_partial_run_then_resume(tmp_path):
          patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
-        with patch("sqlite3.connect", return_value=conn):
-            g = build_graph()
+        g = build_graph(conn)
 
-            # Run with different thread_id - should execute all nodes
-            g.invoke({"week": 99}, config={"configurable": {"thread_id": "test_w99"}})
+        # Run with different thread_id - should execute all nodes
+        g.invoke({"week": 99}, config={"configurable": {"thread_id": "test_w99"}})
 
     # Different thread_id should execute all nodes
     assert execution_log == ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]
@@ -217,6 +225,8 @@ def test_partial_run_then_resume(tmp_path):
     checkpoint2 = checkpointer.get({"configurable": {"thread_id": "test_w99"}})
     assert checkpoint2 is not None
     assert checkpoint2["channel_values"]["week"] == 99
+
+    conn.close()
 
 
 def test_resume_skip_behavior(tmp_path):
@@ -295,9 +305,8 @@ def test_resume_checkpoint_integrity(tmp_path):
          patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
-        with patch("sqlite3.connect", return_value=conn):
-            g = build_graph()
-            g.invoke({"week": 101}, config={"configurable": {"thread_id": "test_w101"}})
+        g = build_graph(conn)
+        g.invoke({"week": 101}, config={"configurable": {"thread_id": "test_w101"}})
 
     first_run_collect_count = collect_invocation_count[0]
     assert first_run_collect_count == 1, "collect should be invoked exactly once in first run"
@@ -320,15 +329,16 @@ def test_resume_checkpoint_integrity(tmp_path):
          patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
-        with patch("sqlite3.connect", return_value=conn):
-            g = build_graph()
-            # Re-invoke with SAME thread_id - checkpoint should maintain consistency
-            g.invoke({"week": 101}, config={"configurable": {"thread_id": "test_w101"}})
+        g = build_graph(conn)
+        # Re-invoke with SAME thread_id - checkpoint should maintain consistency
+        g.invoke({"week": 101}, config={"configurable": {"thread_id": "test_w101"}})
 
     # Checkpoint should still exist and maintain consistent state
     checkpoint_after_rerun = checkpointer.get({"configurable": {"thread_id": "test_w101"}})
     assert checkpoint_after_rerun is not None, "Checkpoint should persist after rerun"
     assert checkpoint_after_rerun["channel_values"]["week"] == 101, "Checkpoint should preserve state"
+
+    conn.close()
 
 
 def test_node_wiring_and_state_passing(tmp_path):
@@ -346,17 +356,21 @@ def test_node_wiring_and_state_passing(tmp_path):
             return state
         return f
 
-    with patch("geo.orchestrate.graph.collect_node", mk_state_accumulator("collect")), \
-         patch("geo.orchestrate.graph.fetch_node", mk_state_accumulator("fetch")), \
-         patch("geo.orchestrate.graph.snapshot_node", mk_state_accumulator("snapshot")), \
-         patch("geo.orchestrate.graph.assess_node", mk_state_accumulator("assess")), \
-         patch("geo.orchestrate.graph.research_node", mk_state_accumulator("research")), \
-         patch("geo.orchestrate.graph.generate_node", mk_state_accumulator("generate")), \
-         patch("geo.orchestrate.graph.rules_node", mk_state_accumulator("rules")), \
-         patch("geo.orchestrate.graph.report_node", mk_state_accumulator("report")):
+    conn = sqlite3.connect(tmp_path / "t.sqlite", check_same_thread=False)
+    try:
+        with patch("geo.orchestrate.graph.collect_node", mk_state_accumulator("collect")), \
+             patch("geo.orchestrate.graph.fetch_node", mk_state_accumulator("fetch")), \
+             patch("geo.orchestrate.graph.snapshot_node", mk_state_accumulator("snapshot")), \
+             patch("geo.orchestrate.graph.assess_node", mk_state_accumulator("assess")), \
+             patch("geo.orchestrate.graph.research_node", mk_state_accumulator("research")), \
+             patch("geo.orchestrate.graph.generate_node", mk_state_accumulator("generate")), \
+             patch("geo.orchestrate.graph.rules_node", mk_state_accumulator("rules")), \
+             patch("geo.orchestrate.graph.report_node", mk_state_accumulator("report")):
 
-        g = build_graph()
-        g.invoke({"week": 202}, config={"configurable": {"thread_id": "test_w202"}})
+            g = build_graph(conn)
+            g.invoke({"week": 202}, config={"configurable": {"thread_id": "test_w202"}})
+    finally:
+        conn.close()
 
     # Verify all 8 nodes executed in correct order
     assert len(state_history) == 8
@@ -402,14 +416,13 @@ def test_error_handling_graceful_degradation(tmp_path):
          patch("geo.orchestrate.graph.rules_node", mk_tracked("rules")), \
          patch("geo.orchestrate.graph.report_node", mk_tracked("report")):
 
-        with patch("sqlite3.connect", return_value=conn):
-            g = build_graph()
-            # Graph should raise error, not silently continue
-            try:
-                g.invoke({"week": 303}, config={"configurable": {"thread_id": "test_w303"}})
-                assert False, "Expected RuntimeError from failing fetch node"
-            except RuntimeError as e:
-                assert "Simulated fetch failure" in str(e)
+        g = build_graph(conn)
+        # Graph should raise error, not silently continue
+        try:
+            g.invoke({"week": 303}, config={"configurable": {"thread_id": "test_w303"}})
+            assert False, "Expected RuntimeError from failing fetch node"
+        except RuntimeError as e:
+            assert "Simulated fetch failure" in str(e)
 
     # Verify collect and fetch executed, but subsequent nodes did NOT
     assert "collect" in execution_log
@@ -426,6 +439,8 @@ def test_error_handling_graceful_degradation(tmp_path):
     # After failure, checkpoint may exist but should be in a consistent state
     # The key assertion: we didn't silently continue to snapshot/assess/report
     assert checkpoint is None or checkpoint.get("channel_values", {}).get("week") == 303
+
+    conn.close()
 
 
 def test_full_chain_order_and_generate_skip(tmp_path, monkeypatch):
@@ -446,8 +461,12 @@ def test_full_chain_order_and_generate_skip(tmp_path, monkeypatch):
     import geo.rules.keeper as KP
     monkeypatch.setattr(KP, "iterate", lambda w, **k: (calls.append("rules"), {})[1])
     monkeypatch.setattr(G, "report_node", lambda s: (calls.append("report"), s)[1])
-    g = G.build_graph()
-    g.invoke({"week": 9}, config={"configurable": {"thread_id": "test-full"}})
+    conn = sqlite3.connect(tmp_path / "t.sqlite", check_same_thread=False)
+    try:
+        g = G.build_graph(conn)
+        g.invoke({"week": 9}, config={"configurable": {"thread_id": "test-full"}})
+    finally:
+        conn.close()
     # v1.1: assess before generate (generate needs this week's eval_report)
     assert calls == ["collect", "fetch", "snapshot", "assess", "research", "suggest",
                      "generate", "rules", "report"]
@@ -460,7 +479,8 @@ def test_force_new_run_uses_fresh_thread(tmp_path, monkeypatch):
     class FakeApp:
         def invoke(self, state, config=None):
             seen["thread"] = config["configurable"]["thread_id"]
-    monkeypatch.setattr(G, "build_graph", lambda: FakeApp())
+    monkeypatch.setattr(G, "REPO", tmp_path)  # _new_run_conn 落 tmp,不触碰生产库
+    monkeypatch.setattr(G, "build_graph", lambda conn=None: FakeApp())
     G.run_pipeline(9, force_new_run=True)
     assert seen["thread"].startswith("w9-")  # Timestamped new thread, bypasses old checkpoint
 
@@ -556,3 +576,61 @@ def test_run_pipeline_rejects_test_band_week(monkeypatch, tmp_path):
     monkeypatch.setattr(G, "REPO", tmp_path)
     with pytest.raises(ValueError, match="测试保留带"):
         G.run_pipeline(901)
+
+
+# ---- 2026-09-02 §2: 测试隔离生产库 + 连接所有权 ----
+def test_build_graph_uses_passed_conn_isolated(tmp_path):
+    """build_graph(conn) 必须接受外部连接:测试传 tmp 库,不得触碰生产 state/runs.sqlite。"""
+    conn = sqlite3.connect(tmp_path / "t.sqlite", check_same_thread=False)
+    try:
+        app = build_graph(conn)
+        assert app is not None
+    finally:
+        conn.close()
+
+
+def test_run_pipeline_closes_own_conn(tmp_path, monkeypatch):
+    """run_pipeline 自建连接:返回或抛错后都必须 close(所有权归 run_pipeline)。"""
+    import geo.orchestrate.graph as G
+
+    held = []
+    real_conn = sqlite3.connect(tmp_path / "rp.sqlite", check_same_thread=False)
+
+    def fake_new_conn():
+        held.append(real_conn)
+        return real_conn
+
+    class FakeSnap:
+        values = {}
+        next = ()
+
+    class FakeApp:
+        def __init__(self, fail=False):
+            self.fail = fail
+
+        def get_state(self, config):
+            return FakeSnap()
+
+        def invoke(self, state, config=None):
+            if self.fail:
+                raise RuntimeError("boom")
+
+    monkeypatch.setattr(G, "_new_run_conn", fake_new_conn)
+
+    def assert_closed():
+        with pytest.raises(sqlite3.ProgrammingError):
+            real_conn.execute("SELECT 1")
+
+    # 成功路径:run_pipeline 返回后连接已关
+    monkeypatch.setattr(G, "build_graph", lambda conn=None: FakeApp())
+    G.run_pipeline(9)
+    assert held == [real_conn], "run_pipeline must create its own connection"
+    assert_closed()
+
+    # 异常路径:invoke 抛错也要走 finally 关连接
+    held.clear()
+    monkeypatch.setattr(G, "build_graph", lambda conn=None: FakeApp(fail=True))
+    with pytest.raises(RuntimeError, match="boom"):
+        G.run_pipeline(9)
+    assert held == [real_conn]
+    assert_closed()
