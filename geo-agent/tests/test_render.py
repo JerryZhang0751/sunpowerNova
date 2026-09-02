@@ -96,6 +96,64 @@ def test_render_playbook_feedback_section_tolerates_null_metrics():
     assert "数据缺失" in md                        # null 行明确标注,不静默不崩
 
 
+def test_render_feedback_rejects_non_numeric_metrics():
+    """codex w3 修改三(2026-09-02): 指标差值只对有效数值(int|float、非 bool、
+    有限值)计算——字符串/NaN/inf/缺键一律"数据缺失/Δ不可算",禁止隐式 float()
+    转换(字符串可能掩盖上游 schema 漂移)。合法数字输出保持不变。"""
+    agg = FeatureAggregates(week=1,
+        coverage=type("C", (), {"total_l1": 45, "total_cited_sources": 1469, "l3_resolved": 134,
+                                "l3_missing": 1315, "l3_js_only": 20})(),
+        formats=[], sources={}, platforms={}, problem_space={})
+    feed = {"published": [],
+            "latest": {"week": 2, "mention_rate": "0.133",        # 字符串
+                       "citation_rate": float("nan"),               # NaN
+                       "sov": float("inf"),                         # 无穷
+                       "self_geo": 41.2, "self_seo": True},         # bool 非数值
+            "prev": {"week": 1, "mention_rate": 0.133, "citation_rate": 0.089,
+                     "sov": 3.78, "self_geo": 43.4, "self_seo": 49.8},
+            "rule_version": "geo-seo-v4"}
+    md = render_playbook([], agg, 3, feed=feed)                    # 不得 raise
+    lines = [l for l in md.splitlines() if l.startswith("- ")]
+    mention = next(l for l in lines if l.startswith("- mention_rate"))
+    assert "数据缺失" in mention and "Δ不可算" in mention
+    sov = next(l for l in lines if l.startswith("- sov"))
+    assert "数据缺失" in sov and "Δ不可算" in sov
+    geo = next(l for l in lines if l.startswith("- self_geo"))
+    assert "41.2" in geo and "43.4" in geo and "Δ-2.2" in geo      # 合法数字照常算差值
+
+
+def test_render_feedback_tolerates_missing_keys_both_sides():
+    """codex w3 修改三: 任一侧缺键(.get→None)同样走数据缺失;prev 缺键不炸。"""
+    agg = FeatureAggregates(week=1,
+        coverage=type("C", (), {"total_l1": 0, "total_cited_sources": 0, "l3_resolved": 0,
+                                "l3_missing": 0, "l3_js_only": 0})(),
+        formats=[], sources={}, platforms={}, problem_space={})
+    feed = {"published": [],
+            "latest": {"week": 2, "self_geo": 41.2},               # 其余键整体缺失
+            "prev": {"week": 1, "self_geo": 43.4},                 # prev 同样缺其余键
+            "rule_version": "geo-seo-v4"}
+    md = render_playbook([], agg, 3, feed=feed)                    # 不得 raise
+    mention = next(l for l in md.splitlines() if l.startswith("- mention_rate"))
+    assert "数据缺失" in mention and "Δ不可算" in mention
+
+
+def test_render_feedback_first_period_invalid_value_marked():
+    """codex w3 修改三: 无 prev(首期)时无效值显示"数据缺失(首期基线,无环比)",
+    有效值仍显示首期基线。"""
+    agg = FeatureAggregates(week=1,
+        coverage=type("C", (), {"total_l1": 0, "total_cited_sources": 0, "l3_resolved": 0,
+                                "l3_missing": 0, "l3_js_only": 0})(),
+        formats=[], sources={}, platforms={}, problem_space={})
+    feed = {"published": [],
+            "latest": {"week": 1, "mention_rate": "n/a", "self_geo": 47.6},
+            "prev": None, "rule_version": "geo-seo-v1"}
+    md = render_playbook([], agg, 2, feed=feed)
+    mention = next(l for l in md.splitlines() if l.startswith("- mention_rate"))
+    assert "数据缺失(首期基线" in mention
+    geo = next(l for l in md.splitlines() if l.startswith("- self_geo"))
+    assert "47.6" in geo and "首期基线" in geo
+
+
 def test_render_playbook_rule_version_live():
     from geo.research.render import render_playbook
     from geo.research.models import FeatureAggregates

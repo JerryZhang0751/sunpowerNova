@@ -1,9 +1,21 @@
 # src/geo/research/render.py
 from __future__ import annotations
 import json
+import math
 from geo.research.models import FeatureAggregates, PlaybookConclusion
 
 _FMT_LABEL = {"comparison_table":"对比表","qa":"Q&A","list":"清单","definition":"定义段","spec_card":"规格卡"}
+
+
+def _valid_num(v) -> bool:
+    """有效指标 = int|float 且非 bool 且有限值(codex w3 修改三,2026-09-02)。
+    None/缺键/字符串/布尔/NaN/±inf 一律视为缺失——禁止隐式 float() 转换,
+    字符串参与运算会掩盖上游 schema 漂移;非法值必须显式标注不静默。"""
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def _fmt_val(v) -> str:
+    return v if _valid_num(v) else "数据缺失"
 
 def _rule_version(feed: dict | None) -> str:
     rv = (feed or {}).get("rule_version")
@@ -29,11 +41,15 @@ def _feedback_section(feed: dict | None) -> list[str]:
         if prev:
             p = prev.get(k)
             # w3 实跑(2026-09-01):w2 gap=None(竞品 L3 缺失期)→ latest 指标为 null,
-            # Δ 减法 None-float 直接 TypeError。任一侧缺失时展示原值并标注,不崩不静默。
-            if v is None or p is None:
-                return f"- {label}: {v} → 前期 {p}(Δ不可算:某期数据缺失)"
+            # Δ 减法 None-float 直接 TypeError。codex w3 修改三(2026-09-02)收严:
+            # 只对 _valid_num 的有限数值算差值;字符串/bool/NaN/inf/缺键任一侧
+            # 存在即"数据缺失/Δ不可算",不做隐式 float() 转换。
+            if not _valid_num(v) or not _valid_num(p):
+                return f"- {label}: {_fmt_val(v)} → 前期 {_fmt_val(p)}(Δ不可算:某期数据缺失)"
             return f"- {label}: {v} → 前期 {p}(Δ{round(v - p, 1):+})"
-        return f"- {label}: {v}(首期基线,无环比)"
+        if _valid_num(v):
+            return f"- {label}: {v}(首期基线,无环比)"
+        return f"- {label}: 数据缺失(首期基线,无环比)"
     L += [row("mention_rate", "mention_rate"), row("citation_rate", "citation_rate"),
           row("sov", "sov"), row("self_geo", "self_geo"), row("self_seo", "self_seo")]
     L.append(f"- 规则版本: {feed.get('rule_version', '—')}")
