@@ -2,6 +2,7 @@
 from __future__ import annotations
 import re
 import json
+import time
 import logging
 import yaml
 from geo.shared.config import settings
@@ -23,6 +24,16 @@ _SKELETONS = {
 class GenerateError(Exception):
     pass
 
+# codex w3 修改二(2026-09-02):重试责任只留业务层一层。
+# - SDK 层 max_retries=0:OpenAI 默认 2 次 SDK 重试 × 业务 2 次 = 一次
+#   generate_draft 最多 6 个 HTTP 请求(超时/429/5xx 被分层叠加,超长阻塞);
+# - GENERATE_TOTAL_BUDGET_S 总预算:已无剩余时间时不再开始新尝试
+#   (2×300s=600s,取 610 容忍调度抖动;同步调用的绝对墙钟取消需异步/子进程
+#   机制,另立设计不在本轮)。
+GENERATE_REQUEST_TIMEOUT_S = 300.0
+GENERATE_TOTAL_BUDGET_S = 610.0
+GENERATE_MAX_ATTEMPTS = 2
+
 def playbook_digest(playbook_text: str) -> dict:
     text = playbook_text or ""
     m = _WEEK_RE.search(text)
@@ -43,11 +54,13 @@ def playbook_digest(playbook_text: str) -> dict:
     return {"week": int(m.group(1)) if m else None, "formats": formats,
             "templates_note": "高被引骨架：对比表 / 定义段 / 规格卡（见 playbook §5）"}
 
-def _kimi_chat(messages: list[dict], tools=None, timeout: int = 300) -> str:
+def _kimi_chat(messages: list[dict], tools=None, timeout: float = GENERATE_REQUEST_TIMEOUT_S) -> str:
     # 300s:草稿生成为长补全,Kimi 实测响应 50–215s(见模型记录);180s 在 w3 实跑
     # (2026-09-01)连续两次掐死正常生成。研究层短调用不受影响(各自独立超时)。
+    # max_retries=0:重试责任只在业务层 generate_draft(见模块头注释)。
     from openai import OpenAI
-    c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url, timeout=timeout)
+    c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url,
+               timeout=timeout, max_retries=0)
     r = c.chat.completions.create(model="kimi-k3", messages=messages, temperature=1,
                                   response_format={"type": "json_object"})
     return r.choices[0].message.content or ""
@@ -72,18 +85,30 @@ def generate_draft(topic: str, page_type: str, brand: dict, digest: dict, *, cha
     user = (f"TOPIC: {topic}\nPAGE_TYPE: {page_type}\n\nBRAND FACTS:\n{facts}\n\n"
             f"PLAYBOOK DIGEST:\n{json.dumps(digest, ensure_ascii=False)}")
     last: Exception | None = None
-    for attempt in (1, 2):
+    made = 0
+    deadline = time.monotonic() + GENERATE_TOTAL_BUDGET_S
+    for attempt in range(1, GENERATE_MAX_ATTEMPTS + 1):
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            log.warning("generate_draft 总预算 %.0fs 耗尽,停止于第 %d/%d 次尝试前",
+                        GENERATE_TOTAL_BUDGET_S, attempt, GENERATE_MAX_ATTEMPTS)
+            break
+        made = attempt
         try:
             data = json.loads(chat([{"role": "system", "content": _SYS_GEN},
-                                    {"role": "user", "content": user}]))
+                                    {"role": "user", "content": user}],
+                                   timeout=min(GENERATE_REQUEST_TIMEOUT_S, remaining)))
             for k in ("frontmatter", "title", "body_md", "json_ld", "fact_anchors"):
                 if k not in data:
                     raise ValueError(f"输出缺键 {k}")
             return data
         except Exception as e:
             last = e
-            log.warning("generate_draft 第 %d 次失败: %s", attempt, e)
-    raise GenerateError(f"Kimi 生成两次失败: {last}")
+            log.warning("generate_draft 第 %d/%d 次失败: %s", attempt, GENERATE_MAX_ATTEMPTS, e)
+    if made == GENERATE_MAX_ATTEMPTS:
+        raise GenerateError(f"Kimi 生成两次失败: {last}")
+    raise GenerateError(f"Kimi 生成提前终止(完成 {made}/{GENERATE_MAX_ATTEMPTS} 次尝试,"
+                        f"总预算 {GENERATE_TOTAL_BUDGET_S}s 耗尽): {last}")
 
 def skeleton_draft(topic: str, page_type: str, brand: dict) -> dict:
     body = _SKELETONS.get(page_type, _SKELETONS["guide"]).format(topic=topic)

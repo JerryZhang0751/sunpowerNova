@@ -66,7 +66,11 @@ def test_skeleton_draft_deterministic():
 
 def test_kimi_chat_timeout_covers_documented_tail():
     """generate 草稿是长补全,Kimi 实测响应 50–215s(模型记录);180s 默认超时在
-    w3 实跑(2026-09-01)连续两次掐死正常生成。默认超时须 ≥300s 覆盖已记录长尾。"""
+    w3 实跑(2026-09-01)连续两次掐死正常生成。默认超时须 ≥300s 覆盖已记录长尾。
+
+    codex w3 修改二(2026-09-02): 同时断言 max_retries == 0——SDK 层默认
+    max_retries=2 会与业务层 generate_draft 的 2 次重试叠加成最多 6 个 HTTP
+    请求、超长阻塞;重试责任只留业务层一层。"""
     from unittest.mock import patch, MagicMock
     from geo.generate.kimi import _kimi_chat
     with patch("openai.OpenAI") as oi:
@@ -77,3 +81,40 @@ def test_kimi_chat_timeout_covers_documented_tail():
     assert out == "ok"
     assert oi.call_args.kwargs.get("timeout") >= 300, \
         f"timeout={oi.call_args.kwargs.get('timeout')} 低于实测长尾 215s"
+    assert oi.call_args.kwargs.get("max_retries") == 0, \
+        f"max_retries={oi.call_args.kwargs.get('max_retries')} 须为 0(重试只在业务层)"
+
+
+def test_generate_draft_makes_at_most_two_http_attempts():
+    """codex w3 修改二: 单次 generate_draft 最多触发 2 个底层 HTTP 请求——
+    走真 _kimi_chat + mock openai.OpenAI(禁联网),create 恒失败时恰好 2 次。"""
+    from unittest.mock import patch
+    import geo.generate.kimi as gk
+    with patch("openai.OpenAI") as oi:
+        oi.return_value.chat.completions.create.side_effect = RuntimeError("Request timed out.")
+        with pytest.raises(GenerateError, match="两次失败"):
+            gk.generate_draft("t", "guide", _BRAND, _DIGEST)      # 不注 chat_fn=真 _kimi_chat
+        assert oi.return_value.chat.completions.create.call_count == 2
+
+
+def test_generate_draft_does_not_start_attempt_after_total_budget(monkeypatch):
+    """codex w3 修改二: 总预算耗尽后不得启动新一轮尝试(可控 monotonic 时钟,
+    不真实等待)——首尝试失败 + 时钟跳过 deadline → chat 只被调 1 次。"""
+    import geo.generate.kimi as gk
+    seq = iter([0.0, 0.0, 10000.0])            # t0 / 首尝试 remaining / 次尝试 remaining
+
+    class _FakeTime:
+        @staticmethod
+        def monotonic():
+            return next(seq, 10000.0)
+
+    monkeypatch.setattr(gk, "time", _FakeTime)
+    calls = {"n": 0}
+
+    def fail_fast(messages, tools=None, timeout=120):
+        calls["n"] += 1
+        raise RuntimeError("boom")
+
+    with pytest.raises(GenerateError):
+        gk.generate_draft("t", "guide", _BRAND, _DIGEST, chat_fn=fail_fast)
+    assert calls["n"] == 1, "预算耗尽后不得启动第二次尝试"
