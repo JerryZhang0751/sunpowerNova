@@ -61,11 +61,11 @@ def test_source_dir_is_week_scoped(tmp_path):
 
 
 def test_legacy_source_dirs_chain():
-    """week<=3 回退链含 w3(黄金锁通路);w4+ 只含本周。"""
+    """week<=3 回退链含 w3(黄金锁通路);w4+ 只含本周;week==3 不重复列 w3。"""
     r = Path("/r")
     assert legacy_source_dirs(1, r) == [r / "data" / "sources" / "w1",
                                         r / "data" / "sources" / "w3"]
-    assert legacy_source_dirs(3, r) == [r / "data" / "sources" / "w3"] * 2
+    assert legacy_source_dirs(3, r) == [r / "data" / "sources" / "w3"]
     assert legacy_source_dirs(4, r) == [r / "data" / "sources" / "w4"]
     assert legacy_source_dirs(901, r) == [r / "data" / "sources" / "w901"]
 
@@ -112,6 +112,36 @@ def test_fetch_source_text_only_orphan_is_miss():
                            transport=_net_mock(calls))
     assert calls, "孤儿 text 必须视为 miss 重抓"
     assert (sd / "meta.json").exists(), "重抓后必须补齐 meta,自愈成完整对"
+
+
+def test_fetch_source_corrupt_meta_is_miss():
+    """坏 meta(残缺 JSON)→ miss 重抓覆写;解析错不上抛(与 analyst/corpus 读路径对称),
+    否则被 fetch_node/fetch_topn 吞掉后坏 meta 永不覆写(URL 该周永久 failed)。"""
+    url = "https://corrupt-meta.example/a"
+    sd = source_dir(TEST_WEEK, sha1_url(url))
+    (sd / "text.md").write_text("stale", encoding="utf-8")
+    (sd / "meta.json").write_text("{not json", encoding="utf-8")
+    calls: list = []
+    with patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
+        rec = fetch_source(url, TEST_WEEK, fetcher_kimi=False,
+                           transport=_net_mock(calls))
+    assert calls, "坏 meta 必须判 miss 重抓"
+    assert rec.http_status == 200
+    assert json.loads((sd / "meta.json").read_text(encoding="utf-8"))["url"] == url
+
+
+def test_fetch_source_schema_drift_meta_is_miss():
+    """schema 漂移(合法 JSON 但字段不符 → TypeError)同样判 miss 重抓。"""
+    url = "https://drift-meta.example/a"
+    sd = source_dir(TEST_WEEK, sha1_url(url))
+    (sd / "text.md").write_text("stale", encoding="utf-8")
+    (sd / "meta.json").write_text('{"unexpected_field": true}', encoding="utf-8")
+    calls: list = []
+    with patch("geo.fetch.url_guard._resolve_ips", return_value=_PUB):
+        rec = fetch_source(url, TEST_WEEK, fetcher_kimi=False,
+                           transport=_net_mock(calls))
+    assert calls, "schema 漂移 meta 必须判 miss 重抓"
+    assert rec.http_status == 200
 
 
 def test_fetch_source_writes_meta_before_text(monkeypatch):
@@ -199,6 +229,23 @@ def test_sample_already_fetched_checks_own_week_only(tmp_path):
     _write_pair(3, url)
     assert not _already_fetched(4, url, tmp_path), "w4 不吃 w3 的账(top-N 每周重抓)"
     assert _already_fetched(3, url, tmp_path)
+
+
+def test_sample_already_fetched_uses_text_completeness_marker(tmp_path):
+    """完成标志=text.md(评审修复): 新写序 meta 先落、text 后落,崩溃残留是孤儿 meta——
+    只查 meta 会把孤儿误计为已抓、select_topn 将其排除,fetcher 永远没机会补齐成对。"""
+    from geo.research.sample import _already_fetched
+    url = "https://orphan-meta-sample.example/a"
+    sha = sha1_url(url)
+    sd = source_dir(TEST_WEEK, sha)   # mkdir 副作用;只写孤儿 meta,无 text.md
+    (sd / "meta.json").write_text(json.dumps(
+        {"url": url, "sha1": sha, "http_status": 200, "text": "partial",
+         "structural": {}, "semantic": {}, "js_only": False,
+         "fetched_iso": "2026-08-01T00:00:00Z"}), encoding="utf-8")
+    assert not _already_fetched(TEST_WEEK, url, tmp_path), \
+        "孤儿 meta 不得计为已抓——须留在 top-N 里让 fetcher 重抓补齐"
+    (sd / "text.md").write_text("full", encoding="utf-8")
+    assert _already_fetched(TEST_WEEK, url, tmp_path)
 
 
 def test_corpus_l3_uses_week_chain():

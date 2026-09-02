@@ -59,7 +59,7 @@ def _load_l3_source(week: int, url: str) -> L3Source | None:
     """Load L3 source by URL for a week (2026-09-02 D1: 周目录+legacy 回退链).
 
     Walks ``storage.legacy_source_dirs(week, REPO)`` — ``w{week}`` first, plus
-    the ``w3`` terminal legacy state for week<=3 (w1-w3 的历史评估消费的是迁移前
+    the ``w3`` terminal legacy state for week<3 (w1-w3 的历史评估消费的是迁移前
     共享缓存=迁移后 w3/ 态;黄金锁 43.4 通路). week>=4 reads its own week only —
     a miss is honest absence. meta+text 齐备才算完整(不成对的崩溃残留判 miss,
     由 fetcher 重抓自愈). Must stay aligned with ``geo.fetch.fetcher.fetch_source``

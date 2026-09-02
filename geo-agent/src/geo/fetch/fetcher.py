@@ -89,11 +89,14 @@ def fetch_source(url: str, week: int, fetcher_kimi=True, transport=None) -> L3So
     text_path = sd/"text.md"; meta_path = sd/"meta.json"
     if text_path.exists() and meta_path.exists():   # 完整对才算命中(text=完整标志,2026-09-02 D1)
         import json
-        cached = L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
-        if cached.js_only and cached.http_status is None:
-            pass   # 存量毒化条目(异常路径从不带 status)→ 视为 miss 重抓
-        else:
-            return cached
+        try:
+            cached = L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            cached = None   # 坏 meta(残缺 JSON/schema 漂移;pydantic ValidationError⊂ValueError)
+            # → 视为 miss 重抓覆写(评审修复:与 analyst/corpus 读路径容错对称;否则
+            # 异常被 fetch_node/fetch_topn 吞掉,坏 meta 永不覆写=URL 该周永久 failed)
+        if cached is not None and not (cached.js_only and cached.http_status is None):
+            return cached   # 存量毒化条目(js_only+status None)同样视为 miss 重抓
     status = None; text = ""; js_only = False; structural = {}
     try:
         r = _safe_get(url, transport); status = r.status_code

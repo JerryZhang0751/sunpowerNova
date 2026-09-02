@@ -18,7 +18,7 @@ def _load_prompts(repo: Path) -> dict[str, PromptRow]:
     return rows
 
 def _load_l3(url: str, repo: Path, week: int) -> L3Source | None:
-    """2026-09-02 D1: 周目录+legacy 回退链(week<=3 回退 w3=迁移前共享缓存终态,
+    """2026-09-02 D1: 周目录+legacy 回退链(week<3 回退 w3=迁移前共享缓存终态,
     w4+ 只读本周,miss=诚实缺失);meta+text 齐备才算完整——不成对的崩溃残留判
     miss,由 fetch_topn 重抓自愈,不再产生半读态。与 analyst._load_l3_source
     / fetcher 写路径保持同一对齐约束(Critical-1)。"""
