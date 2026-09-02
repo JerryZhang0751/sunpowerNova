@@ -20,10 +20,13 @@ Method:
      and flag zero-citation runs (no grounding metadata).
 
 Credentials: read from env, falling back to geo-agent/.env, as
-OPENAI_BASE_URL / OPENAI_API_KEY (the relay convention). The relay key is NOT
-in .env by default (relay retired) -- export it or add to a local .env first:
-    OPENAI_BASE_URL=https://live-turing.cn.llm.tcljd.com/api/v1 \
-    OPENAI_API_KEY=sk-...  python3 verify_gemini36.py
+OPENAI_BASE_URL / OPENAI_API_KEY (the relay convention).
+2026-09-02: the relay endpoint is RETIRED -- its URL is no longer committed in
+this file. The endpoint comes from the RELAY_BASE_URL environment variable
+(fallback is a placeholder); the API key is likewise supplied via env and is
+never written into this file:
+    RELAY_BASE_URL=https://<your-endpoint>/v1 OPENAI_API_KEY=<key> \
+    python3 verify_gemini36.py
 Keys are never hardcoded in this file.
 """
 import json
@@ -33,7 +36,8 @@ import urllib.error
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_BASE = "https://live-turing.cn.llm.tcljd.com/api/v1"
+# Relay retired (2026-09-02): endpoint via env var; no real URL committed here.
+DEFAULT_BASE = os.environ.get("RELAY_BASE_URL", "<RELAY_BASE_URL>")
 MODEL = "turing/gemini-3.6-flash"
 # sunhestia.com homepage H1 (site/src/pages/index.astro) -- only a live fetch knows it.
 TRUTH = "your roof. your power. your storage."

@@ -13,3 +13,7 @@ node_modules/
 
 # research 晋升备份(run_research _promote 自动生成)
 geo-agent/knowledge/.history/
+
+# 残留 worktree(已合并)与含私钥路径的本地探针——有意不入库
+.claude/worktrees/
+geo-agent/scripts/gsc_probe*.py
