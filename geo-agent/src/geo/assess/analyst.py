@@ -196,8 +196,9 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         write: False → 只计算并返回 dict,不写 eval_report.json/source_scores.csv
             (黄金锁等只读重算用;2026-09-02 backlog 守卫补强)
         seo_dims_aggregation: "mean" | "first_page"——SEO 维度跨页聚合口径。
-            本任务(2026-09-02)只加参数与校验:两值暂都沿用 first_page 旧逻辑
-            (dims=seo_scores[0].dims,默认路径零变化);T11 实现 mean 分支并切默认。
+            "mean"(默认,T11/2026-09-02 D4 起真实生效)= 维度取全页均值,与 total 同源,
+            signals 置聚合标记 {aggregation, n_pages};w4 起口径。
+            "first_page" = w1–w3 旧口径(dims=第 1 页代表维,黄金锁注入通路)。
 
     Returns:
         dict: Evaluation report with metrics, scores, and competitive differentials
@@ -330,10 +331,19 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         avg_total = round(sum(s.total for s in seo_scores) / len(seo_scores), 1)
         # Create aggregated CompositeScore
         from geo.shared.models import DimScore
-        self_seo_score = CompositeScore(
-            total=avg_total,
-            dims=seo_scores[0].dims  # Use first page's dimensions as representative
-        )
+        if seo_dims_aggregation == "mean":
+            # 2026-09-02 D4:维度=全页均值,与 total 同源(w4 起口径;w1-w3 归档=代表页)
+            template = seo_scores[0].dims
+            dims = []
+            for td in template:
+                vals = [d.score for s in seo_scores for d in s.dims if d.name == td.name]
+                dims.append(DimScore(name=td.name, weight=td.weight,
+                                     score=round(sum(vals) / len(vals), 1) if vals else 0.0,
+                                     signals={"aggregation": "mean_across_pages",
+                                              "n_pages": len(seo_scores)}))
+        else:                                   # first_page = w1-w3 旧口径(黄金锁通路)
+            dims = seo_scores[0].dims
+        self_seo_score = CompositeScore(total=avg_total, dims=dims)
 
     # Score competitors — deterministic top-5 by citation count (matches fetch_node)
     comp_geos = _score_competitors(week, static_signals)
@@ -342,10 +352,12 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
     gap_result = None
     if self_geo_score and comp_geos:
         # Aggregate metrics for gap calculation
+        pos = [m.avg_position for m in metrics.values() if m.avg_position is not None]
         gap_metrics = {
             "mention_rate": sum(m.mention_rate for m in metrics.values()) / max(1, len(metrics)),
             "citation_rate": sum(m.citation_rate for m in metrics.values()) / max(1, len(metrics)),
-            "avg_position": None,  # Would be computed from cited positions
+            # 2026-09-02 §10:接入 per-model 已算值(旧恒 None 占位消灭;记忆"勿消费"注记作废)
+            "avg_position": round(sum(pos) / len(pos), 1) if pos else None,
             "sov": sum(m.sov for m in metrics.values()) / max(1, len(metrics))
         }
         try:
@@ -405,6 +417,26 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         "gap": gap_result,  # Real competitive gap from Task 16
         "authority_gap_note": "权威分基于 P0 代理；外部权威(backlinks/DA)未计入"
     }
+
+    # 成本呈现(2026-09-02 §10):token 用量按模型汇总 L1 usage——记录呈现、
+    # 不折价不考核(spec v1.1)。字段名跨 provider 归一(DashScope input/output,
+    # Ark prompt/completion);total_tokens 缺失时以 input+output 兜底。
+    usage_by_model: dict[str, dict] = {}
+    for l in l1s:
+        u = l.usage or {}
+        if not u:
+            continue
+        agg = usage_by_model.setdefault(
+            l.model, {"records_with_usage": 0, "input_tokens": 0, "output_tokens": 0,
+                      "total_tokens": 0})
+        agg["records_with_usage"] += 1
+        it = u.get("input_tokens", u.get("prompt_tokens", 0)) or 0
+        ot = u.get("output_tokens", u.get("completion_tokens", 0)) or 0
+        agg["input_tokens"] += it
+        agg["output_tokens"] += ot
+        agg["total_tokens"] += u.get("total_tokens") or (it + ot)
+    report["cost"] = {"note": "token 用量(L1 usage 汇总;记录呈现、不折价不考核——spec v1.1)",
+                      "by_model": usage_by_model}
 
     # write=False: 只读重算(黄金锁/对照实验)——不落任何盘,仅返回 dict
     if write:

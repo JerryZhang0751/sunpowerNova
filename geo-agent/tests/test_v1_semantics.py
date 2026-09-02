@@ -68,3 +68,26 @@ def test_v1_semantics_unchanged_on_real_w1():
     # Step 5: SOV 方向反回归——份额口径 0–1,不得再出现 >1 的"平均竞品数"
     for m in rep["metrics"].values():
         assert 0.0 <= m["sov"] <= 1.0
+
+
+@pytest.mark.skipif(
+    not all(p.exists() for p in _REQUIRED_LOCAL),
+    reason="需本地真实 w1 数据(gitignored): data/raw/w1 与 data/analysis/w1/eval_report.json",
+)
+def test_v1_semantics_mean_dims_total_unchanged():
+    """T11 D4(2026-09-02): mean 口径(新默认)在真实 w1 上总量不变。
+
+    total 本就是跨页均值(13 页),维度口径切换(first_page→mean)不动 total;
+    维度分则随全页均值变(与 first_page 逐维不再相等,那正是本任务目的)。
+    """
+    fix_path = Path(__file__).parent / "fixtures" / "rules"
+    rg = _load(fix_path / "geo_rules_v2.yaml")
+    rs = _load(fix_path / "seo_rules_v2.yaml")
+
+    rep = assemble(1, rules_geo=rg, rules_seo=rs, rule_version="geo-seo-v2",
+                   write=False, seo_dims_aggregation="mean")
+    assert rep["self_seo"]["total"] == 49.8   # total 本就是页均值,口径切换不动 total
+    assert rep["self_geo"]["total"] == 43.4
+    # mean 口径特征:SEO 维度 signals 携带聚合标记(区别于代表页的真实信号集)
+    assert all(d["signals"].get("aggregation") == "mean_across_pages"
+               for d in rep["self_seo"]["dims"])

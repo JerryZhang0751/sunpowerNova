@@ -141,7 +141,9 @@ def test_assemble_render_seam_real_l3(tmp_path):
         (raw / "r1.json").write_text(l1.model_dump_json(), encoding="utf-8")
 
         # 4. REAL assemble — must load the L3 the fetcher wrote and score it.
-        report = assemble(week=7)
+        # first_page 注入(2026-09-02 T11): 本测断言 dim.signals 携带真实 per-page
+        # 信号(seam 证据);mean 新默认会把 signals 换成聚合标记,与被测缝无关。
+        report = assemble(week=7, seo_dims_aggregation="first_page")
 
         # --- Critical-1 regression assertions ---
         assert report["self_geo"] is not None, \
