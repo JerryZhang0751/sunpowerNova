@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from geo.shared.config import REPO, settings
 from geo.shared.models import L1Record, L2Record, L3Source, CompositeScore
 from geo.shared.l1 import iter_l1
-from geo.shared.storage import sha1_url, read_run_records
+from geo.shared.storage import sha1_url, read_run_records, legacy_source_dirs
 from geo.assess.geo_scorer import score_geo
 from geo.assess.seo_scorer import score_seo
 from geo.assess.benchmarker import gap
@@ -55,23 +55,27 @@ class MentionMetrics:
         return round(self.valid / self.planned, 3) if self.planned else None
 
 
-def _load_l3_source(url: str) -> L3Source | None:
-    """Load L3 source by URL.
+def _load_l3_source(week: int, url: str) -> L3Source | None:
+    """Load L3 source by URL for a week (2026-09-02 D1: 周目录+legacy 回退链).
 
-    Reads the EXACT path the fetcher writes (storage.source_dir →
-    ``data/sources/{sha1[:12]}/meta.json``). Must stay aligned with
-    ``geo.fetch.fetcher.fetch_source`` / ``geo.shared.storage.source_dir``;
-    a mismatch here silently disables GEO scoring + benchmarker in production
-    (Critical-1 regression).
+    Walks ``storage.legacy_source_dirs(week, REPO)`` — ``w{week}`` first, plus
+    the ``w3`` terminal legacy state for week<=3 (w1-w3 的历史评估消费的是迁移前
+    共享缓存=迁移后 w3/ 态;黄金锁 43.4 通路). week>=4 reads its own week only —
+    a miss is honest absence. meta+text 齐备才算完整(不成对的崩溃残留判 miss,
+    由 fetcher 重抓自愈). Must stay aligned with ``geo.fetch.fetcher.fetch_source``
+    / ``geo.shared.storage.source_dir``; a mismatch here silently disables GEO
+    scoring + benchmarker in production (Critical-1 regression).
     """
     url_hash = sha1_url(url)[:12]
-    meta_path = REPO / "data" / "sources" / url_hash / "meta.json"
-    if not meta_path.exists():
-        return None
-    try:
-        return L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
-    except (json.JSONDecodeError, TypeError, ValueError):
-        return None
+    for base in legacy_source_dirs(week, REPO):
+        meta_path = base / url_hash / "meta.json"
+        if not (meta_path.exists() and (base / url_hash / "text.md").exists()):
+            continue
+        try:
+            return L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
+    return None
 
 
 def _load_static_signals(week: int) -> dict:
@@ -162,7 +166,7 @@ def _score_competitors(week: int, static_signals: dict | None) -> list:
     comp_geos = []
     for comp_domain in competitor_domains_by_count(week, 5):
         comp_url = f"https://{comp_domain}"
-        comp_l3 = _load_l3_source(comp_url)
+        comp_l3 = _load_l3_source(week, comp_url)
         if comp_l3:
             comp_brand_signals = {"mention": 0, "cited": 0, "sov": 0.0, "entity_known": False,
                                   "on_youtube": False, "on_reddit": False,
@@ -252,7 +256,7 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
 
     # Calculate self-audit GEO score (using brand L3 + static signals)
     self_geo_score = None
-    brand_l3 = _load_l3_source(static_signals.get("site", "https://sunhestia.com"))
+    brand_l3 = _load_l3_source(week, static_signals.get("site", "https://sunhestia.com"))
     if brand_l3 and static_signals:
         brand_metrics = _extract_brand_metrics(l1s)
         try:
@@ -277,7 +281,7 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
                 # is genuinely unavailable in the P0 snapshot, it is marked
                 # unknown/degraded (None → scores 0) per the Global Constraint,
                 # never given a fabricated concrete value.
-                page_l3 = _load_l3_source(page_url) if page_url else None
+                page_l3 = _load_l3_source(week, page_url) if page_url else None
                 sem = (page_l3.semantic if page_l3 else {}) or {}
                 st_l3 = (page_l3.structural if page_l3 else {}) or {}
 

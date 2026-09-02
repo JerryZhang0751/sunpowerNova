@@ -5,7 +5,7 @@ from pathlib import Path
 from geo.shared.config import REPO
 from geo.shared.models import CitedSource, L3Source, PromptRow
 from geo.shared.l1 import iter_l1
-from geo.shared.storage import sha1_url
+from geo.shared.storage import sha1_url, legacy_source_dirs
 from geo.research.models import ResearchItem, ResearchCorpus, Coverage
 
 def _load_prompts(repo: Path) -> dict[str, PromptRow]:
@@ -17,12 +17,22 @@ def _load_prompts(repo: Path) -> dict[str, PromptRow]:
                                       market=r["market"], intent=r["intent"], core=r["core"]=="1" or r["core"].lower()=="true")
     return rows
 
-def _load_l3(url: str, repo: Path) -> L3Source | None:
-    d = repo / "data" / "sources" / sha1_url(url)[:12]
-    mp = d / "meta.json"
-    if not mp.exists(): return None
-    l3 = L3Source(**json.loads(mp.read_text(encoding="utf-8")))
-    return l3
+def _load_l3(url: str, repo: Path, week: int) -> L3Source | None:
+    """2026-09-02 D1: 周目录+legacy 回退链(week<=3 回退 w3=迁移前共享缓存终态,
+    w4+ 只读本周,miss=诚实缺失);meta+text 齐备才算完整——不成对的崩溃残留判
+    miss,由 fetch_topn 重抓自愈,不再产生半读态。与 analyst._load_l3_source
+    / fetcher 写路径保持同一对齐约束(Critical-1)。"""
+    url_hash = sha1_url(url)[:12]
+    for base in legacy_source_dirs(week, repo):
+        d = base / url_hash
+        mp = d / "meta.json"
+        if not (mp.exists() and (d / "text.md").exists()):
+            continue
+        try:
+            return L3Source(**json.loads(mp.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
+    return None
 
 def _load_gsc_queries(week: int, repo: Path) -> list[str]:
     gp = repo / "data" / "snapshots" / f"w{week}" / "gsc.json"
@@ -38,7 +48,7 @@ def build_corpus(week: int, repo: Path = REPO) -> ResearchCorpus:
         src_pairs = []
         for cited in l1.l2.cited_sources:
             total_cited += 1
-            l3 = _load_l3(cited.url, repo)
+            l3 = _load_l3(cited.url, repo, week)
             if l3 is None:
                 missing += 1
             elif l3.js_only:

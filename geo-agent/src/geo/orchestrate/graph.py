@@ -36,7 +36,7 @@ def fetch_node(state):
     urls = [site] + [site.rstrip("/") + p for p in settings.targets["site"]["pages"]]
     urls += [f"https://{d}" for d in competitor_domains_by_count(w, 10)]
     for u in urls:
-        try: fetch_source(u)
+        try: fetch_source(u, week=w)   # D1(2026-09-02): L3 落本周目录
         except Exception: pass        # 失败跳过、不入分母
     return state
 

@@ -91,13 +91,15 @@ def test_assemble_render_seam_real_l3(tmp_path):
              patch("httpx.Client", return_value=_mock_httpx()), \
              patch("geo.fetch.meta_llm.make_kimi_client") as mock_factory:
             mock_factory.return_value.chat.completions.create.side_effect = _kimi_response
-            brand_l3 = fetch_source(BRAND_URL, fetcher_kimi=True)
-            fetch_source(COMP_URL, fetcher_kimi=True)
+            brand_l3 = fetch_source(BRAND_URL, week=7, fetcher_kimi=True)
+            fetch_source(COMP_URL, week=7, fetcher_kimi=True)
 
         # The fetcher really wrote meta.json at the storage path, and that path
         # is exactly the path the (fixed) analyst loader reads.
-        brand_meta = source_dir(sha1_url(BRAND_URL)) / "meta.json"
-        analyst_meta = tmp_path / "data" / "sources" / sha1_url(BRAND_URL)[:12] / "meta.json"
+        # T9(2026-09-02 D1): L3 周目录化——assemble(week=7) 只读 w7/,fetch 同周写。
+        brand_meta = source_dir(7, sha1_url(BRAND_URL)) / "meta.json"
+        analyst_meta = (tmp_path / "data" / "sources" / "w7"
+                        / sha1_url(BRAND_URL)[:12] / "meta.json")
         assert brand_meta.exists(), "fetcher must write L3 meta.json to disk"
         assert brand_meta == analyst_meta, "analyst read path must equal fetcher write path"
         assert brand_l3.structural.get("title"), "title captured by extract_structural"

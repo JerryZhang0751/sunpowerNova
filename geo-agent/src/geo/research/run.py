@@ -44,9 +44,9 @@ def _collect_feed(week: int, repo: Path) -> dict | None:
 def run_research(week: int, kimi_enabled: bool = True, *, synth_fn=None, web_fn=None,
                  fetch_n: int = 40, repo: Path = REPO) -> dict:
     corpus = build_corpus(week, repo=repo)
-    urls = select_topn(corpus, n=fetch_n, repo=repo)
+    urls = select_topn(corpus, n=fetch_n, repo=repo, week=week)
     if urls:
-        stats = fetch_topn(urls); log.info("fetched %s", stats.__dict__)
+        stats = fetch_topn(urls, week=week); log.info("fetched %s", stats.__dict__)
         corpus = build_corpus(week, repo=repo)   # reload to pick up new L3
     agg = aggregate(corpus)
 

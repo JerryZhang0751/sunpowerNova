@@ -5,7 +5,7 @@ def test_competitors_get_empty_static_not_site_signals(monkeypatch):
     calls = []
     monkeypatch.setattr(A, "competitor_domains_by_count", lambda w, n: ["example.com"])
     monkeypatch.setattr(A, "_load_l3_source",
-                        lambda url: L3Source(url=url, sha1="s", text="t"))
+                        lambda week, url: L3Source(url=url, sha1="s", text="t"))
     monkeypatch.setattr(A, "score_geo",
                         lambda src, brand, static, **kw: calls.append(static))
     A._score_competitors(1, {"robots_ai": {"GPTBot": True}, "https": True, "pages": [{"path": "/about"}]})

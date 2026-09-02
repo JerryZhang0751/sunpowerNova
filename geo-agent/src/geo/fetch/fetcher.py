@@ -84,10 +84,10 @@ def _safe_get(url: str, transport=None) -> httpx.Response:
         return r
     raise UnsafeURLError(f"重定向超过 {MAX_REDIRECTS} 跳: {url!r}")
 
-def fetch_source(url: str, fetcher_kimi=True, transport=None) -> L3Source:
-    sha = sha1_url(url); sd = source_dir(sha)
+def fetch_source(url: str, week: int, fetcher_kimi=True, transport=None) -> L3Source:
+    sha = sha1_url(url); sd = source_dir(week, sha)
     text_path = sd/"text.md"; meta_path = sd/"meta.json"
-    if text_path.exists():
+    if text_path.exists() and meta_path.exists():   # 完整对才算命中(text=完整标志,2026-09-02 D1)
         import json
         cached = L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
         if cached.js_only and cached.http_status is None:
@@ -112,6 +112,10 @@ def fetch_source(url: str, fetcher_kimi=True, transport=None) -> L3Source:
     rec = L3Source(url=url, sha1=sha, http_status=status, text=text,
                    structural=structural, semantic=semantic, js_only=js_only,
                    fetched_iso=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
-    atomic_write_text(sd/"text.md", text)  # text 用原子写;meta 同
+    # 写序反转(2026-09-02 D1): meta 先、text 后——崩溃残留只可能是"孤儿 meta"
+    # (读路径要求成对,判 miss 重抓自愈),不再产生旧序的孤儿 text.md(旧读路径
+    # 见 text 就读 meta → FileNotFoundError 被 research 吞成永久 failed 的路径
+    # 由此消灭)。text 用原子写;meta 同。
     import json; atomic_write_text(meta_path, rec.model_dump_json())
+    atomic_write_text(sd/"text.md", text)
     return rec
