@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import time
 import httpx
-from geo.shared.config import settings
+from geo.shared.config import MODELS, settings
 
 _URL = re.compile(r"https?://[^\s\"'<>)\]]+")
 
@@ -71,7 +71,7 @@ def _harvest(obj, found=None) -> list[str]:
     return found
 
 
-def collect_doubao(prompt: str, model: str = "doubao-seed-2-1-pro-260628") -> dict:
+def collect_doubao(prompt: str, model: str = MODELS["doubao"]["api_code"]) -> dict:
     """Collect Doubao response using Ark Responses API.
 
     Parameters taken verbatim from m0_smoke.probe_ark_responses
@@ -79,7 +79,7 @@ def collect_doubao(prompt: str, model: str = "doubao-seed-2-1-pro-260628") -> di
 
     Args:
         prompt: User prompt
-        model: Doubao model name (default: doubao-seed-2-1-pro-260628)
+        model: Doubao model name (default: MODELS["doubao"]["api_code"])
 
     Returns:
         dict with answer, raw, search_results, elapsed_s

@@ -36,7 +36,7 @@ def fetch_node(state):
     urls = [site] + [site.rstrip("/") + p for p in settings.targets["site"]["pages"]]
     urls += [f"https://{d}" for d in competitor_domains_by_count(w, 10)]
     for u in urls:
-        try: fetch_source(u)
+        try: fetch_source(u, week=w)   # D1(2026-09-02): L3 落本周目录
         except Exception: pass        # 失败跳过、不入分母
     return state
 
@@ -87,7 +87,16 @@ def rules_node(state):
     iterate(state["week"])
     return state
 
-def build_graph():
+def _new_run_conn():
+    """生产 checkpoint 连接工厂:WAL(崩溃不损 checkpoint)+ busy_timeout(并发写不炸)。(2026-09-02 §2)"""
+    (REPO/"state").mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(REPO/"state"/"runs.sqlite", check_same_thread=False)
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    return conn
+
+def build_graph(conn: sqlite3.Connection | None = None):
+    """conn=None 时自建生产连接;传入 conn 则所有权归调用方(测试传 tmp 库,不触碰生产库)。"""
     g = StateGraph(S)
     g.add_node("collect", collect_node)
     g.add_node("fetch", fetch_node)
@@ -106,9 +115,18 @@ def build_graph():
     g.add_edge("generate", "rules")
     g.add_edge("rules", "report")
     g.add_edge("report", END)
-    (REPO/"state").mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(REPO/"state"/"runs.sqlite", check_same_thread=False)
+    conn = conn or _new_run_conn()
     return g.compile(checkpointer=SqliteSaver(conn))
+
+def _bump_run_yaml_week(week: int) -> None:
+    """--next-week:run.yaml week+1;经 atomic_write_text 原子落盘(不保注释,spec §0 裁量)。"""
+    import yaml as _y
+    from geo.shared.io_utils import atomic_write_text
+    run_raw = _y.safe_load((REPO / "run.yaml").read_text(encoding="utf-8"))
+    run_raw["week"] = week + 1
+    atomic_write_text(REPO / "run.yaml",
+                      _y.safe_dump(run_raw, allow_unicode=True, sort_keys=False))
+    print(f"run.yaml week → {week + 1}")
 
 def run_pipeline(week: int, next_week: bool = False, force_new_run: bool = False):
     validate_production_week(week)
@@ -121,34 +139,33 @@ def run_pipeline(week: int, next_week: bool = False, force_new_run: bool = False
     else:
         thread_id = f"w{week}"
 
-    app = build_graph()
-    config = {"configurable": {"thread_id": thread_id}}
+    conn = _new_run_conn()
+    try:
+        app = build_graph(conn)
+        config = {"configurable": {"thread_id": thread_id}}
 
-    # Completion check via get_state: a graph at END has next == (). DO NOT test
-    # channel_values.week alone — it is set from the very first checkpoint, so a
-    # crashed run is indistinguishable from a completed one that way (w202 incident).
-    partial = False
-    if not force_new_run:
-        snap = app.get_state(config)
-        if snap.values.get("week") == week and not snap.next:
-            print(f"[pipeline] w{week} already completed (thread {thread_id}) — skip")
-            return
-        partial = snap.values.get("week") == week
-        if partial:
-            print(f"[pipeline] w{week} resuming from checkpoint, pending nodes: {list(snap.next)}")
+        # Completion check via get_state: a graph at END has next == (). DO NOT test
+        # channel_values.week alone — it is set from the very first checkpoint, so a
+        # crashed run is indistinguishable from a completed one that way (w202 incident).
+        partial = False
+        if not force_new_run:
+            snap = app.get_state(config)
+            if snap.values.get("week") == week and not snap.next:
+                print(f"[pipeline] w{week} already completed (thread {thread_id}) — skip")
+                return
+            partial = snap.values.get("week") == week
+            if partial:
+                print(f"[pipeline] w{week} resuming from checkpoint, pending nodes: {list(snap.next)}")
 
-    # invoke(None) resumes a partial thread from its checkpoint (only pending
-    # nodes re-run); passing fresh input would restart the graph from START
-    # and re-execute already-checkpointed (paid) work.
-    app.invoke(None if partial else {"week": week}, config=config)
+        # invoke(None) resumes a partial thread from its checkpoint (only pending
+        # nodes re-run); passing fresh input would restart the graph from START
+        # and re-execute already-checkpointed (paid) work.
+        app.invoke(None if partial else {"week": week}, config=config)
 
-    if next_week:
-        import yaml as _y
-        run_raw = _y.safe_load((REPO / "run.yaml").read_text(encoding="utf-8"))
-        run_raw["week"] = week + 1
-        (REPO / "run.yaml").write_text(
-            _y.safe_dump(run_raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
-        print(f"run.yaml week → {week + 1}")
+        if next_week:
+            _bump_run_yaml_week(week)
+    finally:
+        conn.close()
 
 if __name__ == "__main__":
     import argparse

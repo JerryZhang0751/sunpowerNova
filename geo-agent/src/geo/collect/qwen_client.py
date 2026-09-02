@@ -9,7 +9,7 @@ from typing import Any
 import dashscope
 from dashscope import MultiModalConversation
 
-from geo.shared.config import settings
+from geo.shared.config import MODELS, settings
 
 log = logging.getLogger("qwen")
 
@@ -64,7 +64,7 @@ def parse_qwen_response(resp: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def collect_qwen(prompt: str, model: str = "qwen3.7-plus") -> dict[str, Any]:
+def collect_qwen(prompt: str, model: str = MODELS["qwen"]["api_code"]) -> dict[str, Any]:
     """Collect Qwen response with native search aggregation.
 
     CRITICAL: Search results arrive across MULTIPLE stream chunks.
@@ -73,7 +73,7 @@ def collect_qwen(prompt: str, model: str = "qwen3.7-plus") -> dict[str, Any]:
 
     Args:
         prompt: User prompt
-        model: Qwen model name (default: qwen3.7-plus)
+        model: Qwen model name (default: MODELS["qwen"]["api_code"])
 
     Returns:
         dict with answer, search_results, usage, elapsed_s

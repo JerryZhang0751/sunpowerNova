@@ -9,7 +9,7 @@ crashed on ``None.total`` at render time.
 
 The test exercises the REAL ``fetch_source`` → REAL ``assemble`` → REAL
 ``render`` path. Only the network (``httpx``) and the external Kimi LLM
-(``meta_llm.OpenAI``) are mocked — those are not the seam under test. It does
+(``meta_llm.make_kimi_client``, T4 合一后的 client 构造缝隙) are mocked — those are not the seam under test. It does
 NOT patch ``_load_l3_source`` and does NOT mock the analyst or reporter nodes.
 """
 
@@ -89,15 +89,17 @@ def test_assemble_render_seam_real_l3(tmp_path):
         with patch("geo.fetch.url_guard._resolve_ips",
                    return_value=[_ipa.ip_address("93.184.216.34")]), \
              patch("httpx.Client", return_value=_mock_httpx()), \
-             patch("geo.fetch.meta_llm.OpenAI") as mock_openai:
-            mock_openai.return_value.chat.completions.create.side_effect = _kimi_response
-            brand_l3 = fetch_source(BRAND_URL, fetcher_kimi=True)
-            fetch_source(COMP_URL, fetcher_kimi=True)
+             patch("geo.fetch.meta_llm.make_kimi_client") as mock_factory:
+            mock_factory.return_value.chat.completions.create.side_effect = _kimi_response
+            brand_l3 = fetch_source(BRAND_URL, week=7, fetcher_kimi=True)
+            fetch_source(COMP_URL, week=7, fetcher_kimi=True)
 
         # The fetcher really wrote meta.json at the storage path, and that path
         # is exactly the path the (fixed) analyst loader reads.
-        brand_meta = source_dir(sha1_url(BRAND_URL)) / "meta.json"
-        analyst_meta = tmp_path / "data" / "sources" / sha1_url(BRAND_URL)[:12] / "meta.json"
+        # T9(2026-09-02 D1): L3 周目录化——assemble(week=7) 只读 w7/,fetch 同周写。
+        brand_meta = source_dir(7, sha1_url(BRAND_URL)) / "meta.json"
+        analyst_meta = (tmp_path / "data" / "sources" / "w7"
+                        / sha1_url(BRAND_URL)[:12] / "meta.json")
         assert brand_meta.exists(), "fetcher must write L3 meta.json to disk"
         assert brand_meta == analyst_meta, "analyst read path must equal fetcher write path"
         assert brand_l3.structural.get("title"), "title captured by extract_structural"
@@ -139,7 +141,9 @@ def test_assemble_render_seam_real_l3(tmp_path):
         (raw / "r1.json").write_text(l1.model_dump_json(), encoding="utf-8")
 
         # 4. REAL assemble — must load the L3 the fetcher wrote and score it.
-        report = assemble(week=7)
+        # first_page 注入(2026-09-02 T11): 本测断言 dim.signals 携带真实 per-page
+        # 信号(seam 证据);mean 新默认会把 signals 换成聚合标记,与被测缝无关。
+        report = assemble(week=7, seo_dims_aggregation="first_page")
 
         # --- Critical-1 regression assertions ---
         assert report["self_geo"] is not None, \

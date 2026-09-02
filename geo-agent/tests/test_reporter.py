@@ -119,6 +119,40 @@ def test_collection_gate_absent_graceful(tmp_path):
     assert "数据完整性未记录" not in html and "完整性待确认" in html
 
 
+# ---- T11(2026-09-02): SEO 维度口径注记 + 成本 token 呈现 ----
+def test_seo_aggregation_note_present(tmp_path):
+    """SEO 区标题旁必须带口径注记(w4+ 全页平均 / w1–w3 代表页,跨周对比有断点)。"""
+    html = render(REPORT, tmp_path / "note.html").read_text(encoding="utf-8")
+    assert "w4+ 维度=全页平均" in html
+    assert "w1–w3 为代表页口径" in html and "跨周维度对比有断点" in html
+
+
+def test_cost_row_renders_when_usage_present(tmp_path):
+    rep = json.loads(json.dumps(REPORT))
+    rep["cost"] = {
+        "note": "token 用量(L1 usage 汇总;记录呈现、不折价不考核——spec v1.1)",
+        "by_model": {
+            "qwen": {"records_with_usage": 6, "input_tokens": 1000,
+                     "output_tokens": 500, "total_tokens": 1500},
+            "doubao": {"records_with_usage": 6, "input_tokens": 800,
+                       "output_tokens": 400, "total_tokens": 1200},
+        },
+    }
+    html = render(rep, tmp_path / "cost.html").read_text(encoding="utf-8")
+    assert "成本(token,不折价)" in html
+    assert "qwen 1500" in html and "doubao 1200" in html   # 按模型 total_tokens
+
+
+def test_cost_absent_or_empty_graceful(tmp_path):
+    """旧报告(无 cost 键)与空 by_model 均不渲染成本行,不崩。"""
+    html_old = render(REPORT, tmp_path / "old.html").read_text(encoding="utf-8")
+    assert "成本(token,不折价)" not in html_old
+    rep = json.loads(json.dumps(REPORT))
+    rep["cost"] = {"note": "n", "by_model": {}}
+    html_empty = render(rep, tmp_path / "empty.html").read_text(encoding="utf-8")
+    assert "成本(token,不折价)" not in html_empty
+
+
 def test_dashboard_structure_and_interactions(tmp_path):
     """The approved layout and core interactions remain present in future reports."""
     html = render(REPORT, tmp_path / "dashboard.html").read_text(encoding="utf-8")
@@ -137,3 +171,28 @@ def test_dashboard_structure_and_interactions(tmp_path):
     assert html.count('<span class="card-subtitle">得分 / 权重</span>') == 2
     assert '<details class="card appendix section"' in html
     assert "品牌提及率" in html and "声量占比" in html
+
+
+# ---- T13(2026-09-02): 数据降级事件可见(有则黄色提示行;旧报告/全零不渲染) ----
+DEGRADED_KEYS = ("self_geo_score_skipped", "page_seo_skipped", "gap_skipped",
+                 "competitor_skipped", "l3_semantic_degraded")
+
+def test_degraded_events_hint_renders_when_nonzero(tmp_path):
+    """degraded_events 有非零项 → 黄色提示行列出各类计数(降级可见,不虚报健康)。"""
+    rep = json.loads(json.dumps(REPORT))
+    rep["degraded_events"] = {k: 0 for k in DEGRADED_KEYS}
+    rep["degraded_events"]["page_seo_skipped"] = 1
+    rep["degraded_events"]["l3_semantic_degraded"] = 2
+    html = render(rep, tmp_path / "deg.html").read_text(encoding="utf-8")
+    assert "数据降级事件" in html
+    assert "page_seo_skipped 1" in html and "l3_semantic_degraded 2" in html
+
+
+def test_degraded_events_zero_or_absent_graceful(tmp_path):
+    """旧报告(无键)与全零 dict 均不渲染提示行(不虚报降级,T11 同款守卫模式)。"""
+    html_old = render(REPORT, tmp_path / "old.html").read_text(encoding="utf-8")
+    assert "数据降级事件" not in html_old
+    rep = json.loads(json.dumps(REPORT))
+    rep["degraded_events"] = {k: 0 for k in DEGRADED_KEYS}
+    html_zero = render(rep, tmp_path / "zero.html").read_text(encoding="utf-8")
+    assert "数据降级事件" not in html_zero

@@ -167,10 +167,11 @@ def iterate(week: int, *, repo: Path = REPO) -> dict:
             yaml.safe_dump(geo_raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
         (repo / "rules" / "seo-rules.yaml").write_text(
             yaml.safe_dump(seo_raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        from geo.shared.io_utils import atomic_write_text
         run_raw = yaml.safe_load((repo / "run.yaml").read_text(encoding="utf-8"))
         run_raw["rule_version"] = to_v
-        (repo / "run.yaml").write_text(
-            yaml.safe_dump(run_raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
+        atomic_write_text(repo / "run.yaml",
+                          yaml.safe_dump(run_raw, allow_unicode=True, sort_keys=False))
 
     with (repo / "rules" / "changelog.md").open("a", encoding="utf-8") as f:
         f.write(render_changelog(week, from_v, to_v, decisions, w_before, w_after, observations))

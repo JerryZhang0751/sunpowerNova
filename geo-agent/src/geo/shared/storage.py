@@ -12,8 +12,20 @@ log = logging.getLogger("storage")
 def sha1_url(url: str) -> str:
     return hashlib.sha1(url.encode("utf-8")).hexdigest()
 
-def source_dir(sha1: str) -> Path:
-    p = REPO/"data"/"sources"/sha1[:12]; p.mkdir(parents=True, exist_ok=True); return p
+def source_dir(week: int, sha1: str) -> Path:
+    """2026-09-02 D1: 周目录隔离——每周独立快照自洽,历史 SEO 重算可复现(w3 起)。"""
+    p = REPO/"data"/"sources"/f"w{week}"/sha1[:12]; p.mkdir(parents=True, exist_ok=True); return p
+
+def legacy_source_dirs(week: int, repo: Path = REPO) -> list[Path]:
+    """周 L3 查找回退链: w{week} + (week<3 时回退 w3=迁移前共享缓存的终态;week==3
+    即自身目录,不重复列出)。
+    w1/w2/w3 的历史评估消费的就是这份态(黄金锁通路);w4+ 不回退——miss=诚实缺失。
+    注意: 需 monkeypatch/注入 repo 的调用方必须显式传 repo(默认值绑定的 REPO 是
+    storage 模块导入时的对象),否则 patch 不到——analyst/corpus 均在调用点传各自 REPO。"""
+    dirs = [repo / "data" / "sources" / f"w{week}"]
+    if week < 3:   # week==3 不重复列 w3(评审修复去重;查找集不变)
+        dirs.append(repo / "data" / "sources" / "w3")
+    return dirs
 
 def l1_path(week:int, model:str, pid:str, run:int) -> Path:
     p = REPO/"data"/"raw"/f"w{week}"/model/pid; p.mkdir(parents=True, exist_ok=True)

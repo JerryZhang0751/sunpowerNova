@@ -84,16 +84,19 @@ def _safe_get(url: str, transport=None) -> httpx.Response:
         return r
     raise UnsafeURLError(f"重定向超过 {MAX_REDIRECTS} 跳: {url!r}")
 
-def fetch_source(url: str, fetcher_kimi=True, transport=None) -> L3Source:
-    sha = sha1_url(url); sd = source_dir(sha)
+def fetch_source(url: str, week: int, fetcher_kimi=True, transport=None) -> L3Source:
+    sha = sha1_url(url); sd = source_dir(week, sha)
     text_path = sd/"text.md"; meta_path = sd/"meta.json"
-    if text_path.exists():
+    if text_path.exists() and meta_path.exists():   # 完整对才算命中(text=完整标志,2026-09-02 D1)
         import json
-        cached = L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
-        if cached.js_only and cached.http_status is None:
-            pass   # 存量毒化条目(异常路径从不带 status)→ 视为 miss 重抓
-        else:
-            return cached
+        try:
+            cached = L3Source(**json.loads(meta_path.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            cached = None   # 坏 meta(残缺 JSON/schema 漂移;pydantic ValidationError⊂ValueError)
+            # → 视为 miss 重抓覆写(评审修复:与 analyst/corpus 读路径容错对称;否则
+            # 异常被 fetch_node/fetch_topn 吞掉,坏 meta 永不覆写=URL 该周永久 failed)
+        if cached is not None and not (cached.js_only and cached.http_status is None):
+            return cached   # 存量毒化条目(js_only+status None)同样视为 miss 重抓
     status = None; text = ""; js_only = False; structural = {}
     try:
         r = _safe_get(url, transport); status = r.status_code
@@ -108,10 +111,20 @@ def fetch_source(url: str, fetcher_kimi=True, transport=None) -> L3Source:
         raise
     except Exception as e:
         raise FetchError(f"{type(e).__name__}: {e} ({url})") from e
-    semantic = extract_semantic(text) if (fetcher_kimi and text.strip()) else {}
+    # T13(2026-09-02): extract_semantic 返回 (semantic, degraded)——Kimi 失败不再
+    # 与"无语义字段"不可区分,降级标志落 L3Source(评估/报告可见);不走语义(关/空文本)=非降级。
+    if fetcher_kimi and text.strip():
+        semantic, sem_degraded = extract_semantic(text)
+    else:
+        semantic, sem_degraded = {}, False
     rec = L3Source(url=url, sha1=sha, http_status=status, text=text,
-                   structural=structural, semantic=semantic, js_only=js_only,
+                   structural=structural, semantic=semantic,
+                   semantic_degraded=sem_degraded, js_only=js_only,
                    fetched_iso=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
-    atomic_write_text(sd/"text.md", text)  # text 用原子写;meta 同
+    # 写序反转(2026-09-02 D1): meta 先、text 后——崩溃残留只可能是"孤儿 meta"
+    # (读路径要求成对,判 miss 重抓自愈),不再产生旧序的孤儿 text.md(旧读路径
+    # 见 text 就读 meta → FileNotFoundError 被 research 吞成永久 failed 的路径
+    # 由此消灭)。text 用原子写;meta 同。
     import json; atomic_write_text(meta_path, rec.model_dump_json())
+    atomic_write_text(sd/"text.md", text)
     return rec

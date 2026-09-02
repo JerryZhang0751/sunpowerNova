@@ -63,7 +63,8 @@ def _article_urls(text: str) -> tuple[list, bool]:
 
 def run_generate(topic: str, page_type: str = "guide", week: int = 1,
                  allow_no_playbook: bool = False, kimi: bool = True,
-                 chat_fn=None, repo: Path = REPO, today: str = None) -> dict:
+                 chat_fn=None, repo: Path = REPO, today: str = None,
+                 allow_published_overwrite: bool = False) -> dict:
     repo = Path(repo)
     try:
         brand = load_brand(repo / "knowledge" / "brand.yaml")
@@ -107,6 +108,13 @@ def run_generate(topic: str, page_type: str = "guide", week: int = 1,
     blocks.append("<!-- AUTO-GENERATED 事实核对清单（校验器产出，人审加速器）\n"
                   + result.appendix_md + "\n-->")
     out_dir = repo / "content" / "drafts"
+    # backlog 2026-09-02 守卫补强: 同 slug 已有发布文 → 拒写影子草稿(落盘前拦截,
+    # 拒绝路径零副作用)。Kimi 改写主题后可能与已发布页同 slug(w3 近重复同根因);
+    # 确认换题,或 --allow-published-overwrite 显式放行。
+    pub_existing = repo / "content" / "published" / f"{fm['slug']}.md"
+    if pub_existing.exists() and not allow_published_overwrite:
+        raise SystemExit(f"slug {fm['slug']!r} 已有发布文 {pub_existing}——拒绝生成影子草稿"
+                         "(确认换题,或 --allow-published-overwrite 显式放行)")
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{fm['slug']}.md"
     out.write_text("\n".join(blocks), encoding="utf-8")
@@ -175,7 +183,12 @@ def run_mark_published(slug: str, *, url: str | None = None, override: bool = Fa
         updates["override_reason"] = reason
     pub_dir = repo / "content" / "published"
     pub_dir.mkdir(parents=True, exist_ok=True)
-    (pub_dir / f"{slug}.md").write_text(_fm_update(text, updates), encoding="utf-8")
+    # backlog 2026-09-02 守卫补强: published/<slug>.md 已存在 → 归档会覆写已发布文,
+    # 默认拒绝;确需覆写用 --override --reason 显式放行(写盘前拦截)。
+    pub_file = pub_dir / f"{slug}.md"
+    if pub_file.exists() and not override:
+        raise SystemExit(f"{pub_file} 已存在——归档将覆写已发布文;确需覆写用 --override --reason")
+    pub_file.write_text(_fm_update(text, updates), encoding="utf-8")
     if url:
         from urllib.parse import urlparse
         path = urlparse(url).path.rstrip("/")
@@ -217,10 +230,12 @@ def main() -> None:
     ap.add_argument("--url")
     ap.add_argument("--override", action="store_true")
     ap.add_argument("--reason", default="")
+    ap.add_argument("--allow-published-overwrite", action="store_true",
+                    help="同 slug 已有发布文时仍生成/归档(显式放行影子草稿/覆写)")
     ap.add_argument("--bootstrap-brand", action="store_true")
     a = ap.parse_args()
     if a.suggest:
-        run_suggest(a.week)
+        run_suggest(validate_production_week(a.week))
     elif a.bootstrap_brand:
         res = run_bootstrap()
         print(res)
@@ -234,7 +249,8 @@ def main() -> None:
         print(run_mark_published(a.mark_published, url=a.url, override=a.override, reason=a.reason))
     elif a.topic:
         res = run_generate(a.topic, a.page_type, validate_production_week(a.week),
-                           allow_no_playbook=a.allow_no_playbook, kimi=not a.no_kimi)
+                           allow_no_playbook=a.allow_no_playbook, kimi=not a.no_kimi,
+                           allow_published_overwrite=a.allow_published_overwrite)
         print(res)
         if res["validation"] == "flagged":
             sys.exit(2)

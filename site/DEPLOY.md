@@ -21,19 +21,33 @@ for auto-deploy from Git.
 Gets a live `https://sunhestia.pages.dev` URL immediately. Use this for the W1
 control so the site is crawlable while the custom domain is being registered.
 
+Deploy with an API **token**, not `wrangler login` — the OAuth login flow is
+known to break behind a local proxy (CSRF mismatch). Prerequisite: a
+Cloudflare API token with Pages edit permission, stored in `site/.cf_token`
+(a local, gitignored file).
+
 ```bash
 cd site
+npm run check && npm run build     # check gate: 0 errors / 0 warnings / 0 hints
 
-# one-time auth (opens a browser to log into Cloudflare)
-npx wrangler login
-
-# create the Pages project
+# one-time: create the Pages project
+CLOUDFLARE_API_TOKEN=$(cat .cf_token) CLOUDFLARE_ACCOUNT_ID="<CLOUDFLARE_ACCOUNT_ID>" \
 npx wrangler pages project create sunhestia --production-branch main
 
-# deploy the already-built output (run `npm run build` first)
-npm run build
-npx wrangler pages deploy dist --project-name sunhestia
+# deploy the already-built output
+CLOUDFLARE_API_TOKEN=$(cat .cf_token) CLOUDFLARE_ACCOUNT_ID="<CLOUDFLARE_ACCOUNT_ID>" \
+npx wrangler pages deploy dist --project-name sunhestia --branch main
 ```
+
+Notes:
+
+- `.cf_token` (gitignored) and the account ID never enter the repository —
+  substitute `<CLOUDFLARE_ACCOUNT_ID>` with your own value at deploy time.
+- The first `npx wrangler` invocation downloads wrangler on the spot and can
+  exceed 300s. Run it in the background; don't pipe it into `tail`.
+- Direct upload is atomic: killing a deploy midway and rerunning is lossless.
+- Verify after deploy: both the apex domain and the `*.pages.dev` URL return
+  200, `sitemap-0.xml` contains the new pages, and schema/canonical are present.
 
 Wrangler prints the live URL (e.g. `https://sunhestia.pages.dev`). That URL is
 the W1 baseline measurement target.

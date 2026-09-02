@@ -60,10 +60,11 @@ def do_rollback(repo: Path, to_version: str) -> None:
         d["restores"] = to_version
         (repo / "rules" / f"{name}-rules.yaml").write_text(
             yaml.safe_dump(d, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    from geo.shared.io_utils import atomic_write_text
     run_raw = yaml.safe_load((repo / "run.yaml").read_text(encoding="utf-8"))
     run_raw["rule_version"] = new_v
-    (repo / "run.yaml").write_text(
-        yaml.safe_dump(run_raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    atomic_write_text(repo / "run.yaml",
+                      yaml.safe_dump(run_raw, allow_unicode=True, sort_keys=False))
     with (repo / "rules" / "changelog.md").open("a", encoding="utf-8") as fh:
         fh.write(f"\n## rollback — {new_v} restores {to_version}(现行 {cur_v} 已归档;不倒退版本号)\n")
     print(f"rolled back: {new_v} restores {to_version}")

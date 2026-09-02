@@ -76,7 +76,7 @@ def _normalize(provider: str, req: dict) -> dict:
     Normalize provider-specific request format into standard {function, params} shape.
 
     Args:
-        provider: Provider name (qwen, doubao, zhipu, kimi)
+        provider: Provider name (qwen, doubao, zhipu) — BFCL 只评采集层客户端
         req: Raw request object from fixture
 
     Returns:
@@ -100,14 +100,6 @@ def _normalize(provider: str, req: dict) -> dict:
             }
         }
     elif provider == "zhipu":
-        return {
-            "function": "POST /messages",
-            "params": {
-                "model": req.get("model"),
-                "tools": req.get("tools", [])
-            }
-        }
-    elif provider == "kimi":
         return {
             "function": "POST /messages",
             "params": {

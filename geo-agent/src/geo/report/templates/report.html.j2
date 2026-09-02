@@ -233,6 +233,22 @@
     .card-head h2,
     .card-head h3 { margin: 0; font-size: 1rem; letter-spacing: -.02em; }
     .card-subtitle { color: var(--muted); font-size: .76rem; }
+    .note { color: var(--muted); font-size: .68rem; }
+    .cost-row { color: var(--muted); font-size: .74rem; margin: 10px 2px 0; }
+    .degraded-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      width: fit-content;
+      border: 1px solid #f1d695;
+      border-radius: 8px;
+      background: var(--sun-soft);
+      color: #765317;
+      font-size: .74rem;
+      font-weight: 650;
+      margin: 10px 2px 0;
+      padding: 5px 11px;
+    }
     .score-card {
       position: relative;
       display: flex;
@@ -551,11 +567,13 @@
           <article class="card score-card seo"><div><p class="score-label">SEO 综合得分</p><div class="score-value">{{ '%.1f'|format(seo.total) if seo and seo.total is not none else '—' }}</div><div class="score-scale">满分 100</div>{% if seo and seo.total is not none and seo.total >= 70 %}<span class="score-tag good">表现良好</span>{% elif seo and seo.total is not none and seo.total >= 40 %}<span class="score-tag warn">需提升</span>{% else %}<span class="score-tag bad">优先改进</span>{% endif %}</div><div class="score-ring" style="--score: {{ seo.total if seo and seo.total is not none else 0 }}; --ring-color: #367be5" aria-hidden="true"></div></article>
           <article class="card score-card health"><div><p class="score-label">采集完成率</p>{% if counts.planned %}<div class="score-value">{{ '{:.0%}'.format(counts.valid / counts.planned) }}</div><div class="score-scale">{{ counts.valid }} / {{ counts.planned }} 条有效{% if counts.failed %} · {{ counts.failed }} 条失败{% endif %}</div>{% else %}<div class="score-value">—</div><div class="score-scale">旧报告未记录采集分母</div>{% endif %}{% if report.collection_gate is defined and report.collection_gate and report.collection_gate.manifest and report.collection_gate.ok %}<span class="score-tag good">已通过质量门 · 最低 {{ '{:.1%}'.format(report.collection_gate.min_success_rate or 0) }}</span>{% elif report.collection_gate is defined and report.collection_gate and report.collection_gate.manifest %}<span class="score-tag bad">未通过质量门 · 最低 {{ '{:.1%}'.format(report.collection_gate.min_success_rate or 0) }}</span>{% else %}<span class="score-tag warn">完整性待确认</span>{% endif %}</div>{% if report.collection_gate is defined and report.collection_gate and report.collection_gate.manifest and report.collection_gate.ok %}<div class="health-check" aria-hidden="true">✓</div>{% else %}<div class="health-check" style="border-color: var(--sun); color: var(--sun)" aria-hidden="true">!</div>{% endif %}</article>
         </div>
+        {% if report.cost and report.cost.by_model %}<div class="cost-row">成本(token,不折价):{% for m, c in report.cost.by_model.items() | sort %}{{ m }} {{ c.total_tokens }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+        {%- if report.degraded_events and report.degraded_events.values() | sum %}<div class="degraded-row"><span aria-hidden="true">⚠</span><span>数据降级事件:{% for k, v in report.degraded_events.items() | sort %}{{ k }} {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}(语义/评分兜底已生效,分数仍完整)</span></div>{% endif %}
       </section>
 
       <div class="grid analysis-grid section" id="geo-seo-analysis">
         <section class="card chart-card" id="geo-analysis" aria-labelledby="geo-title"><div class="card-head"><h2 id="geo-title">GEO 六维表现</h2><span class="card-subtitle">得分 / 权重</span></div>{% if geo and geo.dims %}<div class="chart" id="geo-chart" role="img" aria-label="GEO 六维得分与权重雷达图"></div>{% else %}<div class="empty-state">本期无 GEO 维度数据</div>{% endif %}</section>
-        <section class="card chart-card" id="seo-analysis" aria-labelledby="seo-title"><div class="card-head"><h2 id="seo-title">SEO 五项表现</h2><span class="card-subtitle">得分 / 权重</span></div>{% if seo and seo.dims %}<div class="chart" id="seo-chart" role="img" aria-label="SEO 五项得分与权重条形图"></div>{% else %}<div class="empty-state">本期无 SEO 维度数据</div>{% endif %}</section>
+        <section class="card chart-card" id="seo-analysis" aria-labelledby="seo-title"><div class="card-head"><h2 id="seo-title">SEO 五项表现</h2><span class="card-subtitle">得分 / 权重</span><span class="note">w4+ 维度=全页平均(w1–w3 为代表页口径,跨周维度对比有断点)</span></div>{% if seo and seo.dims %}<div class="chart" id="seo-chart" role="img" aria-label="SEO 五项得分与权重条形图"></div>{% else %}<div class="empty-state">本期无 SEO 维度数据</div>{% endif %}</section>
       </div>
 
       <div class="grid comparison-grid section">

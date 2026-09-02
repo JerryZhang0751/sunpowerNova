@@ -4,7 +4,11 @@ import os
 from pathlib import Path
 
 def atomic_write_text(path: Path, text: str) -> None:
-    """tmp + os.replace 原子写:读方要么看到完整旧文件、要么看到完整新文件。"""
+    """tmp + fsync + os.replace 原子写:读方要么看到完整旧文件、要么看到完整新文件。
+    2026-09-02:补 fsync(断电场景 replace 后内容已落盘)。"""
     tmp = path.parent / (path.name + ".tmp")
-    tmp.write_text(text, encoding="utf-8")
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
     os.replace(tmp, path)

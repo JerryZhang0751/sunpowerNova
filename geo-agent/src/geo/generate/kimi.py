@@ -5,7 +5,8 @@ import json
 import time
 import logging
 import yaml
-from geo.shared.config import settings
+from geo.shared.config import MODELS
+from geo.shared.kimi_client import make_kimi_client
 
 log = logging.getLogger("generate.kimi")
 
@@ -58,10 +59,9 @@ def _kimi_chat(messages: list[dict], tools=None, timeout: float = GENERATE_REQUE
     # 300s:草稿生成为长补全,Kimi 实测响应 50–215s(见模型记录);180s 在 w3 实跑
     # (2026-09-01)连续两次掐死正常生成。研究层短调用不受影响(各自独立超时)。
     # max_retries=0:重试责任只在业务层 generate_draft(见模块头注释)。
-    from openai import OpenAI
-    c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url,
-               timeout=timeout, max_retries=0)
-    r = c.chat.completions.create(model="kimi-k3", messages=messages, temperature=1,
+    # T4(2026-09-02): client 构造合一至 shared.make_kimi_client(超时/重试参数化)。
+    c = make_kimi_client(timeout=timeout, max_retries=0)
+    r = c.chat.completions.create(model=MODELS["kimi"]["api_code"], messages=messages, temperature=1,
                                   response_format={"type": "json_object"})
     return r.choices[0].message.content or ""
 
