@@ -211,3 +211,41 @@ def test_run_mark_published_rejects_url_mismatch_then_archives_consistent(tmp_pa
     assert '"mainEntityOfPage": "https://sunhestia.com/news/battery-sizing/"' in pub
     fm = yaml.safe_load(pub.split("---")[1])
     assert fm["published_url"] == "https://sunhestia.com/news/battery-sizing/"
+
+def test_generate_refuses_published_slug(tmp_path):
+    """backlog 2026-09-02 守卫补强: 同 slug 已有发布文 → 拒写影子草稿(w3 根因之一
+    是 Kimi 改写主题后与已发布页同 slug);--allow-published-overwrite 显式放行。"""
+    repo = _mini_repo(tmp_path)
+    pub = repo / "content" / "published"
+    pub.mkdir(parents=True)
+    (pub / "battery-sizing.md").write_text(
+        "---\ntopic: battery sizing\npage_type: guide\nslug: battery-sizing\n---\n\n# 已发布\n",
+        encoding="utf-8")
+    with pytest.raises(SystemExit, match="已有发布文"):
+        run_generate("battery sizing", chat_fn=_chat_ok, repo=repo, today="2026-09-02")
+    assert not (repo / "content" / "drafts" / "battery-sizing.md").exists(), \
+        "拒绝时不得落盘影子草稿"
+    res = run_generate("battery sizing", chat_fn=_chat_ok, repo=repo, today="2026-09-02",
+                       allow_published_overwrite=True)
+    assert Path(res["path"]).exists()
+
+def test_mark_published_refuses_existing_published(tmp_path):
+    """backlog 2026-09-02 守卫补强: published/<slug>.md 已存在时归档将覆写已发布文
+    → SystemExit 拒绝;--override --reason 显式放行。"""
+    repo = _mini_repo(tmp_path)
+    run_generate("battery sizing", chat_fn=_chat_ok, repo=repo, today="2026-09-02")
+    run_review("battery-sizing", "pass", repo=repo, now="2026-09-02T10:00:00")
+    pub = repo / "content" / "published"
+    pub.mkdir(parents=True, exist_ok=True)
+    (pub / "battery-sizing.md").write_text("---\ntopic: battery sizing\n---\n\n# 旧发布文\n",
+                                           encoding="utf-8")
+    with pytest.raises(SystemExit, match="已存在"):
+        run_mark_published("battery-sizing", repo=repo)
+    # 拒绝时三方均不改动: 草稿还在、旧发布文原样
+    assert (repo / "content" / "drafts" / "battery-sizing.md").exists()
+    assert "旧发布文" in (pub / "battery-sizing.md").read_text(encoding="utf-8")
+    run_mark_published("battery-sizing", override=True, reason="人工确认重发布",
+                       repo=repo, now="2026-09-02T11:00:00")
+    fm = yaml.safe_load((pub / "battery-sizing.md").read_text(encoding="utf-8").split("---")[1])
+    assert fm["status"] == "published" and fm["override_reason"] == "人工确认重发布"
+    assert not (repo / "content" / "drafts" / "battery-sizing.md").exists()

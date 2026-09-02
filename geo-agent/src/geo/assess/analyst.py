@@ -175,7 +175,8 @@ def _score_competitors(week: int, static_signals: dict | None) -> list:
 
 
 def assemble(week: int, *, rules_geo=None, rules_seo=None,
-             out_name: str = "eval_report.json", rule_version: str | None = None) -> dict:
+             out_name: str = "eval_report.json", rule_version: str | None = None,
+             write: bool = True, seo_dims_aggregation: str = "mean") -> dict:
     """
     Assemble deterministic evaluation report from L2 records, GEO/SEO scores, and competitive benchmarks.
 
@@ -188,10 +189,18 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         rules_seo: Optional SEO rules dict for recalc injection (default: use current version)
         out_name: Output filename (default: "eval_report.json")
         rule_version: Rule version to tag in report (default: from settings.run.rule_version)
+        write: False → 只计算并返回 dict,不写 eval_report.json/source_scores.csv
+            (黄金锁等只读重算用;2026-09-02 backlog 守卫补强)
+        seo_dims_aggregation: "mean" | "first_page"——SEO 维度跨页聚合口径。
+            本任务(2026-09-02)只加参数与校验:两值暂都沿用 first_page 旧逻辑
+            (dims=seo_scores[0].dims,默认路径零变化);T11 实现 mean 分支并切默认。
 
     Returns:
         dict: Evaluation report with metrics, scores, and competitive differentials
     """
+    if seo_dims_aggregation not in ("mean", "first_page"):
+        raise ValueError(
+            f"seo_dims_aggregation 非法: {seo_dims_aggregation!r}(仅接受 'mean' | 'first_page')")
     rule_version = rule_version or settings.run.rule_version
     l1s = list(iter_l1(week, REPO))
 
@@ -393,28 +402,30 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         "authority_gap_note": "权威分基于 P0 代理；外部权威(backlinks/DA)未计入"
     }
 
-    # Create output directory
-    out = REPO / "data" / "analysis" / f"w{week}"
-    out.mkdir(parents=True, exist_ok=True)
+    # write=False: 只读重算(黄金锁/对照实验)——不落任何盘,仅返回 dict
+    if write:
+        # Create output directory
+        out = REPO / "data" / "analysis" / f"w{week}"
+        out.mkdir(parents=True, exist_ok=True)
 
-    # Write eval_report.json
-    (out / out_name).write_text(
-        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True),
-        encoding="utf-8"
-    )
+        # Write eval_report.json
+        (out / out_name).write_text(
+            json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True),
+            encoding="utf-8"
+        )
 
-    # Write source_scores.csv
-    with (out / "source_scores.csv").open("w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["model", "prompt_id", "mentioned", "cited", "position", "competitors"])
-        for l in l1s:
-            w.writerow([
-                l.model,
-                l.prompt_id,
-                int(l.l2.mentioned),
-                int(l.l2.cited_with_link),
-                l.l2.citation_position if l.l2.citation_position else "",
-                ";".join(l.l2.competitors_mentioned)
-            ])
+        # Write source_scores.csv
+        with (out / "source_scores.csv").open("w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["model", "prompt_id", "mentioned", "cited", "position", "competitors"])
+            for l in l1s:
+                w.writerow([
+                    l.model,
+                    l.prompt_id,
+                    int(l.l2.mentioned),
+                    int(l.l2.cited_with_link),
+                    l.l2.citation_position if l.l2.citation_position else "",
+                    ";".join(l.l2.competitors_mentioned)
+                ])
 
     return report

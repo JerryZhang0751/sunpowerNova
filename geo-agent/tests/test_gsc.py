@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import patch, MagicMock
 from geo.fetch.gsc import snapshot_gsc, _build_service
 from geo.shared.config import settings
@@ -108,3 +109,25 @@ def test_gsc_corrupted_snapshot_treated_as_miss(iso_snapshots):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is False and out["rows"] == [{"keys": ["ok"]}]   # 重取到新数据
     assert _json.loads(p.read_text(encoding="utf-8"))["rows"] == [{"keys": ["ok"]}]   # 文件被合法 JSON 覆写
+
+def test_gsc_freeze_warns_on_rule_version_mismatch(iso_snapshots, caplog):
+    """2026-08-27 快照冻结守卫的 mismatch 告警分支(此前零覆盖):
+    盘上快照 rule_version ≠ 请求版本 → 仍按冻结语义返回旧内容(不重取、
+    不覆写历史基线),同时 log.warning 提示版本不一致。"""
+    import json as _json
+    from geo.fetch.gsc import snapshot_dir
+    p = snapshot_dir(TEST_WEEK) / "gsc.json"
+    p.write_text(_json.dumps({"week": TEST_WEEK, "rule_version": "geo-seo-v2",
+                              "site": "sc-domain:x", "rows": [{"keys": ["frozen"]}],
+                              "degraded": False}),
+                 encoding="utf-8")
+    svc = MagicMock()
+    svc.searchanalytics().query().execute.return_value = {"rows": [{"keys": ["NEW!"]}]}
+    with patch("geo.fetch.gsc._build_service", return_value=svc):
+        with caplog.at_level(logging.WARNING, logger="fetch.gsc"):
+            out = snapshot_gsc(week=TEST_WEEK, rule_version="geo-seo-v3")
+    assert out["rows"] == [{"keys": ["frozen"]}]          # 返回冻结内容,未重取
+    assert out["rule_version"] == "geo-seo-v2"            # 历史基线版本不被改写
+    svc.searchanalytics().query().execute.assert_not_called()
+    assert any(r.levelno == logging.WARNING and "规则版本" in r.getMessage()
+               for r in caplog.records)

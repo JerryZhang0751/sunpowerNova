@@ -31,12 +31,13 @@ def test_v1_semantics_unchanged_on_real_w1():
     """证明当前语义在真实 w1 数据上零漂移：重新计算的 report 与归档的 eval_report.json 完全一致。
 
     注意：
-    - assemble(1) 会覆写 eval_report.json，故必须先读归档版本再调用 assemble
+    - assemble 以 write=False 调用，不再覆写盘上参照 eval_report.json（2026-09-02
+      守卫补强：黄金锁只读化，归档文件成为真正的不可变基线）
     - 新引擎 DimScore.signals 携带 {signal_id: value}(4 keys for eeat incl. org_or_person_schema)
       而归档仅 3 keys——本测试仅比对 name/score/weight，不比对 signals payload
     - 测试加载提交的 v2 fixture 规则（tests/fixtures/rules/），而非当前规则，防止版本漂移
     """
-    # Step 1: Read archived report BEFORE assemble overwrites it
+    # Step 1: Read archived reference (assemble no longer overwrites it — read-only lock)
     archived_path = REPO / "data" / "analysis" / "w1" / "eval_report.json"
     archived = json.loads(archived_path.read_text(encoding="utf-8"))
 
@@ -45,8 +46,9 @@ def test_v1_semantics_unchanged_on_real_w1():
     rg = _load(fix_path / "geo_rules_v2.yaml")
     rs = _load(fix_path / "seo_rules_v2.yaml")
 
-    # Step 3: Recompute with v2 rules injected (幂等覆写)
-    rep = assemble(1, rules_geo=rg, rules_seo=rs, rule_version="geo-seo-v2")
+    # Step 3: Recompute with v2 rules injected (read-only — 盘上参照不被覆写)
+    rep = assemble(1, rules_geo=rg, rules_seo=rs, rule_version="geo-seo-v2",
+                   write=False, seo_dims_aggregation="first_page")
 
     # Step 3: Assert golden totals (geo-seo-v2: SOV 份额修正后 43.4;SEO 不受影响 49.8)
     assert rep["self_geo"]["total"] == archived["self_geo"]["total"] == 43.4
