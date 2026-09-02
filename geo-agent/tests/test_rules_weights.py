@@ -1,11 +1,19 @@
 # tests/test_rules_weights.py
 import pytest
-from geo.rules.weights import compute_deltas, persisted_deltas, apply_deltas, STEP, W_MIN, W_MAX
+from geo.rules.weights import (compute_deltas, persisted_deltas, apply_deltas,
+                               WeightNormalizationError, STEP, W_MIN, W_MAX)
 from geo.rules.loader import assert_normalized
 import types
 
 W = {"citability": 25, "brand": 20, "eeat": 20, "technical_geo": 15, "schema": 10, "platform": 10}
 S_W1 = {"citability": 0.657, "schema": 7/34, "brand": (0.133 + 0.0887)/2,
+        "eeat": None, "technical_geo": None, "platform": None}
+
+# w2/w3 真实 strengths(盘上 rules_iteration.dimension_strengths)——codex w3 修改四
+# 的复现输入:w3 首个真实权重裁决 citability +1 被旧归一化 no-op 吞掉。
+S_W2 = {"citability": 0.826, "schema": 0.130, "brand": None,
+        "eeat": None, "technical_geo": None, "platform": None}
+S_W3 = {"citability": 0.92, "schema": 0.28, "brand": 0.0777,
         "eeat": None, "technical_geo": None, "platform": None}
 
 def test_raw_delta_computation():
@@ -94,3 +102,53 @@ def test_no_strengths_deterministic_name_fallback():
     nw2 = apply_deltas(W, {"citability": 1})
     assert nw1 == nw2 == {**W, "citability": 26, "brand": 19}     # 零-delta 名字序:brand 最先
     assert sum(nw1.values()) == 100
+
+
+# ---- codex w3 修改四(2026-09-02): 归一化不得抵消/反转持续信号,fail-closed ----
+
+def test_single_positive_persisted_delta_changes_weight():
+    """W3 真实案例端到端:citability 两周同向走强 → persisted +1 → 权重真实上调,
+    不再被归一化吃回(w3 反事实=citability 25→26)。只断言 sum==100 不足以验收,
+    必须同时断言证据方向生效。"""
+    d = persisted_deltas(S_W3, S_W2, W)
+    assert d == {"citability": 1}                          # W3 真实裁决(brand 上期缺席被持续性门挡下)
+    nw = apply_deltas(W, d, S_W3)
+    assert nw["citability"] > 25, "孤立 +1 必须真实上调目标维度"
+    assert_normalized(types.SimpleNamespace(composite="geo", weights=nw))
+
+
+def test_single_negative_persisted_delta_changes_weight():
+    """孤立负 delta 同理:citability 两周走弱 → 权重严格下降。"""
+    cur = {"citability": 0.05, "schema": 0.5, "brand": 0.5,
+           "eeat": None, "technical_geo": None, "platform": None}
+    prev = {"citability": 0.10, "schema": 0.5, "brand": 0.5,
+            "eeat": None, "technical_geo": None, "platform": None}
+    d = persisted_deltas(cur, prev, W)
+    assert d.get("citability") == -1
+    nw = apply_deltas(W, d, cur)
+    assert nw["citability"] < 25, "孤立 -1 必须真实下调目标维度(25→24)"
+    assert sum(nw.values()) == 100
+
+
+def test_normalization_never_reverses_signaled_direction():
+    """任一维度的有效 delta 在未撞边界时方向与幅度都必须生效——归一化补偿
+    只允许落在零-delta 维,不得反转或吃回有证据维度。"""
+    for k, dv in [("citability", 1), ("brand", -1), ("schema", 2)]:
+        nw = apply_deltas(W, {k: dv}, S_W3)
+        assert nw[k] - W[k] == dv, f"{k} 的 delta {dv:+d} 被归一化改变(得 {nw[k] - W[k]:+d})"
+        assert sum(nw.values()) == 100
+
+
+def test_normalization_fails_closed_when_zero_delta_capacity_is_insufficient():
+    """零-delta 维全部触界(W_MIN)且还需减→抛 WeightNormalizationError 失败关闭,
+    不得静默轮转到有证据维度吞掉已生效的信号(旧代码会把 a/b/c 减回去)。"""
+    w = {"a": 35, "b": 35, "c": 35, "d": 5, "e": 5, "f": 5}      # sum 120
+    with pytest.raises(WeightNormalizationError):
+        apply_deltas(w, {"a": 1, "b": 1, "c": 1})                # 零-delta 池 d/e/f 全贴 W_MIN
+
+
+def test_normalization_fails_closed_when_no_zero_delta_dims():
+    """全部维度都有 delta(零-delta 池为空)→同样失败关闭,不得动有证据维度。"""
+    d = {k: 1 for k in W}
+    with pytest.raises(WeightNormalizationError):
+        apply_deltas(W, d)
