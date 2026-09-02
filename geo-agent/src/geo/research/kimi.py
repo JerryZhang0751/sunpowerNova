@@ -1,7 +1,7 @@
 # src/geo/research/kimi.py
 from __future__ import annotations
 import json, logging, re
-from geo.shared.config import settings
+from geo.shared.config import MODELS, settings
 from geo.research.models import FeatureAggregates, PlaybookConclusion
 
 log = logging.getLogger("research.kimi")
@@ -16,7 +16,7 @@ _SYS_SYNTH = (
 def _kimi_chat(messages: list[dict], tools: list | None = None, timeout: int = 120) -> str:
     from openai import OpenAI
     c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url, timeout=timeout)
-    kwargs = dict(model="kimi-k3", messages=messages, temperature=1)  # kimi-k3 强制 temp=1
+    kwargs = dict(model=MODELS["kimi"]["api_code"], messages=messages, temperature=1)  # kimi 强制 temp=1
     if tools: kwargs["tools"] = tools
     if not tools: kwargs["response_format"] = {"type": "json_object"}
     r = c.chat.completions.create(**kwargs)
@@ -71,13 +71,13 @@ _WEB_TOOLS = [{"type": "builtin_function", "function": {"name": "$web_search"}}]
 _NUDGE = ("请继续完成查证：如需可再调用搜索，最终按格式给出结论+来源URL+置信度。")
 
 def _drive_web_search(create, messages: list[dict], *, max_rounds: int = 10) -> str:
-    """kimi-k3 $web_search 工具循环：模型发起 tool_call → arguments 原封不动回传(role=tool)
+    """kimi $web_search 工具循环：模型发起 tool_call → arguments 原封不动回传(role=tool)
     → 服务端执行联网搜索 → finish_reason=stop 终答。
     偶发缺陷（2026-08-18 探针实测）：模型想续搜/搜索无果时 API 返 stop+空 content，
     此时注入催答消息（保留 tools 让它可继续搜）直至出实质终答；超 max_rounds 轮返空。"""
     msgs = list(messages)
     for _ in range(max_rounds):
-        r = create(model="kimi-k3", messages=msgs, temperature=1, tools=_WEB_TOOLS)
+        r = create(model=MODELS["kimi"]["api_code"], messages=msgs, temperature=1, tools=_WEB_TOOLS)
         ch = r.choices[0]
         m = ch.message
         tcs = getattr(m, "tool_calls", None)

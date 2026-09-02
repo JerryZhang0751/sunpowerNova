@@ -5,7 +5,7 @@ import json
 import time
 import logging
 import yaml
-from geo.shared.config import settings
+from geo.shared.config import MODELS, settings
 
 log = logging.getLogger("generate.kimi")
 
@@ -61,7 +61,7 @@ def _kimi_chat(messages: list[dict], tools=None, timeout: float = GENERATE_REQUE
     from openai import OpenAI
     c = OpenAI(api_key=settings.moonshot_api_key, base_url=settings.moonshot_base_url,
                timeout=timeout, max_retries=0)
-    r = c.chat.completions.create(model="kimi-k3", messages=messages, temperature=1,
+    r = c.chat.completions.create(model=MODELS["kimi"]["api_code"], messages=messages, temperature=1,
                                   response_format={"type": "json_object"})
     return r.choices[0].message.content or ""
 

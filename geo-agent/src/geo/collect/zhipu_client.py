@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import time
 import httpx
-from geo.shared.config import settings
+from geo.shared.config import MODELS, settings
 from geo.collect.doubao_client import _harvest   # reuse URL extraction
 
 _NOISE = re.compile(r"<(GUIDContent|autonomous-content|custom-tool)[^>]*>.*?</\1>", re.DOTALL)
@@ -43,15 +43,16 @@ def parse_zhipu_response(raw: dict) -> dict:
     }
 
 
-def collect_zhipu(prompt: str, model: str = "glm-5.2") -> dict:
+def collect_zhipu(prompt: str, model: str = MODELS["zhipu"]["api_code"]) -> dict:
     """Collect Zhipu response using BigModel Anthropic-compatible endpoint.
 
     Parameters taken verbatim from m0_smoke.probe_zhipu_anthropic.
-    Model is glm-5.2 (NOT glm-5.2[1m] - that suffix is display-only and 400s).
+    Model is the registry api_code (do NOT append the "[1m]" suffix -
+    display-only and 400s).
 
     Args:
         prompt: User prompt
-        model: Zhipu model name (default: glm-5.2)
+        model: Zhipu model name (default: MODELS["zhipu"]["api_code"])
 
     Returns:
         dict with answer, raw, search_results, elapsed_s

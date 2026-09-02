@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 from geo.research.models import FeatureAggregates, PlaybookConclusion
+from geo.shared.config import MODELS
 
 _FMT_LABEL = {"comparison_table":"对比表","qa":"Q&A","list":"清单","definition":"定义段","spec_card":"规格卡"}
 
@@ -86,9 +87,9 @@ def render_profiles(platforms_metrics: dict, verified_facts: dict, week: int, ba
     L = [f"# 平台引用画像 · w{week}", ""]
     if banner:
         L.insert(1, banner)
-    names = {"qwen":"Qwen · qwen3.7-plus (阿里 DashScope)",
-             "doubao":"Doubao · doubao-seed-2-1-pro (字节 Ark)",
-             "zhipu":"Zhipu · glm-5.2 (BigModel)"}
+    names = {"qwen":   f"{MODELS['qwen']['display']} · {MODELS['qwen']['api_code']} (阿里 DashScope)",
+             "doubao": f"{MODELS['doubao']['display']} · {MODELS['doubao']['api_code']} (字节 Ark)",
+             "zhipu":  f"{MODELS['zhipu']['display']} · {MODELS['zhipu']['api_code']} (BigModel)"}
     for m, met in platforms_metrics.items():
         L.append(f"## {names.get(m,m)}")
         L.append(f"- 引用偏好(数据,n={met.get('n')}): mention={met.get('mention_rate')} citation={met.get('citation_rate')}")
