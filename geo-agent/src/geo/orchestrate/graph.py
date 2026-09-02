@@ -110,6 +110,16 @@ def build_graph():
     conn = sqlite3.connect(REPO/"state"/"runs.sqlite", check_same_thread=False)
     return g.compile(checkpointer=SqliteSaver(conn))
 
+def _bump_run_yaml_week(week: int) -> None:
+    """--next-week:run.yaml week+1;经 atomic_write_text 原子落盘(不保注释,spec §0 裁量)。"""
+    import yaml as _y
+    from geo.shared.io_utils import atomic_write_text
+    run_raw = _y.safe_load((REPO / "run.yaml").read_text(encoding="utf-8"))
+    run_raw["week"] = week + 1
+    atomic_write_text(REPO / "run.yaml",
+                      _y.safe_dump(run_raw, allow_unicode=True, sort_keys=False))
+    print(f"run.yaml week → {week + 1}")
+
 def run_pipeline(week: int, next_week: bool = False, force_new_run: bool = False):
     validate_production_week(week)
     from datetime import datetime
@@ -143,12 +153,7 @@ def run_pipeline(week: int, next_week: bool = False, force_new_run: bool = False
     app.invoke(None if partial else {"week": week}, config=config)
 
     if next_week:
-        import yaml as _y
-        run_raw = _y.safe_load((REPO / "run.yaml").read_text(encoding="utf-8"))
-        run_raw["week"] = week + 1
-        (REPO / "run.yaml").write_text(
-            _y.safe_dump(run_raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
-        print(f"run.yaml week → {week + 1}")
+        _bump_run_yaml_week(week)
 
 if __name__ == "__main__":
     import argparse
