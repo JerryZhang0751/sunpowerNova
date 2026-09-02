@@ -145,7 +145,7 @@ def test_fetch_source_js_only_detection():
     sd.rmdir()
 
 def test_extract_semantic_graceful_fallback():
-    """Test meta_llm graceful fallback - mocked Kimi failure should return {} without crashing."""
+    """Mocked Kimi failure → ({}, True):degraded=True 标志可见(T13 元组契约)。"""
     text = "Some page text content"
 
     # T4(2026-09-02): meta_llm 的 client 构造已合一至 shared.make_kimi_client,
@@ -157,19 +157,21 @@ def test_extract_semantic_graceful_fallback():
         # Mock Kimi API call to fail
         mock_client.chat.completions.create.side_effect = Exception("Kimi API error")
 
-        result = extract_semantic(text)
+        result, degraded = extract_semantic(text)
 
-    # Should return empty dict on failure, not crash
+    # Should return empty dict + degraded flag on failure, not crash
     assert result == {}
     assert isinstance(result, dict)
+    assert degraded is True
 
 def test_extract_semantic_empty_input():
     """Test meta_llm with empty input - should return {} without calling API."""
     with patch('geo.fetch.meta_llm.make_kimi_client') as mock_factory:
-        result = extract_semantic("   ")
+        result, degraded = extract_semantic("   ")
 
     # Should return {} for empty text without calling API
     assert result == {}
+    assert degraded is False     # 空文本=无从提取,非降级(T13)
     mock_factory.assert_not_called()
 
 def test_extract_semantic_success():
@@ -194,11 +196,12 @@ def test_extract_semantic_success():
         })
         mock_client.chat.completions.create.return_value = mock_response
 
-        result = extract_semantic(text)
+        result, degraded = extract_semantic(text)
 
     assert result['page_type'] == 'product'
     assert result['datapoint_count'] == 3
     assert result['has_definition_segment'] is False
+    assert degraded is False
 
 def test_storage_path_generation():
     """Test storage utilities - week-scoped sha1 directory structure (D1)."""

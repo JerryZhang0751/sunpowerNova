@@ -38,6 +38,7 @@ class L3Source(BaseModel):
     text: str = ""
     structural: dict = Field(default_factory=dict)   # bs4 可解析：H/表/schema/canonical…
     semantic: dict = Field(default_factory=dict)     # Kimi 推断：页面类型/定义段/E-E-A-T文内…
+    semantic_degraded: bool = False                  # T13(2026-09-02): Kimi 失败/解析失败=降级可见(存量 meta 无此字段→False,w1-w3 零漂移)
     js_only: bool = False
     fetched_iso: str = ""
 

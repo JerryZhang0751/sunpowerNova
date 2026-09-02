@@ -684,3 +684,135 @@ def test_legacy_weeks_without_manifest_fall_back():
     assert rep["collection_gate"]["manifest"] is False
     assert rep["collection_gate"]["ok"] is True
     assert rep["collection_gate"]["min_success_rate"] is None   # 无 manifest 不可判定,不得虚报 1.0
+
+
+# ---- T13(2026-09-02): 静默降级可见化 —— degraded_events 计数(评分数值零变化) ----
+from contextlib import ExitStack
+from types import SimpleNamespace
+from geo.shared.models import L3Source, CompositeScore, DimScore
+
+GEO_1DIM = SimpleNamespace(version="t13", signals={"brand": ["entity_known"]},
+                           weights={"brand": 100.0})
+SEO_1DIM = SimpleNamespace(version="t13", signals={"on_page": ["https"]},
+                           weights={"on_page": 100.0})
+L3_OK = L3Source(url="https://sunhestia.com", sha1="s", http_status=200,
+                 text="word " * 400, structural={"canonical": "https://sunhestia.com"},
+                 semantic={"has_author_byline": True, "has_publish_date": True,
+                           "cites_external_sources": True})
+STATIC = {"site": "https://sunhestia.com",
+          "pages": [{"url": "https://sunhestia.com/", "https": True, "http_status": 200}]}
+GSC = {"impressions": 100, "clicks": 5, "ctr": 0.05}
+ZERO_EVENTS = {"self_geo_score_skipped": 0, "page_seo_skipped": 0, "gap_skipped": 0,
+               "competitor_skipped": 0, "l3_semantic_degraded": 0}
+COMPOSITE = CompositeScore(total=50.0,
+                           dims=[DimScore(name="brand", score=50.0, weight=100.0, signals={})])
+
+
+def _assemble_t13(records=None, l3=L3_OK, static=None, gsc=None,
+                  fake_geo=None, fake_seo=None, fake_gap=None, **kw):
+    """write=False 只读装配(901 测试周,无真实数据依赖);四 loader 全 patch。"""
+    records = records if records is not None else [
+        mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True))]
+    with ExitStack() as es:
+        # side_effect 每次调用新建迭代器:assemble 与 competitor_domains_by_count
+        # 会各取一次 iter_l1,共享同一迭代器会第二次拿到耗尽值(竞品扫描为空)。
+        es.enter_context(patch('geo.assess.analyst.iter_l1',
+                               side_effect=lambda *a, **k: iter(records)))
+        es.enter_context(patch('geo.assess.analyst._load_l3_source', return_value=l3))
+        es.enter_context(patch('geo.assess.analyst._load_static_signals',
+                               return_value=STATIC if static is None else static))
+        es.enter_context(patch('geo.assess.analyst._load_gsc_snapshot',
+                               return_value=GSC if gsc is None else gsc))
+        if fake_geo is not None:
+            es.enter_context(patch('geo.assess.analyst.score_geo', side_effect=fake_geo))
+        if fake_seo is not None:
+            es.enter_context(patch('geo.assess.analyst.score_seo', side_effect=fake_seo))
+        if fake_gap is not None:
+            es.enter_context(patch('geo.assess.analyst.gap', side_effect=fake_gap))
+        kw.setdefault("rules_seo", SEO_1DIM)
+        return assemble(901, rules_geo=GEO_1DIM, write=False, **kw)
+
+
+def test_degraded_events_key_zero_when_healthy():
+    """健康输入(全部评分路径成功)→ degraded_events 全零;键无条件出现在报告中。"""
+    rep = _assemble_t13()
+    assert rep["self_geo"] is not None and rep["self_seo"] is not None
+    assert rep["degraded_events"] == ZERO_EVENTS
+
+
+def test_self_geo_skip_counted_and_warned(caplog):
+    """self_geo 评分抛错 → 计数 1 + warning,self_geo=None(不再静默)。"""
+    def boom(*a, **kw):
+        raise ValueError("bad l3")
+    with caplog.at_level("WARNING"):
+        rep = _assemble_t13(fake_geo=boom)
+    assert rep["self_geo"] is None
+    ev = rep["degraded_events"]
+    assert ev["self_geo_score_skipped"] == 1
+    assert ev["competitor_skipped"] == 0 and ev["page_seo_skipped"] == 0
+    assert caplog.records and "self_geo" in caplog.text
+
+
+def test_page_seo_skip_counted_and_warned(caplog):
+    """页面 SEO 评分抛错 → page_seo_skipped 计数 + warning,seo=None。"""
+    def boom(*a, **kw):
+        raise TypeError("bad page")
+    with caplog.at_level("WARNING"):
+        rep = _assemble_t13(fake_seo=boom)
+    assert rep["self_seo"] is None
+    ev = rep["degraded_events"]
+    assert ev["page_seo_skipped"] == 1 and ev["self_geo_score_skipped"] == 0
+    assert caplog.records
+
+
+def test_gap_skip_counted():
+    """gap 计算抛错 → gap_skipped 计数,gap=None(自评/竞品均在场,确系 gap 自身失败)。"""
+    def fake_geo(src, brand, static, **kw):
+        return COMPOSITE                       # 自评+竞品都成功,隔离 gap 失败
+    def boom(*a, **kw):
+        raise ValueError("gap down")
+    records = [mk_l1(model="qwen", prompt_id="B02", run=1,
+                     l2=mk_l2(mentioned=True, cited=True, position=1))]
+    rep = _assemble_t13(records=records, fake_geo=fake_geo, fake_gap=boom)
+    assert rep["gap"] is None
+    assert rep["degraded_events"]["gap_skipped"] == 1
+    assert rep["degraded_events"]["competitor_skipped"] == 0
+
+
+def test_competitor_skip_counted():
+    """竞品评分抛错 → competitor_skipped 计数(竞品缺席诚实可见,不阻断自评)。"""
+    def fake_geo(src, brand, static, **kw):
+        if "rules" not in kw:                  # 竞品调用不带 rules kw,自评带
+            raise ValueError("comp down")
+        return COMPOSITE
+    records = [mk_l1(model="qwen", prompt_id="B02", run=1,
+                     l2=mk_l2(mentioned=True, cited=True, position=1))]
+    rep = _assemble_t13(records=records, fake_geo=fake_geo)
+    ev = rep["degraded_events"]
+    assert ev["competitor_skipped"] == 1
+    assert ev["self_geo_score_skipped"] == 0
+    assert rep["gap"] is None                  # 竞品全缺席 → gap 分支不进入
+
+
+def test_semantic_degraded_feeds_p0_flag_and_counter():
+    """page_l3.semantic_degraded=True → l3_semantic_degraded 计数 + p0_content_degraded True。"""
+    l3_deg = L3_OK.model_copy(update={"semantic_degraded": True})
+    captured = {}
+    def fake_seo(p, gsc, c, **kw):
+        captured.update(c)
+        return CompositeScore(total=50.0,
+                              dims=[DimScore(name="on_page", score=50.0, weight=100.0, signals={})])
+    rep = _assemble_t13(l3=l3_deg, fake_seo=fake_seo)
+    assert captured["p0_content_degraded"] is True
+    assert rep["degraded_events"]["l3_semantic_degraded"] == 1
+
+
+def test_semantic_healthy_keeps_p0_flag_false():
+    """对照:semantic_degraded=False(存量数据默认)→ p0_content_degraded 保持 False。"""
+    captured = {}
+    def fake_seo(p, gsc, c, **kw):
+        captured.update(c)
+        return CompositeScore(total=50.0,
+                              dims=[DimScore(name="on_page", score=50.0, weight=100.0, signals={})])
+    _assemble_t13(fake_seo=fake_seo)
+    assert captured["p0_content_degraded"] is False

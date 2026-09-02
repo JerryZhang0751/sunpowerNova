@@ -3,6 +3,7 @@
 from __future__ import annotations
 import csv
 import json
+import logging
 from dataclasses import dataclass
 from geo.shared.config import REPO, settings
 from geo.shared.models import L1Record, L2Record, L3Source, CompositeScore
@@ -14,6 +15,10 @@ from geo.assess.benchmarker import gap
 
 # 数据质量门(与 collector.COLLECTION_GATE 同值;此处独立常量避免 assess→collect 重依赖)
 COLLECTION_GATE = 0.95
+
+# T13(2026-09-02): 静默降级可见化——评分/语义兜底路径触发时必须留下痕迹
+# (计数入报告 degraded_events + log.warning),不再 except-pass 吞掉。
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -159,10 +164,11 @@ def competitor_domains_by_count(week: int, n: int = 10) -> list[str]:
                 c[host] += 1
     return [d for d, _ in sorted(c.items(), key=lambda x: (-x[1], x[0]))[:n]]
 
-def _score_competitors(week: int, static_signals: dict | None) -> list:
+def _score_competitors(week: int, static_signals: dict | None, degraded_events: dict) -> list:
     """竞品 GEO 评分:score_geo 第三参传 {} —— 竞品无全站快照,静态类信号按 0 计(下界 proxy)。
     不得借用目标站 static_signals(含 pages 列表):否则 about_page_present 等站点级
-    信号会让全体竞品白拿分(v1.1 修正,外部评审 item 6)。"""
+    信号会让全体竞品白拿分(v1.1 修正,外部评审 item 6)。
+    degraded_events: T13 起调用方传入计数字典——竞品评分跳过不再静默。"""
     comp_geos = []
     for comp_domain in competitor_domains_by_count(week, 5):
         comp_url = f"https://{comp_domain}"
@@ -173,7 +179,10 @@ def _score_competitors(week: int, static_signals: dict | None) -> list:
                                   "on_wikipedia": False, "on_linkedin": False}
             try:
                 comp_geos.append(score_geo(comp_l3, comp_brand_signals, {}))
-            except (KeyError, TypeError, ValueError):
+            except (KeyError, TypeError, ValueError) as e:
+                degraded_events["competitor_skipped"] += 1
+                log.warning("w%s 竞品 %s 评分跳过(下界代理数据缺失): %s: %s",
+                            week, comp_domain, type(e).__name__, e)
                 continue
     return comp_geos
 
@@ -208,6 +217,12 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
             f"seo_dims_aggregation 非法: {seo_dims_aggregation!r}(仅接受 'mean' | 'first_page')")
     rule_version = rule_version or settings.run.rule_version
     l1s = list(iter_l1(week, REPO))
+
+    # T13(2026-09-02): 静默降级可见化——五类降级事件计数,随报告无条件落
+    # degraded_events(全零=健康)。只计数与告警,不改变任何评分数值(黄金锁证)。
+    degraded_events = {"self_geo_score_skipped": 0, "page_seo_skipped": 0,
+                       "gap_skipped": 0, "competitor_skipped": 0,
+                       "l3_semantic_degraded": 0}
 
     # Group L1 records by model
     by_model = {}
@@ -262,15 +277,18 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         brand_metrics = _extract_brand_metrics(l1s)
         try:
             self_geo_score = score_geo(brand_l3, brand_metrics, static_signals, rules=rules_geo)
-        except (KeyError, TypeError, ValueError):
-            # Missing required data for scoring - will remain None
-            pass
+        except (KeyError, TypeError, ValueError) as e:
+            # Missing required data for scoring - will remain None(T13: 不再静默)
+            degraded_events["self_geo_score_skipped"] += 1
+            log.warning("w%s self_geo 评分跳过(数据缺失→None): %s: %s",
+                        week, type(e).__name__, e)
 
     # Calculate SEO scores for each page in static_signals
     seo_scores = []
     if static_signals and gsc_snapshot:
         pages = static_signals.get("pages", [])
         for page in pages:
+            page_url = None
             try:
                 page_url = page.get("url")
 
@@ -283,6 +301,9 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
                 # unknown/degraded (None → scores 0) per the Global Constraint,
                 # never given a fabricated concrete value.
                 page_l3 = _load_l3_source(week, page_url) if page_url else None
+                # T13: 该页语义是 Kimi 降级兜底产物 → 计数可见(E-E-A-T 清零有因可查)
+                if page_l3 and page_l3.semantic_degraded:
+                    degraded_events["l3_semantic_degraded"] += 1
                 sem = (page_l3.semantic if page_l3 else {}) or {}
                 st_l3 = (page_l3.structural if page_l3 else {}) or {}
 
@@ -300,7 +321,9 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
                     "has_publish_date": sem.get("has_publish_date"),              # real (Kimi) or None
                     "cites_external_sources": sem.get("cites_external_sources"),  # real (Kimi) or None
                     "content_signals_source": "l3" if page_l3 else "missing",
-                    "p0_content_degraded": page_l3 is None or not page_l3.text,
+                    # T13: semantic_degraded(语义降级兜底)与缺文本同视为内容降级
+                    "p0_content_degraded": page_l3 is None or not page_l3.text
+                    or bool(page_l3.semantic_degraded),
                 }
 
                 # Prepare page data for SEO scoring
@@ -321,8 +344,11 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
 
                 page_seo = score_seo(page_data, gsc_snapshot, content_signals, rules=rules_seo)
                 seo_scores.append(page_seo)
-            except (KeyError, TypeError, ValueError):
-                # Skip pages that can't be scored
+            except (KeyError, TypeError, ValueError) as e:
+                # Skip pages that can't be scored(T13: 跳过必须可见,不再静默)
+                degraded_events["page_seo_skipped"] += 1
+                log.warning("w%s 页面 SEO 评分跳过(url=%s): %s: %s",
+                            week, page_url or "?", type(e).__name__, e)
                 continue
 
     # Aggregate SEO scores (average across all pages)
@@ -346,7 +372,7 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         self_seo_score = CompositeScore(total=avg_total, dims=dims)
 
     # Score competitors — deterministic top-5 by citation count (matches fetch_node)
-    comp_geos = _score_competitors(week, static_signals)
+    comp_geos = _score_competitors(week, static_signals, degraded_events)
 
     # Calculate competitive gap
     gap_result = None
@@ -362,9 +388,11 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         }
         try:
             gap_result = gap(self_geo_score, comp_geos, gap_metrics)
-        except (KeyError, TypeError, ValueError):
-            # Skip gap calculation if data insufficient
-            pass
+        except (KeyError, TypeError, ValueError) as e:
+            # Skip gap calculation if data insufficient(T13: 不再静默)
+            degraded_events["gap_skipped"] += 1
+            log.warning("w%s gap 计算跳过(数据不足→None): %s: %s",
+                        week, type(e).__name__, e)
 
     # Convert CompositeScores to dicts for JSON serialization
     self_geo_dict = None
@@ -415,6 +443,8 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         "self_geo": self_geo_dict,  # Real GEO score from Task 14
         "self_seo": self_seo_dict,  # Real SEO score from Task 15
         "gap": gap_result,  # Real competitive gap from Task 16
+        # T13(2026-09-02): 降级事件计数(全零=健康;旧模板对缺此键的存量报告向后兼容)
+        "degraded_events": degraded_events,
         "authority_gap_note": "权威分基于 P0 代理；外部权威(backlinks/DA)未计入"
     }
 

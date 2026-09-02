@@ -111,9 +111,15 @@ def fetch_source(url: str, week: int, fetcher_kimi=True, transport=None) -> L3So
         raise
     except Exception as e:
         raise FetchError(f"{type(e).__name__}: {e} ({url})") from e
-    semantic = extract_semantic(text) if (fetcher_kimi and text.strip()) else {}
+    # T13(2026-09-02): extract_semantic 返回 (semantic, degraded)——Kimi 失败不再
+    # 与"无语义字段"不可区分,降级标志落 L3Source(评估/报告可见);不走语义(关/空文本)=非降级。
+    if fetcher_kimi and text.strip():
+        semantic, sem_degraded = extract_semantic(text)
+    else:
+        semantic, sem_degraded = {}, False
     rec = L3Source(url=url, sha1=sha, http_status=status, text=text,
-                   structural=structural, semantic=semantic, js_only=js_only,
+                   structural=structural, semantic=semantic,
+                   semantic_degraded=sem_degraded, js_only=js_only,
                    fetched_iso=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
     # 写序反转(2026-09-02 D1): meta 先、text 后——崩溃残留只可能是"孤儿 meta"
     # (读路径要求成对,判 miss 重抓自愈),不再产生旧序的孤儿 text.md(旧读路径

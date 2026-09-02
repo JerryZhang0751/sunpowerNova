@@ -235,6 +235,20 @@
     .card-subtitle { color: var(--muted); font-size: .76rem; }
     .note { color: var(--muted); font-size: .68rem; }
     .cost-row { color: var(--muted); font-size: .74rem; margin: 10px 2px 0; }
+    .degraded-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      width: fit-content;
+      border: 1px solid #f1d695;
+      border-radius: 8px;
+      background: var(--sun-soft);
+      color: #765317;
+      font-size: .74rem;
+      font-weight: 650;
+      margin: 10px 2px 0;
+      padding: 5px 11px;
+    }
     .score-card {
       position: relative;
       display: flex;
@@ -554,6 +568,7 @@
           <article class="card score-card health"><div><p class="score-label">采集完成率</p>{% if counts.planned %}<div class="score-value">{{ '{:.0%}'.format(counts.valid / counts.planned) }}</div><div class="score-scale">{{ counts.valid }} / {{ counts.planned }} 条有效{% if counts.failed %} · {{ counts.failed }} 条失败{% endif %}</div>{% else %}<div class="score-value">—</div><div class="score-scale">旧报告未记录采集分母</div>{% endif %}{% if report.collection_gate is defined and report.collection_gate and report.collection_gate.manifest and report.collection_gate.ok %}<span class="score-tag good">已通过质量门 · 最低 {{ '{:.1%}'.format(report.collection_gate.min_success_rate or 0) }}</span>{% elif report.collection_gate is defined and report.collection_gate and report.collection_gate.manifest %}<span class="score-tag bad">未通过质量门 · 最低 {{ '{:.1%}'.format(report.collection_gate.min_success_rate or 0) }}</span>{% else %}<span class="score-tag warn">完整性待确认</span>{% endif %}</div>{% if report.collection_gate is defined and report.collection_gate and report.collection_gate.manifest and report.collection_gate.ok %}<div class="health-check" aria-hidden="true">✓</div>{% else %}<div class="health-check" style="border-color: var(--sun); color: var(--sun)" aria-hidden="true">!</div>{% endif %}</article>
         </div>
         {% if report.cost and report.cost.by_model %}<div class="cost-row">成本(token,不折价):{% for m, c in report.cost.by_model.items() | sort %}{{ m }} {{ c.total_tokens }}{% if not loop.last %} · {% endif %}{% endfor %}</div>{% endif %}
+        {%- if report.degraded_events and report.degraded_events.values() | sum %}<div class="degraded-row"><span aria-hidden="true">⚠</span><span>数据降级事件:{% for k, v in report.degraded_events.items() | sort %}{{ k }} {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}(语义/评分兜底已生效,分数仍完整)</span></div>{% endif %}
       </section>
 
       <div class="grid analysis-grid section" id="geo-seo-analysis">

@@ -171,3 +171,28 @@ def test_dashboard_structure_and_interactions(tmp_path):
     assert html.count('<span class="card-subtitle">得分 / 权重</span>') == 2
     assert '<details class="card appendix section"' in html
     assert "品牌提及率" in html and "声量占比" in html
+
+
+# ---- T13(2026-09-02): 数据降级事件可见(有则黄色提示行;旧报告/全零不渲染) ----
+DEGRADED_KEYS = ("self_geo_score_skipped", "page_seo_skipped", "gap_skipped",
+                 "competitor_skipped", "l3_semantic_degraded")
+
+def test_degraded_events_hint_renders_when_nonzero(tmp_path):
+    """degraded_events 有非零项 → 黄色提示行列出各类计数(降级可见,不虚报健康)。"""
+    rep = json.loads(json.dumps(REPORT))
+    rep["degraded_events"] = {k: 0 for k in DEGRADED_KEYS}
+    rep["degraded_events"]["page_seo_skipped"] = 1
+    rep["degraded_events"]["l3_semantic_degraded"] = 2
+    html = render(rep, tmp_path / "deg.html").read_text(encoding="utf-8")
+    assert "数据降级事件" in html
+    assert "page_seo_skipped 1" in html and "l3_semantic_degraded 2" in html
+
+
+def test_degraded_events_zero_or_absent_graceful(tmp_path):
+    """旧报告(无键)与全零 dict 均不渲染提示行(不虚报降级,T11 同款守卫模式)。"""
+    html_old = render(REPORT, tmp_path / "old.html").read_text(encoding="utf-8")
+    assert "数据降级事件" not in html_old
+    rep = json.loads(json.dumps(REPORT))
+    rep["degraded_events"] = {k: 0 for k in DEGRADED_KEYS}
+    html_zero = render(rep, tmp_path / "zero.html").read_text(encoding="utf-8")
+    assert "数据降级事件" not in html_zero

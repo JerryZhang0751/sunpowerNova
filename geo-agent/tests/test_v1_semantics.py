@@ -91,3 +91,8 @@ def test_v1_semantics_mean_dims_total_unchanged():
     # mean 口径特征:SEO 维度 signals 携带聚合标记(区别于代表页的真实信号集)
     assert all(d["signals"].get("aggregation") == "mean_across_pages"
                for d in rep["self_seo"]["dims"])
+    # T13(2026-09-02): 零分值漂移的另一半证明——w1 数据健康,五类降级事件必须全零
+    # (存量 meta.json 无 semantic_degraded 字段 → pydantic 默认 False;评分路径无异常)
+    assert rep["degraded_events"] == {"self_geo_score_skipped": 0, "page_seo_skipped": 0,
+                                      "gap_skipped": 0, "competitor_skipped": 0,
+                                      "l3_semantic_degraded": 0}
