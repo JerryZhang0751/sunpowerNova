@@ -90,6 +90,25 @@ def test_robots_txt_empty():
     result = _robots_allows_ai("")
     assert all(result[bot] is True for bot in result)
 
+# ---- D3 robots 解析修正:通配组 + 精确路径匹配(旧实现 fail-open:忽略 * 组、子串误伤) ----
+
+def test_robots_wildcard_group_respected():
+    """User-agent: * 组的 Disallow: / 必须约束所有 bot(旧实现只查 bot 专属组→全放行)。"""
+    txt = "User-agent: *\nDisallow: /\n"
+    assert _robots_allows_ai(txt) == {"GPTBot": False, "ClaudeBot": False,
+                                      "PerplexityBot": False, "Googlebot": False}
+
+def test_robots_specific_group_overrides_wildcard():
+    """bot 专属组优先于 * 组(REP 惯例):GPTBot 专属 Allow 覆盖 * 的全站 Disallow。"""
+    txt = "User-agent: *\nDisallow: /\n\nUser-agent: GPTBot\nAllow: /\n"
+    r = _robots_allows_ai(txt)
+    assert r["GPTBot"] is True and r["ClaudeBot"] is False
+
+def test_robots_substring_not_overreach():
+    # Disallow: /private 不等于全站封禁(旧子串匹配误伤:"Disallow: /" in "Disallow: /private")
+    txt = "User-agent: GPTBot\nDisallow: /private\n"
+    assert _robots_allows_ai(txt)["GPTBot"] is True
+
 def test_sitemap_presence_and_parsing(iso_snapshots):
     """Test sitemap.xml presence and URL parsing."""
     sitemap_xml = """<?xml version="1.0" encoding="UTF-8"?>
@@ -299,9 +318,11 @@ def test_snapshot_structure(iso_snapshots):
     assert "http_status" in pg
 
 
-# ---- 2026-08-27 P1④ 快照冻结守卫:static_signals 无 degraded 概念,存在即冻结 ----
+# ---- D2 快照 degraded 守卫:干净(含旧格式无 degraded 键)→ 冻结;degraded → 重取 ----
 
-def test_static_signals_existing_snapshot_frozen(iso_snapshots):
+def test_static_signals_old_format_snapshot_still_frozen(iso_snapshots):
+    """旧格式快照(无 degraded 键,如已冻结的 w1):prev.get('degraded')=None=falsy → 冻结。
+    黄金锁兼容:w1 重算必须仍读旧格式冻结快照,不得触发重取。"""
     import json as _json
     from geo.fetch.site_signals import snapshot_dir   # iso_snapshots 已 patch → tmp
     p = snapshot_dir(TEST_WEEK) / "static_signals.json"
@@ -311,3 +332,79 @@ def test_static_signals_existing_snapshot_frozen(iso_snapshots):
         out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
     C.assert_not_called()                                  # 不发任何请求
     assert out["pages"] == [{"url": "FROZEN"}]
+
+def test_snapshot_clean_snapshot_still_frozen(iso_snapshots):
+    """显式 degraded:False 的干净快照 → 冻结零网络(既有冻结语义保留)。"""
+    import json as _json
+    from geo.fetch.site_signals import snapshot_dir
+    p = snapshot_dir(TEST_WEEK) / "static_signals.json"
+    p.write_text(_json.dumps({"week": TEST_WEEK, "rule_version": "t", "site": "s",
+                              "degraded": False,
+                              "pages": [{"url": "CLEAN", "http_status": 200}]}), encoding="utf-8")
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    C.assert_not_called()
+    assert out["pages"] == [{"url": "CLEAN", "http_status": 200}]
+
+def test_snapshot_error_page_marks_degraded_and_refetchable(iso_snapshots):
+    """error 页(http_status=None)→ degraded=true;修复后二次调用重取 → degraded 消解并冻结。"""
+    from geo.fetch.site_signals import snapshot_dir
+    ok_html = "<html><head></head></html>"
+
+    def one_page_down(url):
+        if "about" in url:
+            raise Exception("Network error")
+        return MagicMock(status_code=200, text=ok_html)
+
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        m = MagicMock()
+        m.get.side_effect = one_page_down
+        C.return_value.__enter__.return_value = m
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    assert out["degraded"] is True
+    assert any(p.get("http_status") is None and p.get("error") for p in out["pages"])
+    assert isinstance(out["robots_ai"], dict)              # robots 正常 → 仍是 dict
+
+    # 二次调用:全部 200 → degraded 快照允许重取 → 转干净
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        m2 = MagicMock()
+        m2.get.return_value = MagicMock(status_code=200, text=ok_html)
+        C.return_value.__enter__.return_value = m2
+        out2 = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    assert out2["degraded"] is False
+    assert all(p.get("http_status") == 200 for p in out2["pages"])
+
+    # 三次调用:已干净 → 冻结零网络
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        m3 = MagicMock()
+        C.return_value.__enter__.return_value = m3
+        out3 = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    m3.get.assert_not_called()
+    assert out3["degraded"] is False
+    assert out3["pages"] == out2["pages"]
+
+def test_snapshot_robots_fetch_fail_marks_degraded(iso_snapshots):
+    """robots 拉取异常 → robots_ai=None(D3 未知≠允许)+ degraded=true;修复后重取恢复 dict。"""
+    ok_html = "<html><head></head></html>"
+
+    def robots_down(url):
+        if url.endswith("robots.txt"):
+            raise Exception("robots unreachable")
+        return MagicMock(status_code=200, text=ok_html)
+
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        m = MagicMock()
+        m.get.side_effect = robots_down
+        C.return_value.__enter__.return_value = m
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    assert out["robots_ai"] is None
+    assert out["degraded"] is True
+
+    # 修复后重取 → robots_ai 恢复 dict,快照转干净
+    with patch("geo.fetch.site_signals.httpx.Client") as C:
+        m2 = MagicMock()
+        m2.get.return_value = MagicMock(status_code=200, text=ok_html)
+        C.return_value.__enter__.return_value = m2
+        out2 = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    assert isinstance(out2["robots_ai"], dict)
+    assert out2["degraded"] is False
