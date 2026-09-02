@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from geo.shared.config import REPO, settings
 from geo.shared.models import L1Record, L2Record, L3Source, CompositeScore
+from geo.shared.l1 import iter_l1
 from geo.shared.storage import sha1_url, read_run_records
 from geo.assess.geo_scorer import score_geo
 from geo.assess.seo_scorer import score_seo
@@ -53,13 +54,6 @@ class MentionMetrics:
     @property
     def success_rate(self) -> float | None:
         return round(self.valid / self.planned, 3) if self.planned else None
-
-
-def _iter_l1(week: int):
-    """Iterate over L1 records for a given week from raw data."""
-    root = REPO / "data" / "raw" / f"w{week}"
-    for jp in root.rglob("r*.json"):
-        yield L1Record(**json.loads(jp.read_text(encoding="utf-8")))
 
 
 def _load_l3_source(url: str) -> L3Source | None:
@@ -155,7 +149,7 @@ def competitor_domains_by_count(week: int, n: int = 10) -> list[str]:
     except Exception:
         site_host = ""   # settings 不可用时（如单测 mock）不排除任何域名
     c: Counter = Counter()
-    for l in _iter_l1(week):
+    for l in iter_l1(week, REPO):
         for s in l.l2.cited_sources:
             host = urlparse(s.url).netloc
             if host and host != site_host:
@@ -200,7 +194,7 @@ def assemble(week: int, *, rules_geo=None, rules_seo=None,
         dict: Evaluation report with metrics, scores, and competitive differentials
     """
     rule_version = rule_version or settings.run.rule_version
-    l1s = list(_iter_l1(week))
+    l1s = list(iter_l1(week, REPO))
 
     # Group L1 records by model
     by_model = {}

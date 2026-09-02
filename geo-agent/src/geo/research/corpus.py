@@ -3,17 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from geo.shared.config import REPO
-from geo.shared.models import L1Record, CitedSource, L3Source, PromptRow
+from geo.shared.models import CitedSource, L3Source, PromptRow
+from geo.shared.l1 import iter_l1
 from geo.shared.storage import sha1_url
 from geo.research.models import ResearchItem, ResearchCorpus, Coverage
-
-def _iter_l1(week: int, repo: Path) -> list[L1Record]:
-    base = repo / "data" / "raw" / f"w{week}"
-    out = []
-    if not base.exists(): return out
-    for p in sorted(base.rglob("r*.json")):
-        out.append(L1Record(**json.loads(p.read_text(encoding="utf-8"))))
-    return out
 
 def _load_prompts(repo: Path) -> dict[str, PromptRow]:
     import csv
@@ -39,7 +32,7 @@ def _load_gsc_queries(week: int, repo: Path) -> list[str]:
 
 def build_corpus(week: int, repo: Path = REPO) -> ResearchCorpus:
     prompts = _load_prompts(repo)
-    l1s = _iter_l1(week, repo)
+    l1s = list(iter_l1(week, repo))
     items, resolved, missing, js, total_cited = [], 0, 0, 0, 0
     for l1 in l1s:
         src_pairs = []

@@ -4,7 +4,7 @@ import json
 import csv
 from pathlib import Path
 from unittest.mock import patch, MagicMock
-from geo.assess.analyst import assemble, MentionMetrics, _iter_l1
+from geo.assess.analyst import assemble, MentionMetrics
 from geo.shared.models import L1Record, L2Record, CitedSource
 
 
@@ -115,7 +115,7 @@ def test_metrics_denominators():
     ]
 
     # Mock the L1 iteration and new helper functions
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -156,7 +156,7 @@ def test_multi_model_metrics():
         mk_l1(model="doubao", prompt_id="B02", run=2, l2=mk_l2(mentioned=True, cited=False, position=None)),
     ]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -190,7 +190,7 @@ def test_avg_position_calculation():
         mk_l1(model="qwen", prompt_id="B02", run=4, l2=mk_l2(mentioned=True, cited=False, position=None)),
     ]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -216,7 +216,7 @@ def test_sov_calculation():
         mk_l1(model="qwen", prompt_id="B02", run=3, l2=mk_l2(mentioned=True, cited=True, competitors=[])),
     ]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -235,7 +235,7 @@ def test_sov_direction_more_competitors_lower_share():
     """方向性反回归(审查#2 核心): 提及不变、竞品更多 → SOV 必须更低且∈[0,1]。
     旧实现把"平均竞品数"当 SOV 且越高分越高——竞品越多品牌分反而越高。"""
     def _sov(records):
-        with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+        with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
             with patch('geo.assess.analyst._load_l3_source', return_value=None):
                 with patch('geo.assess.analyst._load_static_signals', return_value={}):
                     with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -256,7 +256,7 @@ def test_sov_direction_more_competitors_lower_share():
 def test_sov_zero_when_no_mentions():
     """品牌与竞品都无提及 → SOV=0(分母空安全)。"""
     records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=False, competitors=[]))]
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -284,7 +284,7 @@ def test_report_structure():
     """Test that report has required structure and fields."""
     records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True, cited=True, position=1))]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):  # No L3 data available
             with patch('geo.assess.analyst._load_static_signals', return_value={}):  # No static signals
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):  # No GSC data
@@ -329,7 +329,7 @@ def test_report_determinism():
 
     reports = []
     for i in range(3):  # Generate report 3 times
-        with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+        with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
             with patch('geo.assess.analyst._load_l3_source', return_value=None):
                 with patch('geo.assess.analyst._load_static_signals', return_value={}):
                     with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -357,7 +357,7 @@ def test_csv_output_structure():
     def mock_csv_write(content):
         csv_written.append(content)
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -378,7 +378,7 @@ def test_empty_records():
     """Test behavior with no L1 records."""
     records = []
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -397,7 +397,7 @@ def test_rule_version_binding():
     """Test that report binds to rule_version for determinism."""
     records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True, cited=True, position=1))]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -422,7 +422,7 @@ def test_competitor_counting():
               l2=mk_l2(mentioned=True, cited=True, competitors=["Tesla"])),
     ]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -445,7 +445,7 @@ def test_sentiment_passthrough():
               l2=mk_l2(mentioned=True, cited=False, sentiment="neg")),
     ]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -463,7 +463,7 @@ def test_file_output_structure():
     """Test that output files are created in correct structure."""
     records = [mk_l1(model="qwen", prompt_id="B02", run=1, l2=mk_l2(mentioned=True, cited=True, position=1))]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -487,7 +487,7 @@ def test_aggregation_across_prompts():
         mk_l1(model="qwen", prompt_id="D01", run=1, l2=mk_l2(mentioned=True, cited=False, position=None)),
     ]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
@@ -558,7 +558,7 @@ def test_real_score_calculation_with_data():
               l2=mk_l2(mentioned=True, cited=True, position=1, competitors=["Enphase", "SolarEdge"])),
     ]
 
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=mock_l3):
             with patch('geo.assess.analyst._load_static_signals', return_value=mock_static):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value=mock_gsc):
@@ -608,7 +608,7 @@ def test_score_integration_determinism():
 
     reports = []
     for i in range(3):  # Generate 3 times
-        with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+        with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
             with patch('geo.assess.analyst._load_l3_source', return_value=mock_l3):
                 with patch('geo.assess.analyst._load_static_signals', return_value=mock_static):
                     with patch('geo.assess.analyst._load_gsc_snapshot', return_value=mock_gsc):
@@ -638,7 +638,7 @@ def _manifest(week=94, model="qwen", ok=10, fail=5):
     return recs
 
 def _assemble_with(records, manifest_recs):
-    with patch('geo.assess.analyst._iter_l1', return_value=iter(records)):
+    with patch('geo.assess.analyst.iter_l1', return_value=iter(records)):
         with patch('geo.assess.analyst._load_l3_source', return_value=None):
             with patch('geo.assess.analyst._load_static_signals', return_value={}):
                 with patch('geo.assess.analyst._load_gsc_snapshot', return_value={}):
