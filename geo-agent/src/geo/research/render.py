@@ -18,6 +18,13 @@ def _valid_num(v) -> bool:
 def _fmt_val(v) -> str:
     return v if _valid_num(v) else "数据缺失"
 
+def _conf_disp(vf: dict) -> str:
+    """置信度呈现:结论 dict 带 budget_exhausted 键(global/platform,D5 预算耗尽)时
+    追加「（预算耗尽:原因）」后缀,与真查无(无键)从原因上区分;无键逐字节不变。"""
+    conf = vf.get("confidence", "—")
+    be = vf.get("budget_exhausted")
+    return f"{conf}（预算耗尽:{be}）" if be else conf
+
 def _rule_version(feed: dict | None) -> str:
     rv = (feed or {}).get("rule_version")
     if rv:
@@ -96,10 +103,10 @@ def render_profiles(platforms_metrics: dict, verified_facts: dict, week: int, ba
         vf = verified_facts.get(m.capitalize()) or verified_facts.get(m, {})
         if vf:
             L.append(f"- 爬虫名/收录(联网查证): {vf.get('answer','—')}")
-            L.append(f"  来源：{', '.join(vf.get('sources',[])) or '—'} | 置信度：{vf.get('confidence','—')}")
+            L.append(f"  来源：{', '.join(vf.get('sources',[])) or '—'} | 置信度：{_conf_disp(vf)}")
         L.append("")
     L.append("## 附录：主流 AI 平台爬虫名对照表（Tier2 联网查证）")
     for plat, vf in verified_facts.items():
         if plat.lower() in ("chatgpt","gemini","perplexity","claude"):
-            L.append(f"- {plat}: {vf.get('answer','—')} [{vf.get('confidence','—')}]")
+            L.append(f"- {plat}: {vf.get('answer','—')} [{_conf_disp(vf)}]")
     return "\n".join(L) + "\n"
