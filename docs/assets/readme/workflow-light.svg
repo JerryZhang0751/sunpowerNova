@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="560" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">SunPower Nova 周迭代流程</title>
+  <desc id="desc">观察、诊断、行动、学习四个阶段组成的周迭代流程。自动流程生成草稿后，由人工审核并独立发布到 SunHestia。</desc>
+
+  <rect width="1200" height="560" rx="24" fill="#ffffff"/>
+
+  <g font-family="Inter, 'Segoe UI', 'PingFang SC', 'Noto Sans SC', sans-serif">
+    <path d="M1080 210 C1080 48 120 48 120 210" fill="none" stroke="#e3e8ef" stroke-width="3" stroke-linecap="round" stroke-dasharray="8 9"/>
+    <path d="M120 210 L112 194 L128 194 Z" fill="#e3e8ef"/>
+    <text x="600" y="43" fill="#41506b" font-size="15" font-weight="500" text-anchor="middle">下一周 · 用新证据验证变化</text>
+
+    <g fill="#41506b" font-size="17" font-weight="500" text-anchor="middle">
+      <text x="120" y="102">看见真实回答</text>
+      <text x="440" y="102">找到证据差距</text>
+      <text x="760" y="102">形成可审草稿</text>
+      <text x="1080" y="102">沉淀下周策略</text>
+    </g>
+
+    <g>
+      <rect x="30" y="137" width="180" height="42" rx="21" fill="#f6f8fb" stroke="#e3e8ef"/>
+      <rect x="350" y="137" width="180" height="42" rx="21" fill="#f6f8fb" stroke="#e3e8ef"/>
+      <rect x="670" y="137" width="180" height="42" rx="21" fill="#f6f8fb" stroke="#e3e8ef"/>
+      <rect x="990" y="137" width="180" height="42" rx="21" fill="#f6f8fb" stroke="#e3e8ef"/>
+      <g fill="#0b1f3a" font-size="16" font-weight="500" text-anchor="middle">
+        <text x="120" y="164">采集 · Collect</text>
+        <text x="440" y="164">快照 · Snapshot</text>
+        <text x="760" y="164">研究 · Research</text>
+        <text x="1080" y="164">规则 · RulesKeeper</text>
+      </g>
+    </g>
+
+    <line x1="120" y1="260" x2="1080" y2="260" stroke="#e3e8ef" stroke-width="14" stroke-linecap="round"/>
+    <g fill="none" stroke="#0b1f3a" stroke-width="3" stroke-linecap="round">
+      <line x1="172" y1="260" x2="388" y2="260"/>
+      <line x1="492" y1="260" x2="708" y2="260"/>
+      <line x1="812" y1="260" x2="1028" y2="260"/>
+    </g>
+    <g fill="#0b1f3a">
+      <path d="M390 260 L374 252 L374 268 Z"/>
+      <path d="M710 260 L694 252 L694 268 Z"/>
+      <path d="M1030 260 L1014 252 L1014 268 Z"/>
+    </g>
+
+    <g fill="#0b1f3a">
+      <circle cx="120" cy="260" r="52"/>
+      <circle cx="440" cy="260" r="52"/>
+      <circle cx="760" cy="260" r="52"/>
+      <circle cx="1080" cy="260" r="52"/>
+    </g>
+    <g font-weight="600" text-anchor="middle">
+      <g fill="#f5a524" font-size="15">
+        <text x="120" y="249">01</text>
+        <text x="440" y="249">02</text>
+        <text x="760" y="249">03</text>
+        <text x="1080" y="249">04</text>
+      </g>
+      <g fill="#ffffff" font-size="22">
+        <text x="120" y="280">观察</text>
+        <text x="440" y="280">诊断</text>
+        <text x="760" y="280">行动</text>
+        <text x="1080" y="280">学习</text>
+      </g>
+    </g>
+
+    <text x="120" y="331" fill="#41506b" font-size="14" font-weight="500" text-anchor="middle">采集门 ≥ 95%</text>
+
+    <g>
+      <rect x="30" y="354" width="180" height="42" rx="21" fill="#f6f8fb" stroke="#e3e8ef"/>
+      <rect x="350" y="354" width="180" height="42" rx="21" fill="#f6f8fb" stroke="#e3e8ef"/>
+      <rect x="670" y="354" width="180" height="42" rx="21" fill="#f6f8fb" stroke="#e3e8ef"/>
+      <rect x="990" y="354" width="180" height="42" rx="21" fill="#f6f8fb" stroke="#e3e8ef"/>
+      <g fill="#0b1f3a" font-size="16" font-weight="500" text-anchor="middle">
+        <text x="120" y="381">抓取 · Fetch</text>
+        <text x="440" y="381">评估 · Assess</text>
+        <text x="760" y="381">生成 · Generate</text>
+        <text x="1080" y="381">报告 · Report</text>
+      </g>
+    </g>
+
+    <path d="M760 397 V438 L685 475" fill="none" stroke="#41506b" stroke-width="2" stroke-linecap="round" stroke-dasharray="7 7"/>
+    <path d="M685 475 L695 461 L702 476 Z" fill="#41506b"/>
+    <text x="760" y="431" fill="#41506b" font-size="14" font-weight="500" text-anchor="middle">人工发布路径</text>
+
+    <rect x="600" y="472" width="170" height="44" rx="22" fill="#f5a524"/>
+    <text x="685" y="500" fill="#0b1f3a" font-size="16" font-weight="600" text-anchor="middle">人工审核</text>
+    <line x1="772" y1="494" x2="830" y2="494" stroke="#41506b" stroke-width="2" stroke-linecap="round" stroke-dasharray="7 7"/>
+    <path d="M832 494 L816 486 L816 502 Z" fill="#41506b"/>
+    <rect x="832" y="472" width="188" height="44" rx="22" fill="#1f6feb"/>
+    <text x="926" y="500" fill="#ffffff" font-size="16" font-weight="600" text-anchor="middle">独立发布到 SunHestia</text>
+  </g>
+</svg>
