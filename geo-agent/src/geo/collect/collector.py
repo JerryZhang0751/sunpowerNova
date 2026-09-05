@@ -1,13 +1,13 @@
 from __future__ import annotations
 import json, time, logging
+import httpx
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tenacity import retry, stop_after_attempt, wait_exponential
 from geo.shared.config import settings
 from geo.shared.models import L1Record, L2Record, RunRecord, PromptRow
 from geo.shared.storage import l1_path, append_run_records, read_run_records
 from geo.shared.weeks import validate_production_week
 from geo.collect.prompts import load_prompts, PROMPT_SET_VERSION
-from geo.collect.qwen_client import collect_qwen
+from geo.collect.qwen_client import collect_qwen, QwenAPIError
 from geo.collect.doubao_client import collect_doubao
 from geo.collect.zhipu_client import collect_zhipu
 from geo.collect.l2_parser import parse_l2
@@ -24,6 +24,35 @@ class InvalidCollection(ValueError):
     (2026-08-25 二次审查#5: 否则超时空答能以 status=ok 绕过 95% 门)。"""
 
 
+# Bug#4(w4): DashScope/网络瞬时故障(如 "Response ended prematurely")单 pass 内
+# 重试,免整轮裸跑续跑;API 级错误(配额/鉴权/HTTP 4xx5xx)不重试——烧额度且无效。
+RETRY_ATTEMPTS = 3
+RETRY_BACKOFF_S = 8.0
+_RETRY_MSG = ("ended prematurely", "connection", "timed out")
+_RETRYABLE_EXC = (httpx.TransportError, ConnectionError, TimeoutError)
+_NO_RETRY_EXC = (QwenAPIError, InvalidCollection, httpx.HTTPStatusError)
+
+def _is_retryable(e: Exception) -> bool:
+    if isinstance(e, _NO_RETRY_EXC):
+        return False
+    if isinstance(e, _RETRYABLE_EXC):
+        return True
+    s = str(e).lower()          # dashscope SDK 异常类型不透明 → 消息子串兜底
+    return any(p in s for p in _RETRY_MSG)
+
+def _collect_with_retry(model: str, prompt: str) -> dict:
+    for attempt in range(1, RETRY_ATTEMPTS + 1):
+        try:
+            return CLIENTS[model](prompt)
+        except Exception as e:
+            if attempt >= RETRY_ATTEMPTS or not _is_retryable(e):
+                raise
+            log.warning("collect %s 第 %d/%d 次传输类失败,%.0fs 后重试: %s",
+                        model, attempt, RETRY_ATTEMPTS, RETRY_BACKOFF_S, e)
+            time.sleep(RETRY_BACKOFF_S)
+    raise AssertionError("unreachable")
+
+
 def _l1_valid(p) -> bool:
     """盘上 L1 有效判据: 可解析且带非空答案。
 
@@ -36,9 +65,8 @@ def _l1_valid(p) -> bool:
         return False
 
 
-@retry(reraise=True, stop=stop_after_attempt(2), wait=wait_exponential(min=2, max=10))
 def _one(model, row, run, week, rule_version, brand, comp):
-    out = CLIENTS[model](row.prompt)
+    out = _collect_with_retry(model, row.prompt)
     if out.get("timeout"):
         raise InvalidCollection(f"{model} 响应超时(timeout=True),截断答案不可用")
     if not (out.get("answer") or "").strip():
