@@ -1,11 +1,11 @@
-version: geo-seo-v5
+version: geo-seo-v4
 composite: geo
 weights:
-  citability: 27
-  brand: 19
+  citability: 25
+  brand: 20
   eeat: 20
   technical_geo: 15
-  schema: 9
+  schema: 10
   platform: 10
 signals:
   citability:
@@ -58,42 +58,6 @@ severity_bands:
   - 100
 p2plus_missing: []
 entries:
-- id: remove-faq_block_count
-  type: signal_remove
-  target: citability
-  signal: faq_block_count
-  status: draft
-  statement: formats.qa 被检索源唯一页 share 5.9% (unique_n=17, platforms=1)
-  evidence:
-    bucket: formats.qa
-    history:
-    - week: 2
-      with_n: 3
-      unique_n: 23
-      share: 0.1304
-      platforms:
-      - doubao
-    - week: 3
-      with_n: 3
-      unique_n: 25
-      share: 0.12
-      platforms:
-      - doubao
-    - week: 4
-      with_n: 1
-      unique_n: 17
-      share: 0.0588
-      platforms: &id001
-      - doubao
-    weeks:
-    - 2
-    - 3
-    - 4
-    share: 0.0588
-    unique_n: 17
-    platforms: *id001
-  since_version: null
-  decided_at_week: 4
 - id: add-has_breadcrumblist
   type: signal_add
   target: schema
@@ -113,13 +77,42 @@ entries:
       with_n: 7
       unique_n: 25
       share: 0.28
-      platforms: &id002
+      platforms: &id001
       - doubao
     weeks:
     - 2
     - 3
     share: 0.28
     unique_n: 25
+    platforms: *id001
+  since_version: null
+  decided_at_week: 3
+- id: remove-faq_block_count
+  type: signal_remove
+  target: citability
+  signal: faq_block_count
+  status: draft
+  statement: formats.qa 被检索源唯一页 share 12.0% (unique_n=25, platforms=1)
+  evidence:
+    bucket: formats.qa
+    history:
+    - week: 2
+      with_n: 3
+      unique_n: 23
+      share: 0.1304
+      platforms:
+      - doubao
+    - week: 3
+      with_n: 3
+      unique_n: 25
+      share: 0.12
+      platforms: &id002
+      - doubao
+    weeks:
+    - 2
+    - 3
+    share: 0.12
+    unique_n: 25
     platforms: *id002
   since_version: null
-  decided_at_week: 4
+  decided_at_week: 3
