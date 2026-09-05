@@ -19,6 +19,11 @@ SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 # Kimi hang; every httpx call site in the repo sets 20-300s).
 GSC_TIMEOUT_S = 60.0
 
+# Bug#3(w4): v2rayN 节点对 Google 出口分钟级双态振荡(TLS 1s↔35s),GSC 流程=
+# token+query 两次独立 TLS,单次落坏窗口即 60s 超时——拉取段重试提命中率。
+SNAPSHOT_ATTEMPTS = 3
+SNAPSHOT_RETRY_BACKOFF_S = 15.0
+
 # Bug#2(w4): .env 历史值 'geo-agent/gsc-*.json' 是仓库根相对——按 CWD 解析时
 # 换个目录启动即 FileNotFoundError。回退链消灭该陷阱,三种历史用法全兼容。
 def _resolve_gsc_key(v: str) -> Path:
@@ -66,12 +71,22 @@ def snapshot_gsc(week:int, rule_version:str, days=28) -> dict:
     site = _gsc_site_url()
     end = time.strftime("%Y-%m-%d", time.gmtime()); start = time.strftime("%Y-%m-%d", time.gmtime(time.time()-days*86400))
     out = {"week":week, "rule_version":rule_version, "site":site, "rows":[], "degraded":False}
-    try:
-        svc = _build_service()
-        body = {"startDate":start, "endDate":end, "dimensions":["query"], "rowLimit":1000}
-        res = svc.searchanalytics().query(siteUrl=site, body=body).execute()
-        out["rows"] = res.get("rows", [])
-    except Exception as e:
-        out["degraded"] = True; out["error"] = f"{type(e).__name__}: {e}"
+    last_err: Exception | None = None
+    for attempt in range(1, SNAPSHOT_ATTEMPTS + 1):
+        try:
+            svc = _build_service()
+            body = {"startDate":start, "endDate":end, "dimensions":["query"], "rowLimit":1000}
+            res = svc.searchanalytics().query(siteUrl=site, body=body).execute()
+            out["rows"] = res.get("rows", [])
+            last_err = None
+            break
+        except Exception as e:
+            last_err = e
+            log.warning("w%s gsc 快照拉取第 %d/%d 次失败: %s",
+                        week, attempt, SNAPSHOT_ATTEMPTS, e)
+            if attempt < SNAPSHOT_ATTEMPTS:
+                time.sleep(SNAPSHOT_RETRY_BACKOFF_S)
+    if last_err is not None:
+        out["degraded"] = True; out["error"] = f"{type(last_err).__name__}: {last_err}"
     atomic_write_text(out_path, json.dumps(out, ensure_ascii=False, indent=2))
     return out

@@ -6,7 +6,8 @@ from geo.fetch.gsc import snapshot_gsc, _build_service, _resolve_gsc_key
 from geo.shared.config import settings
 from geo.shared.weeks import TEST_WEEK
 
-def test_gsc_degrades_on_auth_error(iso_snapshots):
+def test_gsc_degrades_on_auth_error(iso_snapshots, monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
     with patch("geo.fetch.gsc._build_service", side_effect=Exception("403 forbidden")):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is True and out["rows"] == []
@@ -85,8 +86,9 @@ def test_gsc_clean_snapshot_is_frozen(iso_snapshots):
     assert out["rows"] == [{"keys": ["frozen"]}]          # 返回现有,未重取
     svc.searchanalytics().query().execute.assert_not_called()
 
-def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots):
+def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots, monkeypatch):
     """08-13 的 SSLEOFError 合法重跑 = degraded 例外口径:degraded 快照必须允许重取。"""
+    monkeypatch.setattr("time.sleep", lambda s: None)
     import json as _json
     from geo.fetch.gsc import snapshot_dir
     p = snapshot_dir(TEST_WEEK) / "gsc.json"
@@ -99,8 +101,9 @@ def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is False and out["rows"] == [{"keys": ["ok"]}]
 
-def test_gsc_corrupted_snapshot_treated_as_miss(iso_snapshots):
+def test_gsc_corrupted_snapshot_treated_as_miss(iso_snapshots, monkeypatch):
     """损坏快照(截断/非法 JSON)不得让守卫抛 JSONDecodeError 硬停管线——视为缺失重取并覆写。"""
+    monkeypatch.setattr("time.sleep", lambda s: None)
     import json as _json
     from geo.fetch.gsc import snapshot_dir
     p = snapshot_dir(TEST_WEEK) / "gsc.json"
@@ -185,3 +188,25 @@ def test_build_service_resolves_relative_key(tmp_path):
                     _build_service()
     mc.assert_called_once()
     assert Path(mc.call_args.args[0]) == geo_dir / "gsc-rel.json"
+
+
+# ---- Bug#3(w4): snapshot 拉取段管线内重试 ------------------------------------
+
+def test_gsc_retry_succeeds_third_attempt(iso_snapshots, monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    svc = MagicMock()
+    svc.searchanalytics().query().execute.side_effect = [
+        TimeoutError("timed out"), TimeoutError("timed out"),
+        {"rows": [{"keys": ["solar battery"], "clicks": 3, "impressions": 50, "ctr": 0.06, "position": 4.2}]}]
+    with patch("geo.fetch.gsc._build_service", return_value=svc):
+        out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
+    assert out["degraded"] is False and len(out["rows"]) == 1
+
+def test_gsc_retry_exhausted_degrades(iso_snapshots, monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    svc = MagicMock()
+    svc.searchanalytics().query().execute.side_effect = TimeoutError("timed out")
+    with patch("geo.fetch.gsc._build_service", return_value=svc):
+        out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
+    assert out["degraded"] is True and "TimeoutError" in out["error"]
+    assert svc.searchanalytics().query().execute.call_count == 3

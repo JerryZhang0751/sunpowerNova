@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, logging, httpx
+import json, logging, time, httpx
 from bs4 import BeautifulSoup
 from geo.shared.config import settings
 from geo.shared.storage import snapshot_dir
@@ -99,6 +99,11 @@ def _fetch_sitemap_urls(c, site: str) -> tuple[bool, list[str]]:
     return False, page_urls
 
 
+# Bug#3(w4): 与 gsc.py 同构的拉取段重试(模块私有常量,不跨导入——避免 google 依赖)。
+SNAPSHOT_ATTEMPTS = 3
+SNAPSHOT_RETRY_BACKOFF_S = 15.0
+
+
 def snapshot_static_signals(week:int, rule_version:str) -> dict:
     out_path = snapshot_dir(week)/"static_signals.json"
     if out_path.exists():                       # 干净才冻结(D2);旧格式无 degraded 键=falsy=冻结(黄金锁兼容)
@@ -112,36 +117,42 @@ def snapshot_static_signals(week:int, rule_version:str) -> dict:
         if prev is not None:
             log.warning("w%s static_signals 快照 degraded,重取(robots 失败或 error 页)", week)
     site = settings.targets["site"]["url"]; pages = settings.targets["site"]["pages"]
-    out = {"week":week, "rule_version":rule_version, "site":site, "pages":[]}
-    robots_failed = False
-    with httpx.Client(timeout=20.0, follow_redirects=True, proxy=settings.proxy) as c:
-        try:
-            r = c.get(f"{site}/robots.txt")
-            # 5xx=服务器错误页(HTML body,httpx 不 raise)≠真实 robots → 拉取失败进 degraded;
-            # 4xx(如 404)=REP 合法"无限制"→ 读 body(空/HTML 无组)→ 全允许,不算失败
-            robots_failed = r.status_code >= 500
-            robots = r.text
-        except Exception:
-            robots = None; robots_failed = True      # D3:未知≠允许,robots_ai=None→评分记 0
-        out["robots_ai"] = None if robots_failed else _robots_allows_ai(robots)
-        # sitemap：sitemap-index.xml(Astro/标准)→回退 sitemap.xml；按 <sitemap>/<url> 判真并跟随 index
-        sitemap_present, sitemap_urls = _fetch_sitemap_urls(c, site)
-        out["sitemap_present"] = sitemap_present
-        norm_sitemap_urls = {u.rstrip("/") for u in sitemap_urls if u}
-        for path in pages:
-            url = site.rstrip("/") + path
-            rec = {"url":url, "path":path, "https": url.startswith("https://")}
+    for attempt in range(1, SNAPSHOT_ATTEMPTS + 1):
+        out = {"week":week, "rule_version":rule_version, "site":site, "pages":[]}
+        robots_failed = False
+        with httpx.Client(timeout=20.0, follow_redirects=True, proxy=settings.proxy) as c:
             try:
-                r = c.get(url); rec["http_status"]=r.status_code
-                soup = BeautifulSoup(r.text,"lxml")
-                st = extract_structural(soup)
-                rec.update(st)
-                rec["has_viewport"] = bool(soup.find("meta", attrs={"name":"viewport"}))
-                rec["in_sitemap"] = (url.rstrip("/") in norm_sitemap_urls) if norm_sitemap_urls else False
-            except Exception as e:
-                rec["http_status"]=None; rec["error"]=f"{type(e).__name__}: {e}"
-            out["pages"].append(rec)
-    out["degraded"] = robots_failed or any(          # D2:degraded 快照可重取
-        p.get("error") or p.get("http_status") != 200 for p in out["pages"])
+                r = c.get(f"{site}/robots.txt")
+                # 5xx=服务器错误页(HTML body,httpx 不 raise)≠真实 robots → 拉取失败进 degraded;
+                # 4xx(如 404)=REP 合法"无限制"→ 读 body(空/HTML 无组)→ 全允许,不算失败
+                robots_failed = r.status_code >= 500
+                robots = r.text
+            except Exception:
+                robots = None; robots_failed = True      # D3:未知≠允许,robots_ai=None→评分记 0
+            out["robots_ai"] = None if robots_failed else _robots_allows_ai(robots)
+            # sitemap：sitemap-index.xml(Astro/标准)→回退 sitemap.xml；按 <sitemap>/<url> 判真并跟随 index
+            sitemap_present, sitemap_urls = _fetch_sitemap_urls(c, site)
+            out["sitemap_present"] = sitemap_present
+            norm_sitemap_urls = {u.rstrip("/") for u in sitemap_urls if u}
+            for path in pages:
+                url = site.rstrip("/") + path
+                rec = {"url":url, "path":path, "https": url.startswith("https://")}
+                try:
+                    r = c.get(url); rec["http_status"]=r.status_code
+                    soup = BeautifulSoup(r.text,"lxml")
+                    st = extract_structural(soup)
+                    rec.update(st)
+                    rec["has_viewport"] = bool(soup.find("meta", attrs={"name":"viewport"}))
+                    rec["in_sitemap"] = (url.rstrip("/") in norm_sitemap_urls) if norm_sitemap_urls else False
+                except Exception as e:
+                    rec["http_status"]=None; rec["error"]=f"{type(e).__name__}: {e}"
+                out["pages"].append(rec)
+        out["degraded"] = robots_failed or any(      # D2:degraded 快照可重取
+            p.get("error") or p.get("http_status") != 200 for p in out["pages"])
+        if not out["degraded"]:
+            break
+        if attempt < SNAPSHOT_ATTEMPTS:
+            log.warning("w%s static 快照第 %d/%d 轮 degraded,重试", week, attempt, SNAPSHOT_ATTEMPTS)
+            time.sleep(SNAPSHOT_RETRY_BACKOFF_S)
     atomic_write_text(out_path, json.dumps(out, ensure_ascii=False, indent=2))
     return out
