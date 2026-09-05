@@ -1,0 +1,183 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: "Solar & Battery Glossary: Core Terms for European Homeowners",
+  description:
+    "Core solar and battery terminology for European homeowners — self-consumption, LiFePO4 and hybrid inverters — each definition tied to the hardware facts of a real residential system.",
+  inLanguage: "en",
+  mainEntityOfPage: "https://sunhestia.com/news/glossary/",
+  author: { "@type": "Organization", name: "SunHestia", url: "https://sunhestia.com" },
+  publisher: { "@type": "Organization", name: "SunHestia", url: "https://sunhestia.com" },
+  about: ["Self-consumption", "LiFePO4", "Hybrid inverter"],
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "What does a residential solar and storage system include?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Typically rooftop solar panels, a hybrid inverter, and a home battery. The panels produce electricity, the inverter routes it to your home or the battery, and the battery stores surplus for use after dark.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How big should my battery be?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Battery size should match your evening electricity use. A common starting point for a detached home is 5–10 kWh, stackable to around 15 kWh. Sizing is based on your actual consumption, not a one-size-fits-all figure.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What warranty do you offer?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "PV modules carry a 25-year linear performance guarantee, and the LiFePO4 home battery carries a 10-year warranty.",
+      },
+    },
+  ],
+};
+---
+<Layout
+  title="Solar & Battery Glossary: Core Terms · SunHestia"
+  description="Core solar and battery terminology for European homeowners — self-consumption, LiFePO4 and hybrid inverters — each definition tied to the hardware facts of a real residential system."
+  path="news/glossary"
+  jsonLd={[articleSchema, faqSchema]}
+>
+  <section class="section">
+    <div class="wrap prose">
+      <div style="color:var(--c-ink-soft); font-size:.9rem">2026-09 · SunHestia</div>
+      <h1>Solar &amp; Battery Glossary: Core Terms for European Homeowners</h1>
+
+      <p>
+        This hub defines the core terminology behind SunHestia residential
+        solar photovoltaic and battery storage systems, which are built around
+        self-consumption for owner-occupiers of detached houses across Europe.
+        Each definition is followed by the hardware facts it connects to, so a
+        term on the page always maps to a real component of the system.
+      </p>
+
+      <h2>Self-consumption</h2>
+      <p>
+        <strong>Self-consumption</strong> is the share of the electricity your
+        solar panels produce that you use in your own home, rather than
+        exporting to the grid. It is the single number that most influences the
+        value of a residential solar system; storage shifts surplus to when it
+        is needed, sharply increasing self-consumption.
+      </p>
+      <p>
+        In practice: solar works without a battery, but without storage most
+        daytime surplus is exported to the grid. A battery lets you keep and
+        use that energy yourself, which is usually better value than selling
+        low and buying back high.
+      </p>
+
+      <h2>LiFePO4</h2>
+      <p>
+        <strong>LiFePO4</strong> — lithium iron phosphate — is the battery
+        chemistry used for SunHestia home batteries. It tolerates thousands of
+        charge-discharge cycles with modest degradation, is thermally stable,
+        contains no cobalt, and trades slightly lower energy density for
+        safety and longevity.
+      </p>
+      <p>
+        The SunHestia Home Battery uses this cobalt-free chemistry and carries
+        a 10-year warranty.
+      </p>
+
+      <h2>Hybrid inverter</h2>
+      <p>
+        <strong>Hybrid inverter</strong> — the control component of the
+        system: it converts solar DC power into the alternating current the
+        home uses, directs surplus into the battery, and only draws from the
+        grid when needed.
+      </p>
+      <p>
+        SunHestia's Hybrid Inverter &amp; Energy Manager adds real-time app
+        monitoring of production, storage and consumption, supports time-of-use
+        scheduling, and is backup-capable for short outages.
+      </p>
+
+      <h2>Quick-reference spec cards</h2>
+
+      <h3>SunHestia Home Battery</h3>
+      <ul>
+        <li><strong>Chemistry:</strong> LiFePO4 (lithium iron phosphate), cobalt-free</li>
+        <li><strong>Capacity:</strong> 5–15 kWh</li>
+        <li><strong>Modularity:</strong> modular from 5 kWh, stackable to 15 kWh</li>
+        <li><strong>Warranty:</strong> 10 years</li>
+        <li><strong>Cycle life:</strong> designed for thousands of charge cycles</li>
+        <li><strong>Mounting:</strong> wall or floor mounted, indoor or covered outdoor</li>
+        <li><strong>Inverter compatibility:</strong> built-in hybrid inverter compatibility</li>
+      </ul>
+
+      <h3>SunHestia Solar PV Modules</h3>
+      <ul>
+        <li><strong>Cell type:</strong> high-efficiency monocrystalline</li>
+        <li><strong>Power:</strong> 400–450 W</li>
+        <li><strong>Colour:</strong> black, low-profile aesthetic for pitched roofs</li>
+        <li><strong>Performance guarantee:</strong> 25 years</li>
+        <li>
+          <strong>Environmental resistance:</strong> resistant to salt mist and
+          ammonia — suited to coastal and rural sites
+        </li>
+      </ul>
+
+      <h3>Hybrid Inverter &amp; Energy Manager</h3>
+      <ul>
+        <li><strong>Type:</strong> smart hybrid inverter</li>
+        <li>
+          <strong>Function:</strong> converts solar DC power for the home,
+          routes power between panels, battery, home and grid, and only draws
+          from the grid when needed
+        </li>
+        <li><strong>Monitoring:</strong> real-time app monitoring of production, storage and consumption</li>
+        <li><strong>Scheduling:</strong> supports time-of-use scheduling</li>
+        <li><strong>Backup:</strong> backup-capable for short outages</li>
+      </ul>
+
+      <h2>Frequently asked questions</h2>
+
+      <h3>What does a residential solar and storage system include?</h3>
+      <p>
+        Typically rooftop solar panels, a hybrid inverter, and a home battery.
+        The panels produce electricity, the inverter routes it to your home or
+        the battery, and the battery stores surplus for use after dark.
+      </p>
+
+      <h3>How big should my battery be?</h3>
+      <p>
+        Battery size should match your evening electricity use. A common
+        starting point for a detached home is 5–10 kWh, stackable to around
+        15 kWh. Sizing is based on your actual consumption, not a
+        one-size-fits-all figure.
+      </p>
+
+      <h3>What warranty do you offer?</h3>
+      <p>
+        PV modules carry a 25-year linear performance guarantee, and the
+        LiFePO4 home battery carries a 10-year warranty.
+      </p>
+
+      <p>
+        Want the full walkthrough? Read
+        <a href="/news/self-consumption-guide/">Solar Self-Consumption: The
+        Homeowner's Guide</a>.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .prose h3 {
+    margin-top: 1.5rem;
+    font-size: 1.05rem;
+  }
+</style>
