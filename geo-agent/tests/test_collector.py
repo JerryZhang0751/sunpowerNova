@@ -1,7 +1,9 @@
 import json
+import httpx
 import geo.collect.collector as collector
 import geo.shared.storage as storage
 from geo.collect.collector import run_collection
+from geo.collect.qwen_client import QwenAPIError
 
 def _fake_collect(prompt, **k):
     return {"answer":"A SunHestia","search_results":[{"url":"https://e.com","title":""}],
@@ -163,3 +165,52 @@ def test_qwen_api_error_preserved_in_manifest(tmp_path, monkeypatch):
     lines = read_run_records(96)
     assert any(l.model == "qwen" and l.status == "failed"
                and "AllocationQuota.FreeTierOnly" in l.error for l in lines)
+
+# ---- Bug#4(w4): 传输类瞬时故障单 pass 内重试 ---------------------------------
+
+def test_retryable_transport_error_retried_to_success(tmp_path, monkeypatch):
+    calls = {"n": 0}
+    def flaky(prompt, **k):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise RuntimeError("Response ended prematurely")
+        return {"answer": "ok text", "usage": {}, "elapsed_s": 0.1}
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    _iso(tmp_path, monkeypatch, clients={"qwen": flaky})
+    recs = run_collection(week=96, models=["qwen"], prompt_ids=["C01"], runs=1, rule_version="t")
+    assert calls["n"] == 3
+    assert [r.status for r in recs if r.model == "qwen" and r.status != "planned"] == ["ok"]
+
+def test_retry_exhausted_records_failed(tmp_path, monkeypatch):
+    calls = {"n": 0}
+    def always_dead(prompt, **k):
+        calls["n"] += 1
+        raise httpx.ConnectError("connection reset")
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    _iso(tmp_path, monkeypatch, clients={"qwen": always_dead})
+    recs = run_collection(week=96, models=["qwen"], prompt_ids=["C01"], runs=1, rule_version="t")
+    assert calls["n"] == 3
+    failed = [r for r in recs if r.status == "failed"]
+    assert len(failed) == 1 and "connection reset" in failed[0].error
+
+def test_qwen_api_error_not_retried(tmp_path, monkeypatch):
+    calls = {"n": 0}
+    def quota(prompt, **k):
+        calls["n"] += 1
+        raise QwenAPIError("AllocationQuota.FreeTierOnly")
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    _iso(tmp_path, monkeypatch, clients={"qwen": quota})
+    recs = run_collection(week=96, models=["qwen"], prompt_ids=["C01"], runs=1, rule_version="t")
+    assert calls["n"] == 1          # 配额类不重试(w3 教训:烧额度且无效)
+    assert [r.status for r in recs if r.status == "failed"]
+
+def test_http_status_error_not_retried(tmp_path, monkeypatch):
+    calls = {"n": 0}
+    req = httpx.Request("GET", "https://ark.cn-beijing.volces.com/api/v3/responses")
+    def limited(prompt, **k):
+        calls["n"] += 1
+        raise httpx.HTTPStatusError("429", request=req, response=httpx.Response(429))
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    _iso(tmp_path, monkeypatch, clients={"qwen": limited})
+    run_collection(week=96, models=["qwen"], prompt_ids=["C01"], runs=1, rule_version="t")
+    assert calls["n"] == 1

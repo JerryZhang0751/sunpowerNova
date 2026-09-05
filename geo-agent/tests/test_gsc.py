@@ -1,10 +1,13 @@
 import logging
 from unittest.mock import patch, MagicMock
-from geo.fetch.gsc import snapshot_gsc, _build_service
+import pytest
+from pathlib import Path
+from geo.fetch.gsc import snapshot_gsc, _build_service, _resolve_gsc_key
 from geo.shared.config import settings
 from geo.shared.weeks import TEST_WEEK
 
-def test_gsc_degrades_on_auth_error(iso_snapshots):
+def test_gsc_degrades_on_auth_error(iso_snapshots, monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
     with patch("geo.fetch.gsc._build_service", side_effect=Exception("403 forbidden")):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is True and out["rows"] == []
@@ -83,8 +86,9 @@ def test_gsc_clean_snapshot_is_frozen(iso_snapshots):
     assert out["rows"] == [{"keys": ["frozen"]}]          # 返回现有,未重取
     svc.searchanalytics().query().execute.assert_not_called()
 
-def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots):
+def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots, monkeypatch):
     """08-13 的 SSLEOFError 合法重跑 = degraded 例外口径:degraded 快照必须允许重取。"""
+    monkeypatch.setattr("time.sleep", lambda s: None)
     import json as _json
     from geo.fetch.gsc import snapshot_dir
     p = snapshot_dir(TEST_WEEK) / "gsc.json"
@@ -97,8 +101,9 @@ def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is False and out["rows"] == [{"keys": ["ok"]}]
 
-def test_gsc_corrupted_snapshot_treated_as_miss(iso_snapshots):
+def test_gsc_corrupted_snapshot_treated_as_miss(iso_snapshots, monkeypatch):
     """损坏快照(截断/非法 JSON)不得让守卫抛 JSONDecodeError 硬停管线——视为缺失重取并覆写。"""
+    monkeypatch.setattr("time.sleep", lambda s: None)
     import json as _json
     from geo.fetch.gsc import snapshot_dir
     p = snapshot_dir(TEST_WEEK) / "gsc.json"
@@ -131,3 +136,77 @@ def test_gsc_freeze_warns_on_rule_version_mismatch(iso_snapshots, caplog):
     svc.searchanalytics().query().execute.assert_not_called()
     assert any(r.levelno == logging.WARNING and "规则版本" in r.getMessage()
                for r in caplog.records)
+
+
+# ---- Bug#2(w4): GSC key 相对路径回退链 --------------------------------------
+
+def test_gsc_key_empty_raises():
+    with pytest.raises(ValueError, match="GSC_KEY_FILE"):
+        _resolve_gsc_key("")
+
+def test_gsc_key_absolute_passthrough(tmp_path):
+    key = tmp_path / "k.json"; key.write_text("{}", encoding="utf-8")
+    assert _resolve_gsc_key(str(key)) == key
+
+def test_gsc_key_repo_root_relative_fallback(tmp_path, monkeypatch):
+    """w4 复现场景: .env 写 'geo-agent/gsc-x.json'(仓库根相对), CWD 不在仓库根。"""
+    root = tmp_path / "proj"; geo_dir = root / "geo-agent"; geo_dir.mkdir(parents=True)
+    key = geo_dir / "gsc-x.json"; key.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr("geo.fetch.gsc.REPO", geo_dir)
+    assert _resolve_gsc_key("geo-agent/gsc-x.json") == key
+
+def test_gsc_key_cwd_relative(tmp_path, monkeypatch):
+    key = tmp_path / "k2.json"; key.write_text("{}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assert _resolve_gsc_key("k2.json") == key
+
+def test_gsc_key_repo_relative(tmp_path, monkeypatch):
+    geo_dir = tmp_path / "geo-agent"; geo_dir.mkdir()
+    key = geo_dir / "k3.json"; key.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr("geo.fetch.gsc.REPO", geo_dir)
+    assert _resolve_gsc_key("k3.json") == key
+
+def test_gsc_key_all_miss_lists_candidates(tmp_path, monkeypatch):
+    geo_dir = tmp_path / "geo-agent"; geo_dir.mkdir()
+    monkeypatch.setattr("geo.fetch.gsc.REPO", geo_dir)
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError) as ei:
+        _resolve_gsc_key("nope.json")
+    msg = str(ei.value)
+    assert "nope.json" in msg and str(geo_dir.parent / "nope.json") in msg and str(geo_dir / "nope.json") in msg
+
+def test_build_service_resolves_relative_key(tmp_path):
+    root = tmp_path / "proj"; geo_dir = root / "geo-agent"; geo_dir.mkdir(parents=True)
+    (geo_dir / "gsc-rel.json").write_text("{}", encoding="utf-8")
+    from unittest.mock import patch as _patch
+    with _patch("geo.fetch.gsc.REPO", geo_dir):
+        with _patch("geo.fetch.gsc.settings") as mock_settings:
+            mock_settings.proxy = None
+            mock_settings.gsc_key_file = "geo-agent/gsc-rel.json"
+            with _patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file") as mc:
+                with _patch("geo.fetch.gsc.build"):
+                    _build_service()
+    mc.assert_called_once()
+    assert Path(mc.call_args.args[0]) == geo_dir / "gsc-rel.json"
+
+
+# ---- Bug#3(w4): snapshot 拉取段管线内重试 ------------------------------------
+
+def test_gsc_retry_succeeds_third_attempt(iso_snapshots, monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    svc = MagicMock()
+    svc.searchanalytics().query().execute.side_effect = [
+        TimeoutError("timed out"), TimeoutError("timed out"),
+        {"rows": [{"keys": ["solar battery"], "clicks": 3, "impressions": 50, "ctr": 0.06, "position": 4.2}]}]
+    with patch("geo.fetch.gsc._build_service", return_value=svc):
+        out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
+    assert out["degraded"] is False and len(out["rows"]) == 1
+
+def test_gsc_retry_exhausted_degrades(iso_snapshots, monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    svc = MagicMock()
+    svc.searchanalytics().query().execute.side_effect = TimeoutError("timed out")
+    with patch("geo.fetch.gsc._build_service", return_value=svc):
+        out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
+    assert out["degraded"] is True and "TimeoutError" in out["error"]
+    assert svc.searchanalytics().query().execute.call_count == 3

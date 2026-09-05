@@ -1,6 +1,8 @@
 # tests/test_generate_kimi.py
 from pathlib import Path
 import json
+import httpx
+import openai
 import yaml
 import pytest
 from geo.generate.kimi import playbook_digest, generate_draft, skeleton_draft, GenerateError
@@ -118,3 +120,43 @@ def test_generate_draft_does_not_start_attempt_after_total_budget(monkeypatch):
     with pytest.raises(GenerateError):
         gk.generate_draft("t", "guide", _BRAND, _DIGEST, chat_fn=fail_fast)
     assert calls["n"] == 1, "预算耗尽后不得启动第二次尝试"
+
+
+# ---- Bug#5(w4): 连接类错误放宽(不耗 token),其它维持 2 次 ----------------------
+
+def _conn_err():
+    return openai.APIConnectionError(
+        request=httpx.Request("POST", "https://api.moonshot.cn/v1/chat/completions"))
+
+def test_conn_error_gets_third_attempt(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    calls = {"n": 0}
+    def chat(messages, tools=None, timeout=120):
+        calls["n"] += 1
+        if calls["n"] <= 2:
+            raise _conn_err()
+        return json.dumps(_GOOD_KIMI, ensure_ascii=False)
+    d = generate_draft("How to size a home battery", "guide", _BRAND, _DIGEST, chat_fn=chat)
+    assert d["title"] == "How to size a home battery" and calls["n"] == 3
+
+def test_conn_error_exhausts_at_three(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    calls = {"n": 0}
+    def chat(messages, tools=None, timeout=120):
+        calls["n"] += 1
+        raise _conn_err()
+    with pytest.raises(GenerateError, match="连接类"):
+        generate_draft("t", "guide", _BRAND, _DIGEST, chat_fn=chat)
+    assert calls["n"] == 3
+
+def test_mixed_conn_then_value_error_stops_at_two(monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    calls = {"n": 0}
+    def chat(messages, tools=None, timeout=120):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise _conn_err()
+        return json.dumps({"title": "t"})          # 缺键 → ValueError(非连接类)
+    with pytest.raises(GenerateError, match="两次失败"):
+        generate_draft("t", "guide", _BRAND, _DIGEST, chat_fn=chat)
+    assert calls["n"] == 2

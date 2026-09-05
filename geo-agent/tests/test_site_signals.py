@@ -14,8 +14,9 @@ def test_signals_per_page(iso_snapshots):
     pg = out["pages"][0]
     assert pg["https"] is True and pg["has_viewport"] is True and "Organization" in pg["schema_types"]
 
-def test_graceful_per_page_failure(iso_snapshots):
+def test_graceful_per_page_failure(iso_snapshots, monkeypatch):
     """Test that individual page failures don't crash the batch."""
+    monkeypatch.setattr("time.sleep", lambda s: None)
     fake_response = MagicMock(status_code=200, text="<html><head></head></html>")
 
     def raise_error(url):
@@ -228,8 +229,9 @@ def test_signal_extraction_correctness(iso_snapshots):
     # Check that structural data was extracted
     assert "h_counts" in pg or "table_count" in pg or "ul_count" in pg
 
-def test_http_status_codes(iso_snapshots):
+def test_http_status_codes(iso_snapshots, monkeypatch):
     """Test different HTTP status codes."""
+    monkeypatch.setattr("time.sleep", lambda s: None)
     status_responses = [404, 500, 200, 403, 301]
 
     call_count = {"count": 0}
@@ -353,8 +355,9 @@ def test_snapshot_clean_snapshot_still_frozen(iso_snapshots):
     C.assert_not_called()
     assert out["pages"] == [{"url": "CLEAN", "http_status": 200}]
 
-def test_snapshot_error_page_marks_degraded_and_refetchable(iso_snapshots):
+def test_snapshot_error_page_marks_degraded_and_refetchable(iso_snapshots, monkeypatch):
     """error 页(http_status=None)→ degraded=true;修复后二次调用重取 → degraded 消解并冻结。"""
+    monkeypatch.setattr("time.sleep", lambda s: None)
     from geo.fetch.site_signals import snapshot_dir
     ok_html = "<html><head></head></html>"
 
@@ -390,8 +393,9 @@ def test_snapshot_error_page_marks_degraded_and_refetchable(iso_snapshots):
     assert out3["degraded"] is False
     assert out3["pages"] == out2["pages"]
 
-def test_snapshot_robots_fetch_fail_marks_degraded(iso_snapshots):
+def test_snapshot_robots_fetch_fail_marks_degraded(iso_snapshots, monkeypatch):
     """robots 拉取异常 → robots_ai=None(D3 未知≠允许)+ degraded=true;修复后重取恢复 dict。"""
+    monkeypatch.setattr("time.sleep", lambda s: None)
     ok_html = "<html><head></head></html>"
 
     def robots_down(url):
@@ -416,9 +420,10 @@ def test_snapshot_robots_fetch_fail_marks_degraded(iso_snapshots):
     assert isinstance(out2["robots_ai"], dict)
     assert out2["degraded"] is False
 
-def test_snapshot_robots_5xx_marks_degraded(iso_snapshots):
+def test_snapshot_robots_5xx_marks_degraded(iso_snapshots, monkeypatch):
     """robots.txt 返回 5xx(错误 HTML 页,httpx 不 raise)→ 同样视为拉取失败:
     robots_ai=None + degraded=true;修复后(200)重取恢复 dict。"""
+    monkeypatch.setattr("time.sleep", lambda s: None)
     ok_html = "<html><head></head></html>"
 
     def robots_500(url):
@@ -460,3 +465,39 @@ def test_snapshot_robots_404_means_unrestricted(iso_snapshots):
     assert out["robots_ai"] == {"GPTBot": True, "ClaudeBot": True,
                                 "PerplexityBot": True, "Googlebot": True}
     assert out["degraded"] is False
+
+
+# ---- Bug#3(w4): static 快照拉取段管线内重试 ----------------------------------
+
+def test_static_retry_clean_second_round(iso_snapshots, monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    fake_ok = MagicMock(status_code=200, text="<html><head><meta name='viewport' content='w'>"
+                          "<link rel='canonical' href='https://sunhestia.com/x'>"
+                          "<script type='application/ld+json'>{\"@type\":\"Organization\"}</script></head></html>")
+    clients = []
+    def make_client(*a, **k):
+        m = MagicMock()
+        m.__enter__.return_value = m   # mock修复(已批准):with Client() as c 须命中同一 mock
+        if not clients:
+            m.get.side_effect = Exception("connection reset")   # 第一轮:robots 即失败→degraded
+        else:
+            m.get.return_value = fake_ok                        # 第二轮:全 200 干净
+        clients.append(m)
+        return m
+    with patch("geo.fetch.site_signals.httpx.Client", side_effect=make_client):
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    assert out["degraded"] is False
+    assert len(clients) == 2
+
+def test_static_retry_exhausted_keeps_degraded(iso_snapshots, monkeypatch):
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    n = {"clients": 0}
+    def make_client(*a, **k):
+        m = MagicMock()
+        m.__enter__.return_value = m   # mock修复(已批准):同上,让 Exception side_effect 真实生效
+        m.get.side_effect = Exception("connection reset")
+        n["clients"] += 1
+        return m
+    with patch("geo.fetch.site_signals.httpx.Client", side_effect=make_client):
+        out = snapshot_static_signals(week=TEST_WEEK, rule_version="t")
+    assert out["degraded"] is True and n["clients"] == 3
