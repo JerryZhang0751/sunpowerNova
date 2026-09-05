@@ -5,6 +5,7 @@ import json
 import time
 import logging
 import yaml
+import openai
 from geo.shared.config import MODELS
 from geo.shared.kimi_client import make_kimi_client
 
@@ -34,6 +35,10 @@ class GenerateError(Exception):
 GENERATE_REQUEST_TIMEOUT_S = 300.0
 GENERATE_TOTAL_BUDGET_S = 610.0
 GENERATE_MAX_ATTEMPTS = 2
+# Bug#5(w4): 连接类(openai.APIConnectionError)不消耗 token,重试≈免费——单独放宽
+# 1 次并加退避;其余失败维持 codex 修改二的 2 次上限(防烧 token 的超时/重复请求)。
+GENERATE_CONN_MAX_FAILS = 3
+GENERATE_CONN_BACKOFF_S = 15.0
 
 def playbook_digest(playbook_text: str) -> dict:
     text = playbook_text or ""
@@ -86,14 +91,15 @@ def generate_draft(topic: str, page_type: str, brand: dict, digest: dict, *, cha
             f"PLAYBOOK DIGEST:\n{json.dumps(digest, ensure_ascii=False)}")
     last: Exception | None = None
     made = 0
+    conn_failures = 0
     deadline = time.monotonic() + GENERATE_TOTAL_BUDGET_S
-    for attempt in range(1, GENERATE_MAX_ATTEMPTS + 1):
+    while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
             log.warning("generate_draft 总预算 %.0fs 耗尽,停止于第 %d/%d 次尝试前",
-                        GENERATE_TOTAL_BUDGET_S, attempt, GENERATE_MAX_ATTEMPTS)
+                        GENERATE_TOTAL_BUDGET_S, made + 1, GENERATE_MAX_ATTEMPTS)
             break
-        made = attempt
+        made += 1
         try:
             data = json.loads(chat([{"role": "system", "content": _SYS_GEN},
                                     {"role": "user", "content": user}],
@@ -102,10 +108,21 @@ def generate_draft(topic: str, page_type: str, brand: dict, digest: dict, *, cha
                 if k not in data:
                     raise ValueError(f"输出缺键 {k}")
             return data
+        except openai.APIConnectionError as e:
+            last = e; conn_failures += 1
+            log.warning("generate_draft 第 %d 次失败(连接类 %d/%d): %s",
+                        made, conn_failures, GENERATE_CONN_MAX_FAILS, e)
+            if conn_failures >= GENERATE_CONN_MAX_FAILS or made >= GENERATE_MAX_ATTEMPTS + 1:
+                break
+            time.sleep(GENERATE_CONN_BACKOFF_S)
         except Exception as e:
             last = e
-            log.warning("generate_draft 第 %d/%d 次失败: %s", attempt, GENERATE_MAX_ATTEMPTS, e)
-    if made == GENERATE_MAX_ATTEMPTS:
+            log.warning("generate_draft 第 %d/%d 次失败: %s", made, GENERATE_MAX_ATTEMPTS, e)
+            if made >= GENERATE_MAX_ATTEMPTS:
+                break
+    if made > GENERATE_MAX_ATTEMPTS:
+        raise GenerateError(f"Kimi 生成 {made} 次失败(含连接类 {conn_failures} 次): {last}")
+    if made >= GENERATE_MAX_ATTEMPTS:
         raise GenerateError(f"Kimi 生成两次失败: {last}")
     raise GenerateError(f"Kimi 生成提前终止(完成 {made}/{GENERATE_MAX_ATTEMPTS} 次尝试,"
                         f"总预算 {GENERATE_TOTAL_BUDGET_S}s 耗尽): {last}")
