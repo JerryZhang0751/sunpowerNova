@@ -1,6 +1,8 @@
 import logging
 from unittest.mock import patch, MagicMock
-from geo.fetch.gsc import snapshot_gsc, _build_service
+import pytest
+from pathlib import Path
+from geo.fetch.gsc import snapshot_gsc, _build_service, _resolve_gsc_key
 from geo.shared.config import settings
 from geo.shared.weeks import TEST_WEEK
 
@@ -131,3 +133,55 @@ def test_gsc_freeze_warns_on_rule_version_mismatch(iso_snapshots, caplog):
     svc.searchanalytics().query().execute.assert_not_called()
     assert any(r.levelno == logging.WARNING and "规则版本" in r.getMessage()
                for r in caplog.records)
+
+
+# ---- Bug#2(w4): GSC key 相对路径回退链 --------------------------------------
+
+def test_gsc_key_empty_raises():
+    with pytest.raises(ValueError, match="GSC_KEY_FILE"):
+        _resolve_gsc_key("")
+
+def test_gsc_key_absolute_passthrough(tmp_path):
+    key = tmp_path / "k.json"; key.write_text("{}", encoding="utf-8")
+    assert _resolve_gsc_key(str(key)) == key
+
+def test_gsc_key_repo_root_relative_fallback(tmp_path, monkeypatch):
+    """w4 复现场景: .env 写 'geo-agent/gsc-x.json'(仓库根相对), CWD 不在仓库根。"""
+    root = tmp_path / "proj"; geo_dir = root / "geo-agent"; geo_dir.mkdir(parents=True)
+    key = geo_dir / "gsc-x.json"; key.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr("geo.fetch.gsc.REPO", geo_dir)
+    assert _resolve_gsc_key("geo-agent/gsc-x.json") == key
+
+def test_gsc_key_cwd_relative(tmp_path, monkeypatch):
+    key = tmp_path / "k2.json"; key.write_text("{}", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    assert _resolve_gsc_key("k2.json") == key
+
+def test_gsc_key_repo_relative(tmp_path, monkeypatch):
+    geo_dir = tmp_path / "geo-agent"; geo_dir.mkdir()
+    key = geo_dir / "k3.json"; key.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr("geo.fetch.gsc.REPO", geo_dir)
+    assert _resolve_gsc_key("k3.json") == key
+
+def test_gsc_key_all_miss_lists_candidates(tmp_path, monkeypatch):
+    geo_dir = tmp_path / "geo-agent"; geo_dir.mkdir()
+    monkeypatch.setattr("geo.fetch.gsc.REPO", geo_dir)
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError) as ei:
+        _resolve_gsc_key("nope.json")
+    msg = str(ei.value)
+    assert "nope.json" in msg and str(geo_dir.parent / "nope.json") in msg and str(geo_dir / "nope.json") in msg
+
+def test_build_service_resolves_relative_key(tmp_path):
+    root = tmp_path / "proj"; geo_dir = root / "geo-agent"; geo_dir.mkdir(parents=True)
+    (geo_dir / "gsc-rel.json").write_text("{}", encoding="utf-8")
+    from unittest.mock import patch as _patch
+    with _patch("geo.fetch.gsc.REPO", geo_dir):
+        with _patch("geo.fetch.gsc.settings") as mock_settings:
+            mock_settings.proxy = None
+            mock_settings.gsc_key_file = "geo-agent/gsc-rel.json"
+            with _patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file") as mc:
+                with _patch("geo.fetch.gsc.build"):
+                    _build_service()
+    mc.assert_called_once()
+    assert Path(mc.call_args.args[0]) == geo_dir / "gsc-rel.json"
