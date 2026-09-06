@@ -1,22 +1,20 @@
 from __future__ import annotations
 import json, time, logging
 from pathlib import Path
+import requests
 from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from google_auth_httplib2 import AuthorizedHttp
+from google.auth.transport.requests import AuthorizedSession, Request
 from geo.shared.config import settings, REPO
 from geo.shared.storage import snapshot_dir
 from geo.shared.io_utils import atomic_write_text
-import httplib2
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 log = logging.getLogger("fetch.gsc")
 
 SCOPES = ["https://www.googleapis.com/auth/webmasters.readonly"]
 
-# httplib2 has NO default timeout — without this a stalled Google endpoint
-# (through the proxy) hangs snapshot_node forever (same incident class as the
-# Kimi hang; every httpx call site in the repo sets 20-300s).
+# 每个请求必须带显式超时——经代理的挂起端点会卡死 snapshot_node(原 httplib2
+# 时代教训,transport 无关保留下来的不变量)。
 GSC_TIMEOUT_S = 60.0
 
 # Bug#3(w4): v2rayN 节点对 Google 出口分钟级双态振荡(TLS 1s↔35s),GSC 流程=
@@ -39,15 +37,23 @@ def _resolve_gsc_key(v: str) -> Path:
         f"GSC 私钥未找到,已试: {p.resolve()}(CWD), {REPO.parent / p}(仓库根), {REPO / p}; "
         "请将 .env GSC_KEY_FILE 写绝对路径或把文件放到上述位置")
 
-def _build_service():
+# 传输层持久修复(2026-09-06): httplib2 在代理下连接挂死(w4 实证,OS 层 Errno 60,
+# 120s 超时也不救;httpx/requests 同代理秒通)——迁 AuthorizedSession 直连 REST。
+# 关键: AuthorizedSession 默认给 token 刷新另建裸 session(只吃 HTTP(S)_PROXY 环境变量,
+# 不继承主 session.proxies)——注入 auth_request 使 token 刷新也显式走代理,
+# 任意代理切换只改 targets.yaml,零环境变量依赖。
+def _gsc_session() -> AuthorizedSession:
     creds = service_account.Credentials.from_service_account_file(
-        _resolve_gsc_key(settings.gsc_key_file), scopes=SCOPES)
-    http = httplib2.Http(timeout=GSC_TIMEOUT_S)
-    if settings.proxy:
-        proxy_info = httplib2.proxy_info_from_url(settings.proxy)
-        http = httplib2.Http(proxy_info=proxy_info, timeout=GSC_TIMEOUT_S)
-    http = AuthorizedHttp(creds, http=http)   # google-auth 无 creds.authorize；用 AuthorizedHttp 包代理 httplib2
-    return build("searchconsole", "v1", http=http, cache_discovery=False)
+        str(_resolve_gsc_key(settings.gsc_key_file)), scopes=SCOPES)
+    proxies = ({"http": settings.proxy, "https": settings.proxy}
+               if settings.proxy else None)
+    auth_sess = requests.Session()
+    if proxies:
+        auth_sess.proxies = proxies
+    sess = AuthorizedSession(creds, auth_request=Request(session=auth_sess))
+    if proxies:
+        sess.proxies = proxies
+    return sess
 
 def _gsc_site_url() -> str:
     """Search Console 属性标识符：优先 config 的 gsc_site，否则按域名派生 sc-domain:<host>。"""
@@ -74,10 +80,13 @@ def snapshot_gsc(week:int, rule_version:str, days=28) -> dict:
     last_err: Exception | None = None
     for attempt in range(1, SNAPSHOT_ATTEMPTS + 1):
         try:
-            svc = _build_service()
+            sess = _gsc_session()
             body = {"startDate":start, "endDate":end, "dimensions":["query"], "rowLimit":1000}
-            res = svc.searchanalytics().query(siteUrl=site, body=body).execute()
-            out["rows"] = res.get("rows", [])
+            url = ("https://searchconsole.googleapis.com/webmasters/v3/sites/"
+                   f"{quote(site, safe='')}/searchAnalytics/query")
+            r = sess.post(url, json=body, timeout=GSC_TIMEOUT_S)
+            r.raise_for_status()
+            out["rows"] = r.json().get("rows", [])
             last_err = None
             break
         except Exception as e:
