@@ -42,15 +42,19 @@ def _resolve_gsc_key(v: str) -> Path:
 # 关键: AuthorizedSession 默认给 token 刷新另建裸 session(只吃 HTTP(S)_PROXY 环境变量,
 # 不继承主 session.proxies)——注入 auth_request 使 token 刷新也显式走代理,
 # 任意代理切换只改 targets.yaml,零环境变量依赖。
+# trust_env=False: requests 的 env/系统代理(macOS scproxy)会经 merge_environment_settings
+# 压过 session 级显式 proxies——关闭后 targets.yaml 是唯一代理事实源,proxy=None 即真直连。
 def _gsc_session() -> AuthorizedSession:
     creds = service_account.Credentials.from_service_account_file(
         str(_resolve_gsc_key(settings.gsc_key_file)), scopes=SCOPES)
     proxies = ({"http": settings.proxy, "https": settings.proxy}
                if settings.proxy else None)
     auth_sess = requests.Session()
+    auth_sess.trust_env = False
     if proxies:
         auth_sess.proxies = proxies
     sess = AuthorizedSession(creds, auth_request=Request(session=auth_sess))
+    sess.trust_env = False
     if proxies:
         sess.proxies = proxies
     return sess

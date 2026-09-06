@@ -201,6 +201,21 @@ def test_gsc_session_token_refresh_proxied():
         else:
             assert not sess.proxies and not sess._auth_request.session.proxies
 
+def test_gsc_session_ignores_env_and_system_proxy(monkeypatch):
+    """trust_env=False: env 代理与系统代理不得压过 session 级显式 proxies
+    (终局评审 Important 1——targets.yaml 是唯一代理事实源)。"""
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:9999")
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:9999")
+    with patch("geo.fetch.gsc.settings") as mock_settings, \
+         patch("geo.fetch.gsc._resolve_gsc_key", return_value=Path("/tmp/fake-key.json")), \
+         patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file"):
+        mock_settings.proxy = "http://127.0.0.1:10808"
+        mock_settings.gsc_key_file = "/tmp/fake-key.json"
+        sess = _gsc_session()
+    assert sess.trust_env is False
+    assert sess._auth_request.session.trust_env is False
+    assert dict(sess.proxies) == {"http": "http://127.0.0.1:10808", "https": "http://127.0.0.1:10808"}
+
 
 # ---- Bug#3(w4): snapshot 拉取段管线内重试 ------------------------------------
 
