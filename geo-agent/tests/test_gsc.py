@@ -1,73 +1,64 @@
 import logging
+import requests
 from unittest.mock import patch, MagicMock
 import pytest
 from pathlib import Path
-from geo.fetch.gsc import snapshot_gsc, _build_service, _resolve_gsc_key
+from geo.fetch.gsc import snapshot_gsc, _gsc_session, _resolve_gsc_key, GSC_TIMEOUT_S
 from geo.shared.config import settings
 from geo.shared.weeks import TEST_WEEK
 
+def _resp(json_data=None, status=200):
+    m = MagicMock()
+    m.status_code = status
+    if status >= 400:
+        m.raise_for_status.side_effect = requests.HTTPError(f"{status}")
+    m.json.return_value = json_data or {}
+    return m
+
 def test_gsc_degrades_on_auth_error(iso_snapshots, monkeypatch):
     monkeypatch.setattr("time.sleep", lambda s: None)
-    with patch("geo.fetch.gsc._build_service", side_effect=Exception("403 forbidden")):
+    with patch("geo.fetch.gsc._gsc_session", return_value=MagicMock(
+            post=MagicMock(return_value=_resp(status=403)))):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is True and out["rows"] == []
 
-def test_gsc_http_sets_timeout():
-    """httplib2 has NO default timeout — every Http() in the GSC path must set one,
-    or a stalled Google endpoint (through the Clash proxy) hangs snapshot_node forever.
-    Must hold on BOTH branches: direct and proxied."""
-    for proxy in (None, "http://127.0.0.1:7890"):
-        with patch("geo.fetch.gsc.settings") as mock_settings:
-            mock_settings.proxy = proxy
-            mock_settings.gsc_key_file = "/tmp/fake-key.json"
-            with patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file"):
-                with patch("geo.fetch.gsc.httplib2.Http") as mock_http:
-                    with patch("geo.fetch.gsc.build"):
-                        _build_service()
-        for call in mock_http.call_args_list:
-            assert call.kwargs.get("timeout") == 60, \
-                f"Http() missing timeout=60 (proxy={proxy}): {call}"
+def test_gsc_http_sets_timeout(iso_snapshots, monkeypatch):
+    """每个 GSC 请求必须带显式超时——否则经代理的挂起会卡死 snapshot_node
+    (原 httplib2 教训,transport 无关地保下来)。"""
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    sess = MagicMock()
+    sess.post.return_value = _resp({"rows": []})
+    with patch("geo.fetch.gsc._gsc_session", return_value=sess):
+        snapshot_gsc(week=TEST_WEEK, rule_version="t")
+    assert sess.post.call_args.kwargs.get("timeout") == GSC_TIMEOUT_S
 
 def test_gsc_happy(iso_snapshots):
-    svc = MagicMock()
-    svc.searchanalytics().query().execute.return_value = {"rows":[{"keys":["solar battery"],"clicks":3,"impressions":50,"ctr":0.06,"position":4.2}]}
-    with patch("geo.fetch.gsc._build_service", return_value=svc):
+    sess = MagicMock()
+    sess.post.return_value = _resp({"rows": [{"keys": ["solar battery"], "clicks": 3,
+                                              "impressions": 50, "ctr": 0.06, "position": 4.2}]})
+    with patch("geo.fetch.gsc._gsc_session", return_value=sess):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
-    assert out["rows"][0]["keys"]==["solar battery"] and out["degraded"] is False
+    assert out["rows"][0]["keys"] == ["solar battery"] and out["degraded"] is False
 
 def test_gsc_proxy_applied_when_set():
-    """Verify proxy configuration is threaded into GSC HTTP transport when settings.proxy is set."""
-    # Test with proxy set - verify proxy_info_from_url is called
-    with patch("geo.fetch.gsc.settings") as mock_settings:
-        mock_settings.proxy = "http://127.0.0.1:7890"
+    """settings.proxy 非空 → 主 session 与 token 刷新 session 两处 proxies 都设置;
+    为空 → 两处都不设。(原 httplib2 proxy_info 断言的 transport 无关化)"""
+    with patch("geo.fetch.gsc.settings") as mock_settings, \
+         patch("geo.fetch.gsc._resolve_gsc_key", return_value=Path("/tmp/fake-key.json")), \
+         patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file"):
+        mock_settings.proxy = "http://127.0.0.1:10808"
         mock_settings.gsc_key_file = "/tmp/fake-key.json"
-
-        with patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file") as mock_creds:
-            mock_creds.return_value.authorize = MagicMock()
-            with patch("geo.fetch.gsc.httplib2.proxy_info_from_url") as mock_proxy_info:
-                mock_proxy_info.return_value = MagicMock()
-                with patch("geo.fetch.gsc.build") as mock_build:
-                    mock_build.return_value = MagicMock()
-                    _build_service()
-
-                    # Verify proxy_info_from_url was called with the proxy URL
-                    mock_proxy_info.assert_called_once_with("http://127.0.0.1:7890")
-
-    # Test without proxy - verify proxy_info_from_url is NOT called
-    with patch("geo.fetch.gsc.settings") as mock_settings:
+        sess = _gsc_session()
+    want = {"http": "http://127.0.0.1:10808", "https": "http://127.0.0.1:10808"}
+    assert dict(sess.proxies) == want
+    assert dict(sess._auth_request.session.proxies) == want   # token 刷新走代理
+    with patch("geo.fetch.gsc.settings") as mock_settings, \
+         patch("geo.fetch.gsc._resolve_gsc_key", return_value=Path("/tmp/fake-key.json")), \
+         patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file"):
         mock_settings.proxy = None
         mock_settings.gsc_key_file = "/tmp/fake-key.json"
-
-        with patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file") as mock_creds:
-            mock_creds.return_value.authorize = MagicMock()
-            with patch("geo.fetch.gsc.httplib2.proxy_info_from_url") as mock_proxy_info:
-                with patch("geo.fetch.gsc.build") as mock_build:
-                    mock_build.return_value = MagicMock()
-                    _build_service()
-
-                    # Verify proxy_info_from_url was NOT called (no proxy)
-                    mock_proxy_info.assert_not_called()
-
+        sess = _gsc_session()
+    assert not sess.proxies and not sess._auth_request.session.proxies
 
 # ---- 2026-08-27 P1④ 快照冻结守卫:干净快照不可重冻结 --------------------
 
@@ -80,11 +71,11 @@ def test_gsc_clean_snapshot_is_frozen(iso_snapshots):
                               "site": "sc-domain:x", "rows": [{"keys": ["frozen"]}], "degraded": False}),
                  encoding="utf-8")
     svc = MagicMock()
-    svc.searchanalytics().query().execute.return_value = {"rows": [{"keys": ["NEW!"]}]}
-    with patch("geo.fetch.gsc._build_service", return_value=svc):
+    svc.post.return_value = _resp({"rows": [{"keys": ["NEW!"]}]})
+    with patch("geo.fetch.gsc._gsc_session", return_value=svc) as mock_sess:
         out = snapshot_gsc(week=TEST_WEEK, rule_version="geo-seo-v2")
     assert out["rows"] == [{"keys": ["frozen"]}]          # 返回现有,未重取
-    svc.searchanalytics().query().execute.assert_not_called()
+    mock_sess.assert_not_called()                          # 守卫提前 return,拉取不发生
 
 def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots, monkeypatch):
     """08-13 的 SSLEOFError 合法重跑 = degraded 例外口径:degraded 快照必须允许重取。"""
@@ -95,9 +86,9 @@ def test_gsc_degraded_snapshot_can_be_refrozen(iso_snapshots, monkeypatch):
     p.write_text(_json.dumps({"week": TEST_WEEK, "rule_version": "t", "site": "s",
                               "rows": [], "degraded": True, "error": "SSLEOFError"}),
                  encoding="utf-8")
-    svc = MagicMock()
-    svc.searchanalytics().query().execute.return_value = {"rows": [{"keys": ["ok"]}]}
-    with patch("geo.fetch.gsc._build_service", return_value=svc):
+    sess = MagicMock()
+    sess.post.return_value = _resp({"rows": [{"keys": ["ok"]}]})
+    with patch("geo.fetch.gsc._gsc_session", return_value=sess):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is False and out["rows"] == [{"keys": ["ok"]}]
 
@@ -108,9 +99,9 @@ def test_gsc_corrupted_snapshot_treated_as_miss(iso_snapshots, monkeypatch):
     from geo.fetch.gsc import snapshot_dir
     p = snapshot_dir(TEST_WEEK) / "gsc.json"
     p.write_text('{"trunc', encoding="utf-8")   # 截断的非法 JSON
-    svc = MagicMock()
-    svc.searchanalytics().query().execute.return_value = {"rows": [{"keys": ["ok"]}]}
-    with patch("geo.fetch.gsc._build_service", return_value=svc):
+    sess = MagicMock()
+    sess.post.return_value = _resp({"rows": [{"keys": ["ok"]}]})
+    with patch("geo.fetch.gsc._gsc_session", return_value=sess):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is False and out["rows"] == [{"keys": ["ok"]}]   # 重取到新数据
     assert _json.loads(p.read_text(encoding="utf-8"))["rows"] == [{"keys": ["ok"]}]   # 文件被合法 JSON 覆写
@@ -127,13 +118,13 @@ def test_gsc_freeze_warns_on_rule_version_mismatch(iso_snapshots, caplog):
                               "degraded": False}),
                  encoding="utf-8")
     svc = MagicMock()
-    svc.searchanalytics().query().execute.return_value = {"rows": [{"keys": ["NEW!"]}]}
-    with patch("geo.fetch.gsc._build_service", return_value=svc):
+    svc.post.return_value = _resp({"rows": [{"keys": ["NEW!"]}]})
+    with patch("geo.fetch.gsc._gsc_session", return_value=svc) as mock_sess:
         with caplog.at_level(logging.WARNING, logger="fetch.gsc"):
             out = snapshot_gsc(week=TEST_WEEK, rule_version="geo-seo-v3")
     assert out["rows"] == [{"keys": ["frozen"]}]          # 返回冻结内容,未重取
     assert out["rule_version"] == "geo-seo-v2"            # 历史基线版本不被改写
-    svc.searchanalytics().query().execute.assert_not_called()
+    mock_sess.assert_not_called()                          # 守卫提前 return,拉取不发生
     assert any(r.levelno == logging.WARNING and "规则版本" in r.getMessage()
                for r in caplog.records)
 
@@ -175,7 +166,7 @@ def test_gsc_key_all_miss_lists_candidates(tmp_path, monkeypatch):
     msg = str(ei.value)
     assert "nope.json" in msg and str(geo_dir.parent / "nope.json") in msg and str(geo_dir / "nope.json") in msg
 
-def test_build_service_resolves_relative_key(tmp_path):
+def test_gsc_session_resolves_relative_key(tmp_path):
     root = tmp_path / "proj"; geo_dir = root / "geo-agent"; geo_dir.mkdir(parents=True)
     (geo_dir / "gsc-rel.json").write_text("{}", encoding="utf-8")
     from unittest.mock import patch as _patch
@@ -184,29 +175,65 @@ def test_build_service_resolves_relative_key(tmp_path):
             mock_settings.proxy = None
             mock_settings.gsc_key_file = "geo-agent/gsc-rel.json"
             with _patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file") as mc:
-                with _patch("geo.fetch.gsc.build"):
-                    _build_service()
+                _gsc_session()
     mc.assert_called_once()
     assert Path(mc.call_args.args[0]) == geo_dir / "gsc-rel.json"
+
+
+# ---- 传输层持久修复(2026-09-06): token 刷新显式走代理,零环境变量依赖 ----------
+
+def test_gsc_session_token_refresh_proxied():
+    """AuthorizedSession 默认给 token 刷新另建裸 session(只吃 HTTP(S)_PROXY 环境变量,
+    不继承主 session.proxies)——w4 事故根因之一。本锁断言注入路径使两处都显式走代理。"""
+    from google.auth.transport.requests import AuthorizedSession
+    for proxy in ("http://127.0.0.1:10808", None):
+        with patch("geo.fetch.gsc.settings") as mock_settings, \
+             patch("geo.fetch.gsc._resolve_gsc_key", return_value=Path("/tmp/fake-key.json")), \
+             patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file"):
+            mock_settings.proxy = proxy
+            mock_settings.gsc_key_file = "/tmp/fake-key.json"
+            sess = _gsc_session()
+        assert isinstance(sess, AuthorizedSession)
+        if proxy:
+            want = {"http": proxy, "https": proxy}
+            assert dict(sess.proxies) == want
+            assert dict(sess._auth_request.session.proxies) == want
+        else:
+            assert not sess.proxies and not sess._auth_request.session.proxies
+
+def test_gsc_session_ignores_env_and_system_proxy(monkeypatch):
+    """trust_env=False: env 代理与系统代理不得压过 session 级显式 proxies
+    (终局评审 Important 1——targets.yaml 是唯一代理事实源)。"""
+    monkeypatch.setenv("HTTPS_PROXY", "http://127.0.0.1:9999")
+    monkeypatch.setenv("HTTP_PROXY", "http://127.0.0.1:9999")
+    with patch("geo.fetch.gsc.settings") as mock_settings, \
+         patch("geo.fetch.gsc._resolve_gsc_key", return_value=Path("/tmp/fake-key.json")), \
+         patch("geo.fetch.gsc.service_account.Credentials.from_service_account_file"):
+        mock_settings.proxy = "http://127.0.0.1:10808"
+        mock_settings.gsc_key_file = "/tmp/fake-key.json"
+        sess = _gsc_session()
+    assert sess.trust_env is False
+    assert sess._auth_request.session.trust_env is False
+    assert dict(sess.proxies) == {"http": "http://127.0.0.1:10808", "https": "http://127.0.0.1:10808"}
 
 
 # ---- Bug#3(w4): snapshot 拉取段管线内重试 ------------------------------------
 
 def test_gsc_retry_succeeds_third_attempt(iso_snapshots, monkeypatch):
     monkeypatch.setattr("time.sleep", lambda s: None)
-    svc = MagicMock()
-    svc.searchanalytics().query().execute.side_effect = [
-        TimeoutError("timed out"), TimeoutError("timed out"),
-        {"rows": [{"keys": ["solar battery"], "clicks": 3, "impressions": 50, "ctr": 0.06, "position": 4.2}]}]
-    with patch("geo.fetch.gsc._build_service", return_value=svc):
+    sess = MagicMock()
+    sess.post.side_effect = [TimeoutError("timed out"), TimeoutError("timed out"),
+                             _resp({"rows": [{"keys": ["solar battery"], "clicks": 3,
+                                              "impressions": 50, "ctr": 0.06, "position": 4.2}]})]
+    with patch("geo.fetch.gsc._gsc_session", return_value=sess):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is False and len(out["rows"]) == 1
 
 def test_gsc_retry_exhausted_degrades(iso_snapshots, monkeypatch):
     monkeypatch.setattr("time.sleep", lambda s: None)
-    svc = MagicMock()
-    svc.searchanalytics().query().execute.side_effect = TimeoutError("timed out")
-    with patch("geo.fetch.gsc._build_service", return_value=svc):
+    sess = MagicMock()
+    sess.post.side_effect = TimeoutError("timed out")
+    with patch("geo.fetch.gsc._gsc_session", return_value=sess):
         out = snapshot_gsc(week=TEST_WEEK, rule_version="t")
     assert out["degraded"] is True and "TimeoutError" in out["error"]
-    assert svc.searchanalytics().query().execute.call_count == 3
+    assert sess.post.call_count == 3
