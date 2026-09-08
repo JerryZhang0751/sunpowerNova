@@ -1,6 +1,7 @@
 # src/geo/research/run.py
 from __future__ import annotations
 import json, logging, shutil, time
+from dataclasses import asdict
 from pathlib import Path
 from geo.shared.config import REPO
 from geo.shared.io_utils import atomic_write_text
@@ -84,10 +85,17 @@ def run_research(week: int, kimi_enabled: bool = True, *, synth_fn=None, web_fn=
              week=week, draft=pf_degraded, repo=repo)
     drafts = [str(p) for p, d in ((pb_path, pb_degraded), (pf_path, pf_degraded)) if d
               for p in [p.parent / (p.name + ".draft")]]
+    # advisory-only 存档(2026-09-09):完整落盘 Kimi 结论+平台查证供人工审阅;
+    # 不喂 RulesKeeper/评分/生成——render 只渲染 format 类,source/platform/problem_space
+    # 类结论此前无落盘,本 JSON 是其唯一存档。Kimi 失败/禁用也照常落盘(如实记状态)。
+    findings_path = repo / "data" / "analysis" / f"w{week}" / "research_findings.json"
+    atomic_write_text(findings_path, json.dumps(
+        _findings_jsonable(week, agg, conclusions, verified, kimi_enabled, exhausted),
+        ensure_ascii=False, indent=2, sort_keys=True))
     return {"playbook": str(pb_path), "profiles": str(pf_path),
             "conclusions": len(conclusions), "verified_platforms": len(verified),
             "degraded": pb_degraded or pf_degraded, "drafts": drafts,
-            "budget_exhausted": exhausted}
+            "budget_exhausted": exhausted, "findings": str(findings_path)}
 
 def _promote(target: Path, text: str, *, week: int, draft: bool, repo: Path) -> Path:
     """draft=True → 写 <name>.draft 不动正式文件;否则晋升(旧文件备份 knowledge/.history/)。"""
@@ -101,6 +109,31 @@ def _promote(target: Path, text: str, *, week: int, draft: bool, repo: Path) -> 
         if stale.exists(): stale.unlink()
     atomic_write_text(out, text)
     return out
+
+def _findings_jsonable(week: int, agg, conclusions: list, verified: dict,
+                       kimi_enabled: bool, budget_exhausted: list[str]) -> dict:
+    """组装 research_findings.json(advisory-only)。状态语义:
+    synthesis: disabled(kimi 关)/ok(≥1 条合法结论)/degraded(启用但空或失败);
+    verification: disabled(kimi 关)/ok(全部待查平台非空 answer)/partial(部分)/degraded(全无)。"""
+    answers = [(v or {}).get("answer") for v in (verified or {}).values()]
+    return {
+        "schema_version": 1,
+        "week": week,
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "source_scope": "answer_citations_only",
+        "usage": "advisory_only",
+        "rules_applied": False,
+        "synthesis_status": ("disabled" if not kimi_enabled
+                             else "ok" if conclusions else "degraded"),
+        "verification_status": ("disabled" if not kimi_enabled
+                                else "ok" if answers and all(answers)
+                                else "partial" if any(answers) else "degraded"),
+        "coverage": asdict(agg.coverage),
+        "evidence_ref": f"data/analysis/w{week}/research_aggregates.json",
+        "conclusions": [asdict(c) for c in conclusions],   # 保序;含 playbook 未渲染类
+        "platform_verification": verified or {},
+        "budget_exhausted": list(budget_exhausted),
+    }
 
 def _agg_jsonable(a, budget_exhausted: list[str] | None = None):
     # §11(2026-09-02)：既有五字段不动,追加 budget_exhausted 平台名清单
