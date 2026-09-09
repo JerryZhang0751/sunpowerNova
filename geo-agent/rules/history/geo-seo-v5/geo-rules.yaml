@@ -1,8 +1,8 @@
-version: geo-seo-v6
+version: geo-seo-v5
 composite: geo
 weights:
-  citability: 28
-  brand: 18
+  citability: 27
+  brand: 19
   eeat: 20
   technical_geo: 15
   schema: 9
@@ -58,48 +58,12 @@ severity_bands:
   - 100
 p2plus_missing: []
 entries:
-- id: add-has_breadcrumblist
-  type: signal_add
-  target: schema
-  signal: has_breadcrumblist
-  status: draft
-  statement: schema.BreadcrumbList 被检索源唯一页 share 23.1% (unique_n=26, platforms=1)
-  evidence:
-    bucket: schema.BreadcrumbList
-    history:
-    - week: 2
-      with_n: 3
-      unique_n: 23
-      share: 0.1304
-      platforms:
-      - doubao
-    - week: 3
-      with_n: 7
-      unique_n: 25
-      share: 0.28
-      platforms:
-      - doubao
-    - week: 5
-      with_n: 6
-      unique_n: 26
-      share: 0.2308
-      platforms: &id001
-      - doubao
-    weeks:
-    - 2
-    - 3
-    - 5
-    share: 0.2308
-    unique_n: 26
-    platforms: *id001
-  since_version: null
-  decided_at_week: 5
 - id: remove-faq_block_count
   type: signal_remove
   target: citability
   signal: faq_block_count
   status: draft
-  statement: formats.qa 被检索源唯一页 share 11.5% (unique_n=26, platforms=1)
+  statement: formats.qa 被检索源唯一页 share 5.9% (unique_n=17, platforms=1)
   evidence:
     bucket: formats.qa
     history:
@@ -119,21 +83,43 @@ entries:
       with_n: 1
       unique_n: 17
       share: 0.0588
-      platforms:
-      - doubao
-    - week: 5
-      with_n: 3
-      unique_n: 26
-      share: 0.1154
-      platforms: &id002
+      platforms: &id001
       - doubao
     weeks:
     - 2
     - 3
     - 4
-    - 5
-    share: 0.1154
-    unique_n: 26
+    share: 0.0588
+    unique_n: 17
+    platforms: *id001
+  since_version: null
+  decided_at_week: 4
+- id: add-has_breadcrumblist
+  type: signal_add
+  target: schema
+  signal: has_breadcrumblist
+  status: draft
+  statement: schema.BreadcrumbList 被检索源唯一页 share 28.0% (unique_n=25, platforms=1)
+  evidence:
+    bucket: schema.BreadcrumbList
+    history:
+    - week: 2
+      with_n: 3
+      unique_n: 23
+      share: 0.1304
+      platforms:
+      - doubao
+    - week: 3
+      with_n: 7
+      unique_n: 25
+      share: 0.28
+      platforms: &id002
+      - doubao
+    weeks:
+    - 2
+    - 3
+    share: 0.28
+    unique_n: 25
     platforms: *id002
   since_version: null
-  decided_at_week: 5
+  decided_at_week: 4

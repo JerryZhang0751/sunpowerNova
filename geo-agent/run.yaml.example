@@ -2,6 +2,6 @@ week: 1
 mode: audit          # audit | experiment
 scope: core          # core(45) | full(129)
 runs: 1              # 每 prompt×model 重复次数
-rule_version: geo-seo-v5
+rule_version: geo-seo-v6
 augment_citation_prompt: false  # 是否给 prompt 追加"Cite sources with URLs"（方法学开关，默认 false=逐字）
 providers: [qwen, doubao, zhipu]
