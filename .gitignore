@@ -17,3 +17,6 @@ geo-agent/knowledge/.history/
 # 残留 worktree(已合并)与含私钥路径的本地探针——有意不入库
 .claude/worktrees/
 geo-agent/scripts/gsc_probe*.py
+
+# codex 本地构建/验证工程(演讲 PPT 工作目录,2026-09-09 入 ignore;成品在 docs/ppt-working/ 提交决策另定)
+.codex-*/
