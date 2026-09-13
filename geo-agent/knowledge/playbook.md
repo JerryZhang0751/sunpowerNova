@@ -1,76 +1,80 @@
-# SunHestia GEO Playbook · w5
-> rule_version geo-seo-v5 | L1=45 | 被引源分析 sample_n=33(缺失116/js_only0)
+# SunHestia GEO Playbook · w6
+> rule_version geo-seo-v7 | L1=45 | 被引源分析 sample_n=37(缺失140/js_only2)
 > ⚠️ 观察性相关非因果，低置信项已标注。结论由确定性聚合 + Kimi 综合生成。
 
 ## 1. 被引格式特征
 ### comparison_table（对比表）
-- cited_n=6 sample_n=33 confidence=ok platforms=['doubao']
-- 结论：comparison_table 与 qa 格式被引较少：33 个样本中分别为 6 个与 4 个，去重后 26 个唯一页面中为 6 个与 3 个。｜行动：对比表格与问答段落可作为补充而非主要投入方向；仅在有明确对比/决策意图的页面部署。
+- cited_n=9 sample_n=37 confidence=ok platforms=['doubao']
+- 结论：comparison_table 与 definition 引用率中等（分别为 9/37 与 8/37），在决策/对比类问题中起补充作用，但不是主要被引形态。｜行动：在 decision/comparison 意图页面保留对比表与术语定义模块，作为列表与规格卡片的辅助结构，而非主体。
 ### qa（Q&A）
-- cited_n=4 sample_n=33 confidence=ok platforms=['doubao']
-- 结论：qa 为本周最不被引用的格式：33 个样本中仅 4 个，去重后 26 个唯一页面中仅 3 个。｜行动：避免将 FAQ/QA 作为核心内容载体；如需覆盖问答意图，可结合 FAQPage schema 但以 list/spec_card 为主体。
+- cited_n=3 sample_n=37 confidence=ok platforms=['doubao']
+- 结论：qa（问答）形态引用率最低：37 个样本中仅 3 个被引用（去重后 2/21），单纯 FAQ 式结构对引用贡献有限。｜行动：避免把核心信息只放在 FAQ/问答模块中；问答内容应同时以列表或规格卡片形式冗余呈现。
 ### list（清单）
-- cited_n=28 sample_n=33 confidence=ok platforms=['doubao']
-- 结论：list 是豆包引用页面中最常见的格式：33 个已解析被引样本中 28 个（约 85%）含列表结构，去重后 26 个唯一页面中 22 个为 list。｜行动：在目标内容中优先使用结构化列表（要点式规格、步骤、优缺点清单），并保持列表可被静态渲染直接读取。
+- cited_n=31 sample_n=37 confidence=ok platforms=['doubao']
+- 结论：list（要点列表）是被引用最多的答案形态：37 个已解析样本中 31 个包含 list 结构，21 个去重样本中 16 个被引用，显著高于其他格式。｜行动：将核心卖点、选购要点、步骤类内容组织为清晰的要点列表/排行结构，提高被 AI 答案直接引用与改写的概率。
 ### definition（定义段）
-- cited_n=13 sample_n=33 confidence=ok platforms=['doubao']
-- 结论：definition 格式被引频率中等：33 个样本中 13 个，去重后 26 个唯一页面中 11 个。｜行动：在页面开头提供简洁定义段（术语/品类一句话解释），覆盖 definition 类查询场景。
+- cited_n=8 sample_n=37 confidence=ok platforms=['doubao']
 ### spec_card（规格卡）
-- cited_n=23 sample_n=33 confidence=ok platforms=['doubao']
-- 结论：spec_card 为第二大被引格式：33 个样本中 23 个（约 70%）为规格卡片式内容，去重后 26 个唯一页面中 19 个。｜行动：为产品与品类页建立规格卡片模块（容量、功率、价格区间等字段化呈现），与 list 格式叠加使用。
+- cited_n=20 sample_n=37 confidence=ok platforms=['doubao']
+- 结论：spec_card（规格卡片）引用表现次之：37 个样本中 20 个含规格卡片，21 个去重样本中 14 个被引用，说明结构化参数内容（功率、容量、价格、质保等）易被采纳。｜行动：为核心产品/方案建立标准化规格卡片，覆盖容量、功率、价格区间、适配场景等字段，并保持各渠道参数一致。
 
 ## 2. 被引来源特征
 ```json
 {
   "domain_type": {
-    "other": 32,
-    "news_review": 1
+    "news_review": 1,
+    "other": 36
   },
   "page_type": {
+    "news": 4,
     "product": 6,
-    "other": 8,
-    "news": 3,
+    "other": 4,
+    "spec": 2,
     "comparison": 8,
-    "blog": 8
+    "blog": 13
   },
   "schema": {
-    "": 10,
-    "LocalBusiness": 3,
-    "ElectricalContractor": 2,
-    "RoofingContractor": 2,
-    "Article": 1,
-    "BreadcrumbList": 6,
-    "BlogPosting": 2,
-    "WebSite": 1,
+    "": 12,
     "Organization": 2,
-    "FAQPage": 2,
-    "ItemList": 1,
-    "Product": 1,
-    "Dataset": 1,
-    "NewsArticle": 1
-  },
-  "has_publish_date": 7,
-  "ugc": 0,
-  "resolved": 33,
-  "unique_n": 26,
-  "schema_unique": {
-    "": 8,
-    "LocalBusiness": 2,
+    "BreadcrumbList": 2,
+    "Article": 1,
+    "FAQPage": 1,
+    "LocalBusiness": 1,
     "ElectricalContractor": 1,
     "RoofingContractor": 1,
-    "Article": 1,
-    "BreadcrumbList": 6,
-    "BlogPosting": 2,
-    "WebSite": 1,
-    "Organization": 2,
-    "FAQPage": 2,
-    "ItemList": 1,
     "Product": 1,
-    "Dataset": 1,
-    "NewsArticle": 1
+    "BlogPosting": 1
+  },
+  "has_publish_date": 14,
+  "ugc": 0,
+  "resolved": 37,
+  "unique_n": 21,
+  "schema_unique": {
+    "": 8,
+    "Organization": 2,
+    "BreadcrumbList": 2,
+    "Article": 1,
+    "FAQPage": 1,
+    "LocalBusiness": 1,
+    "ElectricalContractor": 1,
+    "RoofingContractor": 1,
+    "Product": 1,
+    "BlogPosting": 1
   },
   "schema_unique_platforms": {
     "": [
+      "doubao"
+    ],
+    "Organization": [
+      "doubao"
+    ],
+    "BreadcrumbList": [
+      "doubao"
+    ],
+    "Article": [
+      "doubao"
+    ],
+    "FAQPage": [
       "doubao"
     ],
     "LocalBusiness": [
@@ -82,34 +86,10 @@
     "RoofingContractor": [
       "doubao"
     ],
-    "Article": [
-      "doubao"
-    ],
-    "BreadcrumbList": [
-      "doubao"
-    ],
-    "BlogPosting": [
-      "doubao"
-    ],
-    "WebSite": [
-      "doubao"
-    ],
-    "Organization": [
-      "doubao"
-    ],
-    "FAQPage": [
-      "doubao"
-    ],
-    "ItemList": [
-      "doubao"
-    ],
     "Product": [
       "doubao"
     ],
-    "Dataset": [
-      "doubao"
-    ],
-    "NewsArticle": [
+    "BlogPosting": [
       "doubao"
     ]
   }
@@ -144,11 +124,11 @@
 - 据 §1 高被引格式，建议骨架：对比表 / 定义段 / 规格卡（由生成 agent P2 落地）。
 
 ## 6. 上期动作→指标对照
-- 上期发布: glossary(2026-09-05); self-consumption(2026-08-18); solar-only-vs-solar-plus-battery-storage(2026-08-28); solar-only-vs-solar-plus-battery(2026-09-01)
+- 上期发布: glossary(2026-09-05); home-solar-battery-deep-dive(2026-09-09); self-consumption(2026-08-18); solar-only-vs-solar-plus-battery-storage(2026-08-28); solar-only-vs-solar-plus-battery(2026-09-01)
 - mention_rate: 0.133 → 前期 0.133(Δ+0.0)
-- citation_rate: 0.022333333333333334 → 前期 0.022333333333333334(Δ+0.0)
-- sov: 0.043333333333333335 → 前期 0.042(Δ+0.0)
-- self_geo: 41.2 → 前期 41.1(Δ+0.1)
-- self_seo: 49.7 → 前期 50.2(Δ-0.5)
+- citation_rate: 0.06666666666666667 → 前期 0.022333333333333334(Δ+0.0)
+- sov: 0.04800000000000001 → 前期 0.043333333333333335(Δ+0.0)
+- self_geo: 43.3 → 前期 41.2(Δ+2.1)
+- self_seo: 49.9 → 前期 49.7(Δ+0.2)
 - 规则版本: —
 - ⚠️ 收录有延迟、单周样本小;对照为观察性相关,非因果归因。
