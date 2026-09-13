@@ -8,14 +8,16 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "node -e \"try{require.resolve('@astrojs/check');require.resolve('typescript')}catch(e){console.error('site: 缺 @astrojs/check / typescript —— 先 npm install,不得跳过静态检查');process.exit(1)}\" && astro check"
+    "check": "node -e \"try{require.resolve('@astrojs/check');require.resolve('typescript')}catch(e){console.error('site: 缺 @astrojs/check / typescript —— 先 npm install,不得跳过静态检查');process.exit(1)}\" && astro check",
+    "deploy": "wrangler pages deploy dist --project-name sunhestia --branch main"
   },
   "dependencies": {
-    "astro": "^5.0.0",
-    "@astrojs/sitemap": "^3.2.0"
+    "@astrojs/sitemap": "^3.2.0",
+    "astro": "^5.0.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.4",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "wrangler": "4.112.0"
   }
 }
