@@ -43,13 +43,14 @@ const products = [
   },
 ];
 
+// GSC Product snippets critical 修复(2026-09-13):无公开价格/真实评价无法诚实
+// 满足 offers|review|aggregateRating 要求 → Product 降级为 Thing(话题实体,
+// 不主张商品富摘要资格),消除 GSC 常挂报告;category/brand 为 Product 专属属性随之去除。
 const productSchemas = products.map((p) => ({
   "@context": "https://schema.org",
-  "@type": "Product",
+  "@type": "Thing",
   name: p.name,
   description: p.body,
-  category: p.tag,
-  brand: { "@type": "Brand", name: "SunHestia" },
 }));
 ---
 <Layout
