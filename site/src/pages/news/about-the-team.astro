@@ -1,0 +1,305 @@
+---
+import Layout from "../../layouts/Layout.astro";
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: "Who Designs and Installs Your SunHestia System",
+  description:
+    "How SunHestia designs residential solar and battery systems around self-consumption: consumption-first battery sizing, roof-by-roof assessment, the hardware installed, and the guarantees behind the work.",
+  inLanguage: "en",
+  mainEntityOfPage: "https://sunhestia.com/news/about-the-team/",
+  author: { "@type": "Organization", name: "SunHestia", url: "https://sunhestia.com" },
+  publisher: { "@type": "Organization", name: "SunHestia", url: "https://sunhestia.com" },
+  about: [
+    { "@type": "Thing", name: "Residential solar photovoltaic systems" },
+    { "@type": "Thing", name: "Home battery storage" },
+    { "@type": "Thing", name: "Self-consumption" },
+  ],
+};
+
+const orgSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: "SunHestia",
+  url: "https://sunhestia.com",
+  description:
+    "Residential solar photovoltaic and battery storage systems for European homeowners, focused on self-consumption.",
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "What does a residential solar and storage system include?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Typically rooftop solar panels, a hybrid inverter, and a home battery. The panels produce electricity, the inverter routes it to your home or the battery, and the battery stores surplus for use after dark.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Do I need a battery with solar panels?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Solar works without a battery, but without storage most daytime surplus is exported to the grid. A battery lets you keep and use that energy yourself, which is usually better value than selling low and buying back high.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "How long does installation take?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "For a typical detached home, the physical installation is often completed within a day once the system is designed and the hardware is on site.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "What warranty do you offer?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "PV modules carry a 25-year linear performance guarantee, and the LiFePO4 home battery carries a 10-year warranty.",
+      },
+    },
+  ],
+};
+---
+<Layout
+  title="Who Designs & Installs Your SunHestia System · SunHestia"
+  description="How SunHestia designs residential solar and battery systems around self-consumption: consumption-first battery sizing, roof-by-roof assessment, the hardware installed, and the guarantees behind the work."
+  path="news/about-the-team"
+  jsonLd={[articleSchema, faqSchema, orgSchema]}
+>
+  <section class="section">
+    <div class="wrap prose">
+      <div style="color:var(--c-ink-soft); font-size:.9rem">2026-09 · SunHestia</div>
+      <h1>Who Designs and Installs Your SunHestia System</h1>
+
+      <p>
+        SunHestia designs residential solar photovoltaic and battery storage
+        systems for European homeowners, with one focus above all others:
+        <strong>self-consumption</strong> — the share of the electricity your
+        solar panels produce that you use in your own home rather than
+        exporting to the grid. Storage shifts surplus to when it is needed,
+        sharply increasing self-consumption, and it is the single number that
+        most influences the value of a residential solar system. Every design
+        decision described below is made to raise that number, and every system
+        is configured to the connection rules and tariffs of your country.
+      </p>
+
+      <h2>How your system is designed</h2>
+      <ul>
+        <li>
+          <strong>Consumption first, not a template.</strong> Battery size is
+          matched to your evening electricity use. A common starting point for
+          a detached home is 5–10 kWh, stackable to around 15 kWh — sized from
+          your actual consumption, never a one-size-fits-all figure.
+        </li>
+        <li>
+          <strong>Roof-by-roof assessment.</strong> Each roof is assessed
+          individually: pitched tile and metal roofs, flat roofs on garages,
+          and ground-mounted frames where the main roof is shaded. Orientation
+          and shading both affect yield.
+        </li>
+        <li>
+          <strong>Built for owner-occupiers.</strong> Systems are designed for
+          owner-occupiers of detached houses and configured to the connection
+          rules and tariffs of each country.
+        </li>
+      </ul>
+
+      <h2>The hardware our teams install</h2>
+
+      <h3>SunHestia Solar PV Modules</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Specification</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Cell type</td>
+              <td>High-efficiency monocrystalline</td>
+            </tr>
+            <tr>
+              <td>Power</td>
+              <td>400–450 W</td>
+            </tr>
+            <tr>
+              <td>Aesthetic</td>
+              <td>Black, low-profile, for pitched roofs</td>
+            </tr>
+            <tr>
+              <td>Performance guarantee</td>
+              <td>25 years</td>
+            </tr>
+            <tr>
+              <td>Environmental resistance</td>
+              <td>
+                Resistant to salt mist and ammonia — suited to coastal and
+                rural sites
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>SunHestia Home Battery</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Specification</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Chemistry</td>
+              <td>LiFePO4 (lithium iron phosphate), cobalt-free</td>
+            </tr>
+            <tr>
+              <td>Capacity</td>
+              <td>5–15 kWh — modular from 5 kWh, stackable to 15 kWh</td>
+            </tr>
+            <tr>
+              <td>Warranty</td>
+              <td>10 years</td>
+            </tr>
+            <tr>
+              <td>Mounting</td>
+              <td>Wall or floor mounted, indoor or covered outdoor</td>
+            </tr>
+            <tr>
+              <td>Inverter compatibility</td>
+              <td>Built-in hybrid inverter compatibility</td>
+            </tr>
+            <tr>
+              <td>Cycle life</td>
+              <td>Designed for thousands of charge cycles</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Hybrid Inverter &amp; Energy Manager</h3>
+      <ul>
+        <li>
+          Converts solar DC power for the home and routes power between panels,
+          battery, home and grid — drawing from the grid only when needed
+        </li>
+        <li>Real-time app monitoring of production, storage and consumption</li>
+        <li>Backup-capable for short outages</li>
+        <li>Supports time-of-use scheduling</li>
+      </ul>
+
+      <h2>Installation: often a single day on site</h2>
+      <p>
+        For a typical detached home, the physical installation is often
+        completed within a day once the system is designed and the hardware is
+        on site. The design work — sizing, roof assessment and configuration to
+        your country's rules — happens before anyone climbs a ladder.
+      </p>
+
+      <h2>The guarantees behind the work</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Component</th>
+              <th>Guarantee</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>SunHestia Solar PV Modules</td>
+              <td>25-year linear performance guarantee</td>
+            </tr>
+            <tr>
+              <td>SunHestia Home Battery</td>
+              <td>10-year warranty</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Frequently asked questions</h2>
+
+      <h3>What does a residential solar and storage system include?</h3>
+      <p>
+        Typically rooftop solar panels, a hybrid inverter, and a home battery.
+        The panels produce electricity, the inverter routes it to your home or
+        the battery, and the battery stores surplus for use after dark.
+      </p>
+
+      <h3>Do I need a battery with solar panels?</h3>
+      <p>
+        Solar works without a battery, but without storage most daytime surplus
+        is exported to the grid. A battery lets you keep and use that energy
+        yourself, which is usually better value than selling low and buying
+        back high.
+      </p>
+
+      <h3>How long does installation take?</h3>
+      <p>
+        For a typical detached home, the physical installation is often
+        completed within a day once the system is designed and the hardware is
+        on site.
+      </p>
+
+      <h3>What warranty do you offer?</h3>
+      <p>
+        PV modules carry a 25-year linear performance guarantee, and the
+        LiFePO4 home battery carries a 10-year warranty.
+      </p>
+
+      <h2>Sources</h2>
+      <p>
+        All figures in this page come from SunHestia's first-party product
+        specifications and the homeowner FAQ at sunhestia.com. No third-party
+        estimates or projections are used.
+      </p>
+
+      <p>
+        Want every hardware data point in one place? See the
+        <a href="/news/home-solar-battery-deep-dive/">Home Solar &amp; Battery
+        Deep Dive</a>, or check the
+        <a href="/news/glossary/">Solar &amp; Battery Glossary</a> for the
+        terminology.
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .prose h3 {
+    margin-top: 1.5rem;
+    font-size: 1.05rem;
+  }
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+  .prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+  .prose th,
+  .prose td {
+    text-align: left;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .prose th {
+    background: var(--c-bg-alt);
+    color: var(--c-ink);
+    font-weight: 600;
+  }
+</style>
