@@ -78,7 +78,9 @@ const schemas = [
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
-    <link rel="canonical" href={canonical} />
+    {/* noindex pages (404) are served under arbitrary URLs — a fixed canonical would
+        wrongly point them all at one URL and leak a bogus /404/ target into GSC. */}
+    {!noindex && <link rel="canonical" href={canonical} />}
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
     <!-- Open Graph / Twitter (standard social metadata) -->
@@ -86,7 +88,7 @@ const schemas = [
     <meta property="og:site_name" content="SunHestia" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonical} />
+    {!noindex && <meta property="og:url" content={canonical} />}
     <meta property="og:locale" content="en_GB" />
     <meta property="og:image" content={og} />
     <meta property="og:image:width" content="1200" />

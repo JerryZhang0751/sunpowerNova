@@ -1,0 +1,5 @@
+# /legal/ has no index page — three legal subpages once (wrongly) canonicaled to it,
+# so Google discovered and 404'd it. Send it to the imprint permanently.
+# Both slash variants listed: Pages redirect rules don't auto-cover trailing slashes.
+/legal /legal/imprint/ 301
+/legal/ /legal/imprint/ 301
