@@ -1,5 +1,6 @@
 ---
-import Layout from "../../layouts/Layout.astro";
+import NewsArticleLayout from "../../layouts/NewsArticleLayout.astro";
+import type { TocItem } from "../../components/ArticleToc.astro";
 
 const articleSchema = {
   "@context": "https://schema.org",
@@ -44,15 +45,29 @@ const faqSchema = {
     },
   ],
 };
+
+const toc: TocItem[] = [
+  { id: "self-consumption", text: "Self-consumption", depth: 2 },
+  { id: "lifepo4", text: "LiFePO4", depth: 2 },
+  { id: "hybrid-inverter", text: "Hybrid inverter", depth: 2 },
+  { id: "quick-reference-spec-cards", text: "Quick-reference spec cards", depth: 2 },
+  { id: "sunhestia-home-battery", text: "SunHestia Home Battery", depth: 3 },
+  { id: "sunhestia-solar-pv-modules", text: "SunHestia Solar PV Modules", depth: 3 },
+  { id: "hybrid-inverter-energy-manager", text: "Hybrid Inverter & Energy Manager", depth: 3 },
+  { id: "frequently-asked-questions", text: "Frequently asked questions", depth: 2 },
+  { id: "faq-what-does-a-residential-solar-and-storage-system-include", text: "What does a residential solar and storage system include?", depth: 3 },
+  { id: "faq-how-big-should-my-battery-be", text: "How big should my battery be?", depth: 3 },
+  { id: "faq-what-warranty-do-you-offer", text: "What warranty do you offer?", depth: 3 },
+];
 ---
-<Layout
+<NewsArticleLayout
   title="Solar & Battery Glossary: Core Terms · SunHestia"
   description="Core solar and battery terminology for European homeowners — self-consumption, LiFePO4 and hybrid inverters — each definition tied to the hardware facts of a real residential system."
   path="news/glossary"
   jsonLd={[articleSchema, faqSchema]}
+  toc={toc}
 >
-  <section class="section">
-    <div class="wrap prose">
+  <div class="prose">
       <div style="color:var(--c-ink-soft); font-size:.9rem">2026-09 · SunHestia</div>
       <h1>Solar &amp; Battery Glossary: Core Terms for European Homeowners</h1>
 
@@ -64,7 +79,7 @@ const faqSchema = {
         term on the page always maps to a real component of the system.
       </p>
 
-      <h2>Self-consumption</h2>
+      <h2 id="self-consumption">Self-consumption</h2>
       <p>
         <strong>Self-consumption</strong> is the share of the electricity your
         solar panels produce that you use in your own home, rather than
@@ -79,7 +94,7 @@ const faqSchema = {
         low and buying back high.
       </p>
 
-      <h2>LiFePO4</h2>
+      <h2 id="lifepo4">LiFePO4</h2>
       <p>
         <strong>LiFePO4</strong> — lithium iron phosphate — is the battery
         chemistry used for SunHestia home batteries. It tolerates thousands of
@@ -92,7 +107,7 @@ const faqSchema = {
         a 10-year warranty.
       </p>
 
-      <h2>Hybrid inverter</h2>
+      <h2 id="hybrid-inverter">Hybrid inverter</h2>
       <p>
         <strong>Hybrid inverter</strong> — the control component of the
         system: it converts solar DC power into the alternating current the
@@ -105,9 +120,9 @@ const faqSchema = {
         scheduling, and is backup-capable for short outages.
       </p>
 
-      <h2>Quick-reference spec cards</h2>
+      <h2 id="quick-reference-spec-cards">Quick-reference spec cards</h2>
 
-      <h3>SunHestia Home Battery</h3>
+      <h3 id="sunhestia-home-battery">SunHestia Home Battery</h3>
       <ul>
         <li><strong>Chemistry:</strong> LiFePO4 (lithium iron phosphate), cobalt-free</li>
         <li><strong>Capacity:</strong> 5–15 kWh</li>
@@ -118,7 +133,7 @@ const faqSchema = {
         <li><strong>Inverter compatibility:</strong> built-in hybrid inverter compatibility</li>
       </ul>
 
-      <h3>SunHestia Solar PV Modules</h3>
+      <h3 id="sunhestia-solar-pv-modules">SunHestia Solar PV Modules</h3>
       <ul>
         <li><strong>Cell type:</strong> high-efficiency monocrystalline</li>
         <li><strong>Power:</strong> 400–450 W</li>
@@ -130,7 +145,7 @@ const faqSchema = {
         </li>
       </ul>
 
-      <h3>Hybrid Inverter &amp; Energy Manager</h3>
+      <h3 id="hybrid-inverter-energy-manager">Hybrid Inverter &amp; Energy Manager</h3>
       <ul>
         <li><strong>Type:</strong> smart hybrid inverter</li>
         <li>
@@ -143,16 +158,16 @@ const faqSchema = {
         <li><strong>Backup:</strong> backup-capable for short outages</li>
       </ul>
 
-      <h2>Frequently asked questions</h2>
+      <h2 id="frequently-asked-questions">Frequently asked questions</h2>
 
-      <h3>What does a residential solar and storage system include?</h3>
+      <h3 id="faq-what-does-a-residential-solar-and-storage-system-include">What does a residential solar and storage system include?</h3>
       <p>
         Typically rooftop solar panels, a hybrid inverter, and a home battery.
         The panels produce electricity, the inverter routes it to your home or
         the battery, and the battery stores surplus for use after dark.
       </p>
 
-      <h3>How big should my battery be?</h3>
+      <h3 id="faq-how-big-should-my-battery-be">How big should my battery be?</h3>
       <p>
         Battery size should match your evening electricity use. A common
         starting point for a detached home is 5–10 kWh, stackable to around
@@ -160,7 +175,7 @@ const faqSchema = {
         one-size-fits-all figure.
       </p>
 
-      <h3>What warranty do you offer?</h3>
+      <h3 id="faq-what-warranty-do-you-offer">What warranty do you offer?</h3>
       <p>
         PV modules carry a 25-year linear performance guarantee, and the
         LiFePO4 home battery carries a 10-year warranty.
@@ -172,8 +187,7 @@ const faqSchema = {
         Homeowner's Guide</a>.
       </p>
     </div>
-  </section>
-</Layout>
+</NewsArticleLayout>
 
 <style>
   .prose h3 {

@@ -1,5 +1,6 @@
 ---
-import Layout from "../../layouts/Layout.astro";
+import NewsArticleLayout from "../../layouts/NewsArticleLayout.astro";
+import type { TocItem } from "../../components/ArticleToc.astro";
 
 const articleSchema = {
   "@context": "https://schema.org",
@@ -73,15 +74,33 @@ const faqSchema = {
     },
   ],
 };
+
+const toc: TocItem[] = [
+  { id: "what-a-residential-solar-and-storage-system-includes", text: "What a residential solar and storage system includes", depth: 2 },
+  { id: "key-definitions", text: "Key definitions", depth: 2 },
+  { id: "hardware-specifications-at-a-glance", text: "Hardware specifications at a glance", depth: 2 },
+  { id: "battery-sizing-start-from-evening-consumption", text: "Battery sizing: start from evening consumption", depth: 2 },
+  { id: "solar-with-a-battery-vs-solar-without", text: "Solar with a battery vs solar without", depth: 2 },
+  { id: "roof-suitability-and-installation-time", text: "Roof suitability and installation time", depth: 2 },
+  { id: "warranty-coverage", text: "Warranty coverage", depth: 2 },
+  { id: "frequently-asked-questions", text: "Frequently asked questions", depth: 2 },
+  { id: "faq-what-does-a-residential-solar-and-storage-system-include", text: "What does a residential solar and storage system include?", depth: 3 },
+  { id: "faq-how-big-should-my-battery-be", text: "How big should my battery be?", depth: 3 },
+  { id: "faq-do-i-need-a-battery-with-solar-panels", text: "Do I need a battery with solar panels?", depth: 3 },
+  { id: "faq-what-roof-types-are-suitable", text: "What roof types are suitable?", depth: 3 },
+  { id: "faq-how-long-does-installation-take", text: "How long does installation take?", depth: 3 },
+  { id: "faq-what-warranty-do-you-offer", text: "What warranty do you offer?", depth: 3 },
+  { id: "sources", text: "Sources", depth: 2 },
+];
 ---
-<Layout
+<NewsArticleLayout
   title="Home Solar & Battery: A Data-Driven Deep Dive · SunHestia"
   description="A data-driven guide to SunHestia residential solar PV and battery storage: 400–450 W monocrystalline modules, a 5–15 kWh LiFePO4 home battery, a 25-year module performance guarantee, a 10-year battery warranty, sizing guidance and self-consumption definitions."
   path="news/home-solar-battery-deep-dive"
   jsonLd={[articleSchema, faqSchema]}
+  toc={toc}
 >
-  <section class="section">
-    <div class="wrap prose">
+  <div class="prose">
       <div style="color:var(--c-ink-soft); font-size:.9rem">2026-09 · SunHestia</div>
       <h1>Home Solar and Battery Storage: A Data-Driven Deep Dive for European Homeowners</h1>
 
@@ -96,7 +115,7 @@ const faqSchema = {
         specifications and homeowner FAQ.
       </p>
 
-      <h2>What a residential solar and storage system includes</h2>
+      <h2 id="what-a-residential-solar-and-storage-system-includes">What a residential solar and storage system includes</h2>
       <p>
         A typical system combines rooftop solar panels, a hybrid inverter, and
         a home battery. The panels produce electricity, the inverter routes it
@@ -104,7 +123,7 @@ const faqSchema = {
         after dark.
       </p>
 
-      <h2>Key definitions</h2>
+      <h2 id="key-definitions">Key definitions</h2>
       <p>
         <strong>Self-consumption.</strong> The share of the electricity your
         solar panels produce that you use in your own home, rather than
@@ -126,7 +145,7 @@ const faqSchema = {
         grid when needed.
       </p>
 
-      <h2>Hardware specifications at a glance</h2>
+      <h2 id="hardware-specifications-at-a-glance">Hardware specifications at a glance</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -221,7 +240,7 @@ const faqSchema = {
         </table>
       </div>
 
-      <h2>Battery sizing: start from evening consumption</h2>
+      <h2 id="battery-sizing-start-from-evening-consumption">Battery sizing: start from evening consumption</h2>
       <p>
         Battery size should match your evening electricity use. A common
         starting point for a detached home is 5–10 kWh, and the modular
@@ -229,7 +248,7 @@ const faqSchema = {
         based on your actual consumption, not a one-size-fits-all figure.
       </p>
 
-      <h2>Solar with a battery vs solar without</h2>
+      <h2 id="solar-with-a-battery-vs-solar-without">Solar with a battery vs solar without</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -265,7 +284,7 @@ const faqSchema = {
         buying back high.
       </p>
 
-      <h2>Roof suitability and installation time</h2>
+      <h2 id="roof-suitability-and-installation-time">Roof suitability and installation time</h2>
       <p>
         Suitable sites include pitched tile and metal roofs, flat roofs on
         garages, and ground-mounted frames where the main roof is shaded.
@@ -275,22 +294,22 @@ const faqSchema = {
         hardware is on site.
       </p>
 
-      <h2>Warranty coverage</h2>
+      <h2 id="warranty-coverage">Warranty coverage</h2>
       <ul>
         <li><strong>PV modules:</strong> 25-year linear performance guarantee.</li>
         <li><strong>LiFePO4 home battery:</strong> 10-year warranty.</li>
       </ul>
 
-      <h2>Frequently asked questions</h2>
+      <h2 id="frequently-asked-questions">Frequently asked questions</h2>
 
-      <h3>What does a residential solar and storage system include?</h3>
+      <h3 id="faq-what-does-a-residential-solar-and-storage-system-include">What does a residential solar and storage system include?</h3>
       <p>
         Typically rooftop solar panels, a hybrid inverter, and a home battery.
         The panels produce electricity, the inverter routes it to your home or
         the battery, and the battery stores surplus for use after dark.
       </p>
 
-      <h3>How big should my battery be?</h3>
+      <h3 id="faq-how-big-should-my-battery-be">How big should my battery be?</h3>
       <p>
         Battery size should match your evening electricity use. A common
         starting point for a detached home is 5–10 kWh, stackable to around
@@ -298,7 +317,7 @@ const faqSchema = {
         one-size-fits-all figure.
       </p>
 
-      <h3>Do I need a battery with solar panels?</h3>
+      <h3 id="faq-do-i-need-a-battery-with-solar-panels">Do I need a battery with solar panels?</h3>
       <p>
         Solar works without a battery, but without storage most daytime
         surplus is exported to the grid. A battery lets you keep and use that
@@ -306,27 +325,27 @@ const faqSchema = {
         buying back high.
       </p>
 
-      <h3>What roof types are suitable?</h3>
+      <h3 id="faq-what-roof-types-are-suitable">What roof types are suitable?</h3>
       <p>
         Pitched tile and metal roofs, flat roofs on garages, and
         ground-mounted frames where the main roof is shaded. Orientation and
         shading affect yield, so we assess each roof individually.
       </p>
 
-      <h3>How long does installation take?</h3>
+      <h3 id="faq-how-long-does-installation-take">How long does installation take?</h3>
       <p>
         For a typical detached home, the physical installation is often
         completed within a day once the system is designed and the hardware
         is on site.
       </p>
 
-      <h3>What warranty do you offer?</h3>
+      <h3 id="faq-what-warranty-do-you-offer">What warranty do you offer?</h3>
       <p>
         PV modules carry a 25-year linear performance guarantee, and the
         LiFePO4 home battery carries a 10-year warranty.
       </p>
 
-      <h2>Sources</h2>
+      <h2 id="sources">Sources</h2>
       <p>
         All data points in this guide come from SunHestia's first-party
         product specifications — SunHestia Solar PV Modules, SunHestia Home
@@ -342,8 +361,7 @@ const faqSchema = {
         Homeowner's Guide</a> for the full walkthrough.
       </p>
     </div>
-  </section>
-</Layout>
+</NewsArticleLayout>
 
 <style>
   .prose h3 {

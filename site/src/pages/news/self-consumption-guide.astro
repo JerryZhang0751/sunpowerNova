@@ -1,5 +1,6 @@
 ---
-import Layout from "../../layouts/Layout.astro";
+import NewsArticleLayout from "../../layouts/NewsArticleLayout.astro";
+import type { TocItem } from "../../components/ArticleToc.astro";
 
 const articleSchema = {
   "@context": "https://schema.org",
@@ -52,15 +53,30 @@ const faqSchema = {
     },
   ],
 };
+
+const toc: TocItem[] = [
+  { id: "what-is-self-consumption", text: "What is self-consumption?", depth: 2 },
+  { id: "why-self-consumption-matters", text: "Why self-consumption matters", depth: 2 },
+  { id: "the-core-system-for-self-consumption", text: "The core system for self-consumption", depth: 2 },
+  { id: "hardware-at-a-glance", text: "Hardware at a glance", depth: 2 },
+  { id: "solar-only-vs-solar-with-storage", text: "Solar only vs. solar with storage", depth: 2 },
+  { id: "sizing-your-battery-for-self-consumption", text: "Sizing your battery for self-consumption", depth: 2 },
+  { id: "warranty-and-longevity", text: "Warranty and longevity", depth: 2 },
+  { id: "frequently-asked-questions", text: "Frequently asked questions", depth: 2 },
+  { id: "faq-do-i-need-a-battery-with-solar-panels", text: "Do I need a battery with solar panels?", depth: 3 },
+  { id: "faq-how-big-should-my-battery-be", text: "How big should my battery be?", depth: 3 },
+  { id: "faq-how-long-does-installation-take", text: "How long does installation take?", depth: 3 },
+  { id: "faq-what-roof-types-are-suitable", text: "What roof types are suitable?", depth: 3 },
+];
 ---
-<Layout
+<NewsArticleLayout
   title="Solar Self-Consumption: The Homeowner's Guide"
   description="What solar self-consumption is, why it is the single number that most influences the value of a residential solar system, and how a hybrid inverter and LiFePO4 home battery raise it."
   path="news/self-consumption-guide"
   jsonLd={[articleSchema, faqSchema]}
+  toc={toc}
 >
-  <section class="section">
-    <div class="wrap prose">
+  <div class="prose">
       <div style="color:var(--c-ink-soft); font-size:.9rem">2026-08 · SunHestia</div>
       <h1>Solar Self-Consumption: The Homeowner's Guide</h1>
 
@@ -72,7 +88,7 @@ const faqSchema = {
         is needed, sharply increasing self-consumption.
       </blockquote>
 
-      <h2>What is self-consumption?</h2>
+      <h2 id="what-is-self-consumption">What is self-consumption?</h2>
       <p>
         Every kilowatt-hour your panels produce goes one of two places: into
         your home, or out to the grid. The share you use yourself is your
@@ -80,7 +96,7 @@ const faqSchema = {
         the system delivers.
       </p>
 
-      <h2>Why self-consumption matters</h2>
+      <h2 id="why-self-consumption-matters">Why self-consumption matters</h2>
       <ul>
         <li>
           Solar works without a battery, but without storage most daytime
@@ -96,7 +112,7 @@ const faqSchema = {
         </li>
       </ul>
 
-      <h2>The core system for self-consumption</h2>
+      <h2 id="the-core-system-for-self-consumption">The core system for self-consumption</h2>
       <p>A residential solar and storage system typically includes:</p>
       <ul>
         <li><strong>Rooftop solar panels</strong> that produce electricity</li>
@@ -116,7 +132,7 @@ const faqSchema = {
         monitoring of production, storage and consumption.
       </p>
 
-      <h2>Hardware at a glance</h2>
+      <h2 id="hardware-at-a-glance">Hardware at a glance</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -153,7 +169,7 @@ const faqSchema = {
         </table>
       </div>
 
-      <h2>Solar only vs. solar with storage</h2>
+      <h2 id="solar-only-vs-solar-with-storage">Solar only vs. solar with storage</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -189,7 +205,7 @@ const faqSchema = {
         </table>
       </div>
 
-      <h2>Sizing your battery for self-consumption</h2>
+      <h2 id="sizing-your-battery-for-self-consumption">Sizing your battery for self-consumption</h2>
       <ul>
         <li>Battery size should match your evening electricity use.</li>
         <li>
@@ -202,7 +218,7 @@ const faqSchema = {
         </li>
       </ul>
 
-      <h2>Warranty and longevity</h2>
+      <h2 id="warranty-and-longevity">Warranty and longevity</h2>
       <ul>
         <li>PV modules carry a 25-year linear performance guarantee.</li>
         <li>The LiFePO4 home battery carries a 10-year warranty.</li>
@@ -213,9 +229,9 @@ const faqSchema = {
         </li>
       </ul>
 
-      <h2>Frequently asked questions</h2>
+      <h2 id="frequently-asked-questions">Frequently asked questions</h2>
 
-      <h3>Do I need a battery with solar panels?</h3>
+      <h3 id="faq-do-i-need-a-battery-with-solar-panels">Do I need a battery with solar panels?</h3>
       <p>
         Solar works without a battery, but without storage most daytime
         surplus is exported to the grid. A battery lets you keep and use that
@@ -223,21 +239,21 @@ const faqSchema = {
         buying back high.
       </p>
 
-      <h3>How big should my battery be?</h3>
+      <h3 id="faq-how-big-should-my-battery-be">How big should my battery be?</h3>
       <p>
         Battery size should match your evening electricity use. A common
         starting point for a detached home is 5–10 kWh, stackable to around
         15 kWh, sized based on your actual consumption.
       </p>
 
-      <h3>How long does installation take?</h3>
+      <h3 id="faq-how-long-does-installation-take">How long does installation take?</h3>
       <p>
         For a typical detached home, the physical installation is often
         completed within a day once the system is designed and the hardware is
         on site.
       </p>
 
-      <h3>What roof types are suitable?</h3>
+      <h3 id="faq-what-roof-types-are-suitable">What roof types are suitable?</h3>
       <p>
         Pitched tile and metal roofs, flat roofs on garages, and
         ground-mounted frames where the main roof is shaded. Orientation and
@@ -250,8 +266,7 @@ const faqSchema = {
         and why does it matter?</a>
       </p>
     </div>
-  </section>
-</Layout>
+</NewsArticleLayout>
 
 <style>
   .prose blockquote {

@@ -19,6 +19,15 @@ const sharedChromeMs = [
   .map((f) => mtimeMs(`${root}${f}`))
   .filter((ms) => ms > 0);
 
+// News-article chrome: TOC 布局与组件只影响 /news/<article>/ 页的 <lastmod>,
+// 不进 sharedChrome —— 目录组件变化不得刷新全站其他页面(spec §4.3.7)。
+const newsArticleMs = [
+  'src/layouts/NewsArticleLayout.astro',
+  'src/components/ArticleToc.astro',
+]
+  .map((f) => mtimeMs(`${root}${f}`))
+  .filter((ms) => ms > 0);
+
 function mtimeMs(file) {
   try {
     return statSync(file).mtimeMs;
@@ -35,7 +44,11 @@ function lastmodFor(path) {
       ? [`${root}src/pages/index.astro`]
       : [`${root}src/pages/${seg}.astro`, `${root}src/pages/${seg}/index.astro`];
   const pageMs = candidates.map(mtimeMs).find((ms) => ms > 0) || 0;
-  const latest = Math.max(pageMs, ...sharedChromeMs);
+  const latest = Math.max(
+    pageMs,
+    ...sharedChromeMs,
+    ...(seg.startsWith('news/') && seg !== 'news' ? newsArticleMs : []),
+  );
   return latest > 0 ? new Date(latest).toISOString() : undefined;
 }
 

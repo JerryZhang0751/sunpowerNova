@@ -1,5 +1,6 @@
 ---
-import Layout from "../../layouts/Layout.astro";
+import NewsArticleLayout from "../../layouts/NewsArticleLayout.astro";
+import type { TocItem } from "../../components/ArticleToc.astro";
 
 const articleSchema = {
   "@context": "https://schema.org",
@@ -65,15 +66,31 @@ const faqSchema = {
     },
   ],
 };
+
+const toc: TocItem[] = [
+  { id: "how-your-system-is-designed", text: "How your system is designed", depth: 2 },
+  { id: "the-hardware-our-teams-install", text: "The hardware our teams install", depth: 2 },
+  { id: "sunhestia-solar-pv-modules", text: "SunHestia Solar PV Modules", depth: 3 },
+  { id: "sunhestia-home-battery", text: "SunHestia Home Battery", depth: 3 },
+  { id: "hybrid-inverter-energy-manager", text: "Hybrid Inverter & Energy Manager", depth: 3 },
+  { id: "installation-often-a-single-day-on-site", text: "Installation: often a single day on site", depth: 2 },
+  { id: "the-guarantees-behind-the-work", text: "The guarantees behind the work", depth: 2 },
+  { id: "frequently-asked-questions", text: "Frequently asked questions", depth: 2 },
+  { id: "faq-what-does-a-residential-solar-and-storage-system-include", text: "What does a residential solar and storage system include?", depth: 3 },
+  { id: "faq-do-i-need-a-battery-with-solar-panels", text: "Do I need a battery with solar panels?", depth: 3 },
+  { id: "faq-how-long-does-installation-take", text: "How long does installation take?", depth: 3 },
+  { id: "faq-what-warranty-do-you-offer", text: "What warranty do you offer?", depth: 3 },
+  { id: "sources", text: "Sources", depth: 2 },
+];
 ---
-<Layout
+<NewsArticleLayout
   title="Who Designs & Installs Your SunHestia System · SunHestia"
   description="How SunHestia designs residential solar and battery systems around self-consumption: consumption-first battery sizing, roof-by-roof assessment, the hardware installed, and the guarantees behind the work."
   path="news/about-the-team"
   jsonLd={[articleSchema, faqSchema, orgSchema]}
+  toc={toc}
 >
-  <section class="section">
-    <div class="wrap prose">
+  <div class="prose">
       <div style="color:var(--c-ink-soft); font-size:.9rem">2026-09 · SunHestia</div>
       <h1>Who Designs and Installs Your SunHestia System</h1>
 
@@ -89,7 +106,7 @@ const faqSchema = {
         is configured to the connection rules and tariffs of your country.
       </p>
 
-      <h2>How your system is designed</h2>
+      <h2 id="how-your-system-is-designed">How your system is designed</h2>
       <ul>
         <li>
           <strong>Consumption first, not a template.</strong> Battery size is
@@ -110,9 +127,9 @@ const faqSchema = {
         </li>
       </ul>
 
-      <h2>The hardware our teams install</h2>
+      <h2 id="the-hardware-our-teams-install">The hardware our teams install</h2>
 
-      <h3>SunHestia Solar PV Modules</h3>
+      <h3 id="sunhestia-solar-pv-modules">SunHestia Solar PV Modules</h3>
       <div class="table-wrap">
         <table>
           <thead>
@@ -149,7 +166,7 @@ const faqSchema = {
         </table>
       </div>
 
-      <h3>SunHestia Home Battery</h3>
+      <h3 id="sunhestia-home-battery">SunHestia Home Battery</h3>
       <div class="table-wrap">
         <table>
           <thead>
@@ -187,7 +204,7 @@ const faqSchema = {
         </table>
       </div>
 
-      <h3>Hybrid Inverter &amp; Energy Manager</h3>
+      <h3 id="hybrid-inverter-energy-manager">Hybrid Inverter &amp; Energy Manager</h3>
       <ul>
         <li>
           Converts solar DC power for the home and routes power between panels,
@@ -198,7 +215,7 @@ const faqSchema = {
         <li>Supports time-of-use scheduling</li>
       </ul>
 
-      <h2>Installation: often a single day on site</h2>
+      <h2 id="installation-often-a-single-day-on-site">Installation: often a single day on site</h2>
       <p>
         For a typical detached home, the physical installation is often
         completed within a day once the system is designed and the hardware is
@@ -206,7 +223,7 @@ const faqSchema = {
         your country's rules — happens before anyone climbs a ladder.
       </p>
 
-      <h2>The guarantees behind the work</h2>
+      <h2 id="the-guarantees-behind-the-work">The guarantees behind the work</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -228,16 +245,16 @@ const faqSchema = {
         </table>
       </div>
 
-      <h2>Frequently asked questions</h2>
+      <h2 id="frequently-asked-questions">Frequently asked questions</h2>
 
-      <h3>What does a residential solar and storage system include?</h3>
+      <h3 id="faq-what-does-a-residential-solar-and-storage-system-include">What does a residential solar and storage system include?</h3>
       <p>
         Typically rooftop solar panels, a hybrid inverter, and a home battery.
         The panels produce electricity, the inverter routes it to your home or
         the battery, and the battery stores surplus for use after dark.
       </p>
 
-      <h3>Do I need a battery with solar panels?</h3>
+      <h3 id="faq-do-i-need-a-battery-with-solar-panels">Do I need a battery with solar panels?</h3>
       <p>
         Solar works without a battery, but without storage most daytime surplus
         is exported to the grid. A battery lets you keep and use that energy
@@ -245,20 +262,20 @@ const faqSchema = {
         back high.
       </p>
 
-      <h3>How long does installation take?</h3>
+      <h3 id="faq-how-long-does-installation-take">How long does installation take?</h3>
       <p>
         For a typical detached home, the physical installation is often
         completed within a day once the system is designed and the hardware is
         on site.
       </p>
 
-      <h3>What warranty do you offer?</h3>
+      <h3 id="faq-what-warranty-do-you-offer">What warranty do you offer?</h3>
       <p>
         PV modules carry a 25-year linear performance guarantee, and the
         LiFePO4 home battery carries a 10-year warranty.
       </p>
 
-      <h2>Sources</h2>
+      <h2 id="sources">Sources</h2>
       <p>
         All figures in this page come from SunHestia's first-party product
         specifications and the homeowner FAQ at sunhestia.com. No third-party
@@ -273,8 +290,7 @@ const faqSchema = {
         terminology.
       </p>
     </div>
-  </section>
-</Layout>
+</NewsArticleLayout>
 
 <style>
   .prose h3 {

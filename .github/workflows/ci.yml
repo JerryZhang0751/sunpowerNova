@@ -48,3 +48,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: TOC integrity (news articles)
+        run: npm run checktoc

@@ -1,5 +1,6 @@
 ---
-import Layout from "../../layouts/Layout.astro";
+import NewsArticleLayout from "../../layouts/NewsArticleLayout.astro";
+import type { TocItem } from "../../components/ArticleToc.astro";
 
 const articleSchema = {
   "@context": "https://schema.org",
@@ -57,15 +58,30 @@ const faqSchema = {
     },
   ],
 };
+
+const toc: TocItem[] = [
+  { id: "key-terms", text: "Key terms", depth: 2 },
+  { id: "side-by-side-at-a-glance", text: "Side-by-side at a glance", depth: 2 },
+  { id: "hardware-spec-cards", text: "Hardware spec cards", depth: 2 },
+  { id: "sunhestia-solar-pv-modules", text: "SunHestia Solar PV Modules", depth: 3 },
+  { id: "sunhestia-home-battery", text: "SunHestia Home Battery", depth: 3 },
+  { id: "hybrid-inverter-energy-manager", text: "Hybrid Inverter & Energy Manager", depth: 3 },
+  { id: "what-storage-changes", text: "What storage changes", depth: 2 },
+  { id: "faq", text: "FAQ", depth: 2 },
+  { id: "faq-do-i-need-a-battery-with-solar-panels", text: "Do I need a battery with solar panels?", depth: 3 },
+  { id: "faq-how-big-should-my-battery-be", text: "How big should my battery be?", depth: 3 },
+  { id: "faq-what-warranty-do-you-offer", text: "What warranty do you offer?", depth: 3 },
+  { id: "faq-how-long-does-installation-take", text: "How long does installation take?", depth: 3 },
+];
 ---
-<Layout
+<NewsArticleLayout
   title="Solar Only vs Solar + Battery: Side-by-Side Comparison"
   description="Side-by-side comparison of rooftop solar panels alone versus solar paired with a SunHestia home battery: components, self-consumption, backup capability, specifications, sizing and warranty."
   path="news/solar-only-vs-solar-plus-battery"
   jsonLd={[articleSchema, faqSchema]}
+  toc={toc}
 >
-  <section class="section">
-    <div class="wrap prose">
+  <div class="prose">
       <div style="color:var(--c-ink-soft); font-size:.9rem">2026-09 · SunHestia</div>
       <h1>Solar Only vs Solar + Battery: A Side-by-Side Comparison</h1>
 
@@ -79,7 +95,7 @@ const faqSchema = {
         with a home battery, so you can see exactly what storage adds.
       </p>
 
-      <h2>Key terms</h2>
+      <h2 id="key-terms">Key terms</h2>
       <p>
         <strong>Self-consumption</strong> — the share of the electricity your
         solar panels produce that you use in your own home, rather than
@@ -101,7 +117,7 @@ const faqSchema = {
         grid when needed.
       </p>
 
-      <h2>Side-by-side at a glance</h2>
+      <h2 id="side-by-side-at-a-glance">Side-by-side at a glance</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -151,9 +167,9 @@ const faqSchema = {
         </table>
       </div>
 
-      <h2>Hardware spec cards</h2>
+      <h2 id="hardware-spec-cards">Hardware spec cards</h2>
 
-      <h3>SunHestia Solar PV Modules</h3>
+      <h3 id="sunhestia-solar-pv-modules">SunHestia Solar PV Modules</h3>
       <ul>
         <li><strong>Power output:</strong> 400–450 W per module</li>
         <li><strong>Cell type:</strong> high-efficiency monocrystalline</li>
@@ -162,7 +178,7 @@ const faqSchema = {
         <li><strong>Performance guarantee:</strong> 25-year linear performance guarantee</li>
       </ul>
 
-      <h3>SunHestia Home Battery</h3>
+      <h3 id="sunhestia-home-battery">SunHestia Home Battery</h3>
       <ul>
         <li><strong>Chemistry:</strong> LiFePO4 (lithium iron phosphate), cobalt-free</li>
         <li><strong>Capacity:</strong> 5–15 kWh — modular from 5 kWh, stackable to 15 kWh</li>
@@ -172,7 +188,7 @@ const faqSchema = {
         <li><strong>Cycle life:</strong> designed for thousands of charge cycles</li>
       </ul>
 
-      <h3>Hybrid Inverter &amp; Energy Manager</h3>
+      <h3 id="hybrid-inverter-energy-manager">Hybrid Inverter &amp; Energy Manager</h3>
       <ul>
         <li><strong>Type:</strong> smart hybrid inverter</li>
         <li><strong>Function:</strong> converts solar DC power for the home and routes power between panels, battery, home and grid, drawing from the grid only when needed</li>
@@ -181,7 +197,7 @@ const faqSchema = {
         <li><strong>Scheduling:</strong> supports time-of-use scheduling</li>
       </ul>
 
-      <h2>What storage changes</h2>
+      <h2 id="what-storage-changes">What storage changes</h2>
       <ul>
         <li>
           Solar works without a battery, but without storage most daytime
@@ -199,9 +215,9 @@ const faqSchema = {
         </li>
       </ul>
 
-      <h2>FAQ</h2>
+      <h2 id="faq">FAQ</h2>
 
-      <h3>Do I need a battery with solar panels?</h3>
+      <h3 id="faq-do-i-need-a-battery-with-solar-panels">Do I need a battery with solar panels?</h3>
       <p>
         Solar works without a battery, but without storage most daytime
         surplus is exported to the grid. A battery lets you keep and use that
@@ -209,7 +225,7 @@ const faqSchema = {
         buying back high.
       </p>
 
-      <h3>How big should my battery be?</h3>
+      <h3 id="faq-how-big-should-my-battery-be">How big should my battery be?</h3>
       <p>
         Battery size should match your evening electricity use. A common
         starting point for a detached home is 5–10 kWh, stackable to around
@@ -217,13 +233,13 @@ const faqSchema = {
         one-size-fits-all figure.
       </p>
 
-      <h3>What warranty do you offer?</h3>
+      <h3 id="faq-what-warranty-do-you-offer">What warranty do you offer?</h3>
       <p>
         PV modules carry a 25-year linear performance guarantee, and the
         LiFePO4 home battery carries a 10-year warranty.
       </p>
 
-      <h3>How long does installation take?</h3>
+      <h3 id="faq-how-long-does-installation-take">How long does installation take?</h3>
       <p>
         For a typical detached home, the physical installation is often
         completed within a day once the system is designed and the hardware
@@ -236,8 +252,7 @@ const faqSchema = {
         Homeowner's Guide</a>.
       </p>
     </div>
-  </section>
-</Layout>
+</NewsArticleLayout>
 
 <style>
   .table-wrap {

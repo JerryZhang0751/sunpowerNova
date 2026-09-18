@@ -1,0 +1,134 @@
+---
+export interface TocItem {
+  id: string;
+  text: string;
+  depth: 2 | 3;
+}
+interface Props {
+  items: TocItem[];
+}
+const { items } = Astro.props;
+---
+<nav class="toc-col" aria-label="Table of contents">
+  <p class="toc-title">On this page</p>
+  <div class="toc-list">
+    {items.map((it) => (
+      <a class="toc-link" href={`#${it.id}`} data-depth={it.depth}>{it.text}</a>
+    ))}
+  </div>
+</nav>
+
+<details class="toc-mobile">
+  <summary>On this page</summary>
+  <div class="toc-list">
+    {items.map((it) => (
+      <a class="toc-link" href={`#${it.id}`} data-depth={it.depth}>{it.text}</a>
+    ))}
+  </div>
+</details>
+
+<style>
+  .toc-title {
+    margin: 0 0 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--c-ink-soft);
+  }
+  .toc-link {
+    display: block;
+    padding: 5px 0 5px 10px;
+    border-left: 2px solid var(--c-border);
+    font-size: 0.88rem;
+    line-height: 1.35;
+    color: var(--c-ink-soft);
+    text-decoration: none;
+  }
+  .toc-link[data-depth="3"] {
+    padding-left: 26px;
+    font-size: 0.84rem;
+  }
+  .toc-link:hover {
+    color: var(--c-ink);
+    border-left-color: var(--c-sun);
+  }
+  .toc-link:focus-visible {
+    outline: 2px solid var(--c-sky);
+    outline-offset: 2px;
+  }
+  .toc-link[aria-current="location"] {
+    color: var(--c-ink);
+    font-weight: 600;
+    border-left-color: var(--c-sun-deep);
+  }
+  /* 桌面: 左侧 sticky 目录(避开 64px 顶部导航,过长独立滚动); 移动: 折叠块 */
+  .toc-col {
+    position: sticky;
+    top: 88px;
+    max-height: calc(100vh - 136px);
+    overflow-y: auto;
+    padding-top: 4px;
+  }
+  .toc-mobile {
+    display: none;
+    margin: 0 0 20px;
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: var(--c-bg-alt);
+  }
+  .toc-mobile summary {
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.92rem;
+    color: var(--c-ink);
+  }
+  @media (max-width: 960px) {
+    .toc-col { display: none; }
+    .toc-mobile { display: block; }
+  }
+  @media print {
+    .toc-col,
+    .toc-mobile { display: none !important; }
+  }
+</style>
+
+<script>
+  // 增强脚本: 滚动高亮当前章节(aria-current="location")。
+  // 纯增强 —— 无 JS 时目录与原生锚点跳转完全可用。
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>("a.toc-link"));
+  const targets = links
+    .map((l) => document.getElementById((l.getAttribute("href") ?? "").slice(1)))
+    .filter((el): el is HTMLElement => el !== null);
+  function setActive(id: string | null) {
+    for (const l of links) {
+      if (id && l.getAttribute("href") === `#${id}`) {
+        l.setAttribute("aria-current", "location");
+      } else {
+        l.removeAttribute("aria-current");
+      }
+    }
+  }
+  function update() {
+    const line = window.scrollY + 100;   // 略低于顶部导航的"当前位置线"
+    let current: HTMLElement | null = null;
+    for (const h of targets) {
+      if (h.offsetTop <= line) current = h;   // 页顶→null;长章节间隙→保持上一个;文末→最后一个
+      else break;
+    }
+    setActive(current ? current.id : null);
+  }
+  let queued = false;
+  function onScroll() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      update();
+    });
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  update();
+</script>

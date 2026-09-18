@@ -1,13 +1,20 @@
 ---
-import Layout from "../../layouts/Layout.astro";
+import NewsArticleLayout from "../../layouts/NewsArticleLayout.astro";
+import type { TocItem } from "../../components/ArticleToc.astro";
+
+const toc: TocItem[] = [
+  { id: "long-cycle-life", text: "Long cycle life", depth: 2 },
+  { id: "inherent-stability", text: "Inherent stability", depth: 2 },
+  { id: "cobalt-free", text: "Cobalt-free", depth: 2 },
+];
 ---
-<Layout
+<NewsArticleLayout
   title="Why we use LiFePO4 for home batteries"
   description="Why SunHestia chooses lithium iron phosphate (LiFePO4) cells for home battery storage: long life, stability and a cobalt-free supply chain."
   path="news/lifepo4-home-batteries"
+  toc={toc}
 >
-  <section class="section">
-    <div class="wrap prose">
+  <div class="prose">
       <div style="color:var(--c-ink-soft); font-size:.9rem">2026-07 · SunHestia</div>
       <h1>Why we use LiFePO4 for home batteries</h1>
       <p>
@@ -16,19 +23,19 @@ import Layout from "../../layouts/Layout.astro";
         safety and cost per cycle are. That is why SunHestia uses lithium iron
         phosphate (LiFePO4) chemistry.
       </p>
-      <h2>Long cycle life</h2>
+      <h2 id="long-cycle-life">Long cycle life</h2>
       <p>
         LiFePO4 cells tolerate thousands of charge-discharge cycles with modest
         degradation. For a home battery that cycles daily, that translates into a
         long service life — which is why we can offer a 10-year warranty.
       </p>
-      <h2>Inherent stability</h2>
+      <h2 id="inherent-stability">Inherent stability</h2>
       <p>
         The chemistry is thermally stable and resistant to the conditions that
         drive degradation and failure in other lithium chemistries. That makes it
         well suited to a device that lives on a wall in a home for a decade.
       </p>
-      <h2>Cobalt-free</h2>
+      <h2 id="cobalt-free">Cobalt-free</h2>
       <p>
         LiFePO4 contains no cobalt, which simplifies the supply chain and avoids a
         material associated with well-documented environmental and social
@@ -40,5 +47,4 @@ import Layout from "../../layouts/Layout.astro";
         reasonable price for the safety and longevity gained.
       </p>
     </div>
-  </section>
-</Layout>
+</NewsArticleLayout>

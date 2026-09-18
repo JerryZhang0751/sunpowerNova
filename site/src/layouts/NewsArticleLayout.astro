@@ -1,0 +1,51 @@
+---
+import Layout from "./Layout.astro";
+import ArticleToc from "../components/ArticleToc.astro";
+import type { TocItem } from "../components/ArticleToc.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  path?: string;
+  ogImage?: string;
+  jsonLd?: object | object[];
+  noindex?: boolean;
+  toc: TocItem[];
+}
+
+const { title, description, path, ogImage, jsonLd, noindex, toc } = Astro.props;
+---
+<Layout title={title} description={description} path={path} ogImage={ogImage} jsonLd={jsonLd} noindex={noindex}>
+  <section class="section">
+    <div class="wrap article-shell">
+      <ArticleToc items={toc} />
+      <div class="article-main">
+        <slot />
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .article-shell {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 48px;
+    align-items: start;
+  }
+  /* 正文标题锚点定位偏移: 跳转后不被 64px 顶部导航遮住 */
+  .article-main :global(h2[id]),
+  .article-main :global(h3[id]) {
+    scroll-margin-top: 88px;
+  }
+  @media (max-width: 960px) {
+    .article-shell {
+      display: block;
+    }
+  }
+  @media print {
+    .article-shell {
+      display: block;
+    }
+  }
+</style>
