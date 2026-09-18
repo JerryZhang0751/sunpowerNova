@@ -92,6 +92,12 @@ const { items } = Astro.props;
     .toc-col,
     .toc-mobile { display: none !important; }
   }
+  /* spec §4.2: 减动效偏好下不启用平滑滚动(global.css 的 html smooth 仅在无本组件页面维持原状) */
+  @media (prefers-reduced-motion: reduce) {
+    :global(html) {
+      scroll-behavior: auto;
+    }
+  }
 </style>
 
 <script>

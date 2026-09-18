@@ -23,7 +23,7 @@ function navLinks(html) {
     const depth = m[1].match(/data-depth="(\d)"/);
     if (href && depth) out.push({ id: href[1], text: norm(m[2]), depth: Number(depth[1]) });
   }
-  return out;
+  return { links: out, block: nav[1] };
 }
 
 function headings(html) {
@@ -58,7 +58,12 @@ for (const p of pages) {
   const html = readFileSync(p, "utf8");
   const errs = [];
   const nav = navLinks(html);
-  if (!nav || nav.length === 0) errs.push('缺少 <nav class="toc-col"> 目录');
+  if (!nav || nav.links.length === 0) errs.push('缺少 <nav class="toc-col"> 目录');
+  // D5 决策(目录不用 ul/ol 列表元素,GEO 结构计数稳定): nav 块内出现 ul/ol 即 FAIL,
+  // 防未来重构回列表结构后本检查仍绿而 GEO ul_count 漂移。
+  if (nav && /<(ul|ol)\b/.test(nav.block)) {
+    errs.push('目录使用了 ul/ol —— 违反 D5(GEO 结构计数)');
+  }
   const hs = headings(html);
   // fail-closed: 原始 h2/h3 出现次数必须与纯文本正则的匹配数一致,
   // 不一致说明有标题含内联标记而漏配 —— 显式报错,不得静默缩小检查范围。
@@ -74,21 +79,21 @@ for (const p of pages) {
   if (dup.length) errs.push(`正文标题 id 重复: ${dup.map(([k]) => k).join(", ")}`);
   if (nav) {
     const seen = new Set();
-    for (const l of nav) {
+    for (const l of nav.links) {
       if (seen.has(l.id)) errs.push(`目录重复链接 #${l.id}`);
       seen.add(l.id);
     }
     const want = hs.filter((h) => h.id)
       .map((h) => ({ id: h.id, text: h.text, depth: Number(h.tag[1]) }));
-    if (JSON.stringify(nav) !== JSON.stringify(want)) {
-      errs.push(`目录与正文标题不一致(逐条比对 id/text/depth/顺序):\n    toc : ${JSON.stringify(nav)}\n    body: ${JSON.stringify(want)}`);
+    if (JSON.stringify(nav.links) !== JSON.stringify(want)) {
+      errs.push(`目录与正文标题不一致(逐条比对 id/text/depth/顺序):\n    toc : ${JSON.stringify(nav.links)}\n    body: ${JSON.stringify(want)}`);
     }
   }
   if (errs.length) {
     failures++;
     console.error(`FAIL ${p}\n  ${errs.join("\n  ")}`);
   } else {
-    console.log(`ok   ${p} (${nav.length} 条目录)`);
+    console.log(`ok   ${p} (${nav.links.length} 条目录)`);
   }
 }
 process.exit(failures ? 1 : 0);
