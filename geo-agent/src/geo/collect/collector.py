@@ -1,7 +1,7 @@
 from __future__ import annotations
 import json, time, logging
 import httpx
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, FIRST_COMPLETED, wait as futures_wait
 from geo.shared.config import settings
 from geo.shared.models import L1Record, L2Record, RunRecord, PromptRow
 from geo.shared.storage import l1_path, append_run_records, read_run_records
@@ -89,6 +89,57 @@ def _mk_rec(week:int, model:str, pid:str, run:int, rule_version:str,
                      prompt_set_version=PROMPT_SET_VERSION, rule_snapshot_version=rule_version,
                      status=status, l1_path=l1, error=error)
 
+def _one_logged(job):
+    """工作线程侧: 单条计时+开始/结束日志(spec §3.3);结果记录仍在主线程。"""
+    m, row, run = job[0], job[1], job[2]
+    t0 = time.monotonic()
+    log.info("collect %s %s r%d start", m, row.id, run)
+    try:
+        rec = _one(*job)
+    except Exception:
+        log.info("collect %s %s r%d failed after %.1fs", m, row.id, run, time.monotonic() - t0)
+        raise
+    log.info("collect %s %s r%d ok %.1fs", m, row.id, run, time.monotonic() - t0)
+    return rec
+
+
+def _run_vendor_parallel(todo, week, rule_version):
+    """供应商级并行调度(spec 2026-09-18 §3.1): 每家最多1个在途请求、总数≤3;
+    一家等待响应或退避重试时,不占用另外两家的执行机会。
+    主线程等待任意完成 → 立即落 manifest → 补位同一家下一条。"""
+    queues: dict[str, list] = {}
+    for j in todo:
+        queues.setdefault(j[0], []).append(j)
+    recs: list[RunRecord] = []
+    t0 = time.monotonic()
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        inflight: dict = {}
+
+        def _submit_next(m):
+            j = queues[m].pop(0)
+            inflight[ex.submit(_one_logged, j)] = j
+
+        for m in list(queues):
+            _submit_next(m)
+        while inflight:
+            done, _ = futures_wait(inflight, return_when=FIRST_COMPLETED)
+            for fut in done:
+                j = inflight.pop(fut)
+                try:
+                    rec = fut.result()
+                except Exception as e:
+                    log.error("fail %s %s r%d: %s", j[0], j[1].id, j[2], e)
+                    rec = _mk_rec(week, j[0], j[1].id, j[2], rule_version,
+                                  "failed", error=str(e))
+                recs.append(rec)
+                append_run_records(week, [rec])   # 完成即落盘(主线程写清单)
+                if queues[j[0]]:
+                    _submit_next(j[0])
+    if todo:
+        log.info("collection round done: %d tasks, %.1fs", len(todo), time.monotonic() - t0)
+    return recs
+
+
 def collection_health(week:int) -> dict:
     """从 runs.jsonl 计算 per-model 计划/有效/成功率。
 
@@ -135,18 +186,7 @@ def run_collection(week:int, models:list[str], prompt_ids:list[str]|None, runs:i
     append_run_records(week, [_mk_rec(week, m, r.id, run, rule_version, "planned",
                                       l1=str(l1_path(week, m, r.id, run)))
                               for (m, r, run, *_) in todo])
-    with ThreadPoolExecutor(max_workers=3) as ex:       # 3 家并行
-        futs = {ex.submit(_one, *j): j for j in todo}
-        for f in as_completed(futs):
-            j = futs[f]
-            try:
-                recs.append(f.result())
-                append_run_records(week, [recs[-1]])
-            except Exception as e:
-                # 失败同样落 manifest:planned 分母不丢、error 可追溯(不再只记日志)
-                log.error("fail %s: %s", j, e)
-                rec = _mk_rec(week, j[0], j[1].id, j[2], rule_version, "failed", error=str(e))
-                recs.append(rec); append_run_records(week, [rec])
+    recs.extend(_run_vendor_parallel(todo, week, rule_version))
     return recs
 
 if __name__ == "__main__":

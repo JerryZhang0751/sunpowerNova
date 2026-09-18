@@ -214,3 +214,183 @@ def test_http_status_error_not_retried(tmp_path, monkeypatch):
     _iso(tmp_path, monkeypatch, clients={"qwen": limited})
     run_collection(week=96, models=["qwen"], prompt_ids=["C01"], runs=1, rule_version="t")
     assert calls["n"] == 1
+
+# ---- spec 2026-09-18 §5.1: 供应商级并行调度(每家最多1个在途,总并发≤3) --------
+
+import threading
+import time as _time
+
+
+def _ok_answer(name):
+    def client(prompt, **k):
+        return {"answer": f"A {name}", "search_results": [], "usage": {}, "elapsed_s": 0.1}
+    return client
+
+
+def _wait_until(cond, timeout=10.0, what="condition"):
+    """有界等待。轮询用 Event.wait(0.01) —— 不经 time.sleep(退避测试会 patch 它)。"""
+    dummy = threading.Event()
+    deadline = _time.monotonic() + timeout
+    while not cond():
+        if _time.monotonic() > deadline:
+            raise AssertionError(f"timeout waiting: {what}")
+        dummy.wait(0.01)
+
+
+def test_first_batch_contains_all_vendors(tmp_path, monkeypatch):
+    """三家均有多条任务 → 首批请求必须包含三家(不能全是同一家);
+    且每家最多1个在途 —— 全部阻塞期间恰好只发生3次调用。"""
+    started: list[str] = []
+    lock = threading.Lock()
+    release = threading.Event()
+
+    def mk(name):
+        def client(prompt, **k):
+            with lock:
+                started.append(name)
+            assert release.wait(timeout=10), "客户端未获释放(测试挂起)"
+            return {"answer": f"A {name}", "search_results": [], "usage": {}, "elapsed_s": 0.1}
+        return client
+
+    _iso(tmp_path, monkeypatch,
+         clients={m: mk(m) for m in ("qwen", "doubao", "zhipu")})
+    th = threading.Thread(target=lambda: run_collection(
+        week=91, models=["qwen", "doubao", "zhipu"],
+        prompt_ids=["C01", "D01", "B02"], runs=1, rule_version="t"))
+    try:
+        th.start()
+        _wait_until(lambda: len(started) >= 3, what="首批三家请求进入")
+        assert set(started) == {"qwen", "doubao", "zhipu"}, started
+        assert len(started) == 3, f"每家应只有1个在途请求: {started}"
+    finally:
+        release.set()
+        th.join(timeout=10)
+    assert not th.is_alive()
+
+
+def test_blocked_vendor_does_not_stall_others(tmp_path, monkeypatch):
+    """qwen 单条阻塞期间:doubao/zhipu 的全部任务完成并逐条落盘;
+    qwen 其余任务不被拉起(每家1在途)。"""
+    unblock = threading.Event()
+    qwen_started: list[str] = []
+
+    def qwen_slow(prompt, **k):
+        qwen_started.append(prompt)
+        assert unblock.wait(timeout=10), "qwen 未获释放(测试挂起)"
+        return {"answer": "A qwen", "search_results": [], "usage": {}, "elapsed_s": 0.1}
+
+    _iso(tmp_path, monkeypatch, clients={"qwen": qwen_slow,
+                                         "doubao": _ok_answer("doubao"),
+                                         "zhipu": _ok_answer("zhipu")})
+    th = threading.Thread(target=lambda: run_collection(
+        week=92, models=["qwen", "doubao", "zhipu"],
+        prompt_ids=["C01", "D01", "B02"], runs=1, rule_version="t"))
+    manifest = tmp_path / "data" / "raw" / "w92" / "runs.jsonl"
+    try:
+        th.start()
+        def others_done():
+            if not manifest.exists():
+                return False
+            lines = manifest.read_text(encoding="utf-8").splitlines()
+            return sum(1 for l in lines if '"status":"ok"' in l
+                       and ('"model":"doubao"' in l or '"model":"zhipu"' in l)) >= 6
+        _wait_until(others_done, what="qwen 阻塞期间 doubao/zhipu 6 条 ok 落盘")
+        assert len(qwen_started) == 1, f"qwen 应只有1条在途: {qwen_started}"
+        still_running = th.is_alive()          # qwen 未完成 → 管线仍在运行
+    finally:
+        unblock.set()
+        th.join(timeout=10)
+    assert not th.is_alive()
+    assert still_running
+
+
+def test_backoff_in_one_vendor_does_not_block_others(tmp_path, monkeypatch):
+    """某家传输类失败进入退避(重试 sleep)期间:另两家照常完成;
+    退避释放后该家重试成功。"""
+    in_backoff = threading.Event()
+    backoff_done = threading.Event()
+
+    def fake_sleep(s):
+        in_backoff.set()
+        assert backoff_done.wait(timeout=10), "退避未获释放(测试挂起)"
+
+    monkeypatch.setattr("time.sleep", fake_sleep)   # 与本文件既有测试同法
+    calls = {"qwen": 0}
+
+    def flaky(prompt, **k):
+        calls["qwen"] += 1
+        if calls["qwen"] == 1:
+            raise RuntimeError("Response ended prematurely")   # 传输类 → 可重试
+        return {"answer": "A qwen", "search_results": [], "usage": {}, "elapsed_s": 0.1}
+
+    _iso(tmp_path, monkeypatch, clients={"qwen": flaky,
+                                         "doubao": _ok_answer("doubao"),
+                                         "zhipu": _ok_answer("zhipu")})
+    th = threading.Thread(target=lambda: run_collection(
+        week=90, models=["qwen", "doubao", "zhipu"], prompt_ids=["C01"], runs=1,
+        rule_version="t"))
+    manifest = tmp_path / "data" / "raw" / "w90" / "runs.jsonl"
+    try:
+        th.start()
+        assert in_backoff.wait(timeout=10), "qwen 未进入退避"
+        def others_done():
+            # 逐行查 model+prompt_id+status 三元组:RunRecord 字段序为
+            # week,model,prompt_id,run,prompt_set_version,rule_snapshot_version,status,...
+            # prompt_id 与 status 不相邻,跨字段连续子串永不匹配(2026-09-18 修正)
+            if not manifest.exists():
+                return False
+            lines = manifest.read_text(encoding="utf-8").splitlines()
+            return (any('"model":"doubao"' in l and '"prompt_id":"C01"' in l
+                        and '"status":"ok"' in l for l in lines) and
+                    any('"model":"zhipu"' in l and '"prompt_id":"C01"' in l
+                        and '"status":"ok"' in l for l in lines))
+        _wait_until(others_done, what="退避期间 doubao/zhipu 完成")
+        assert calls["qwen"] == 1, "退避中:第二次尝试尚未发起"
+    finally:
+        backoff_done.set()
+        th.join(timeout=10)
+    assert not th.is_alive()
+    assert calls["qwen"] == 2          # 退避释放后重试成功
+
+
+def test_completed_vendor_not_called_again(tmp_path, monkeypatch):
+    """某家全部已有有效 L1 → 只走 skipped_exists,不再调用该家接口。"""
+    l1 = _iso(tmp_path, monkeypatch, clients={"doubao": _ok_answer("doubao")})
+    for pid in ("C01", "D01"):
+        p = l1(88, "qwen", pid, 1)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(json.dumps({"answer": "already there"}), encoding="utf-8")
+
+    def must_not_call(prompt, **k):
+        raise AssertionError("已完成供应商不得再调用")
+
+    monkeypatch.setattr(collector, "CLIENTS",
+                        {**collector.CLIENTS, "qwen": must_not_call})
+    recs = run_collection(week=88, models=["qwen", "doubao"],
+                          prompt_ids=["C01", "D01"], runs=1, rule_version="t")
+    st = {(r.model, r.status) for r in recs}
+    assert ("qwen", "skipped_exists") in st and ("doubao", "ok") in st
+
+
+def test_subset_and_repeat_runs_complete_exactly_once(tmp_path, monkeypatch):
+    """供应商子集 + 多 run: 任务不遗漏不重复;全部完成后再跑不发起请求。"""
+    calls: list[tuple[str, str]] = []
+
+    def counting(name):
+        def client(prompt, **k):
+            calls.append((name, prompt))
+            return {"answer": f"A {name}", "search_results": [], "usage": {}, "elapsed_s": 0.1}
+        return client
+
+    _iso(tmp_path, monkeypatch, clients={"qwen": counting("qwen"),
+                                         "zhipu": counting("zhipu")})
+    recs = run_collection(week=87, models=["qwen", "zhipu"],
+                          prompt_ids=["C01", "D01"], runs=2, rule_version="t")
+    assert len(calls) == 8                       # 2家 × 2题 × 2run
+    keys = {(r.model, r.prompt_id, r.run) for r in recs if r.status == "ok"}
+    assert len(keys) == 8
+    calls.clear()
+    recs2 = run_collection(week=87, models=["qwen", "zhipu"],
+                           prompt_ids=["C01", "D01"], runs=2, rule_version="t")
+    assert calls == []
+    assert len(recs2) == 8 and all(r.status == "skipped_exists" for r in recs2)
