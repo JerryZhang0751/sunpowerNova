@@ -283,9 +283,16 @@ def test_backoff_in_one_vendor_does_not_block_others(tmp_path, monkeypatch):
         th.start()
         assert in_backoff.wait(timeout=10), "qwen 未进入退避"
         def others_done():
-            return (manifest.exists() and
-                    '"model":"doubao","prompt_id":"C01","status":"ok"' in manifest.read_text(encoding="utf-8") and
-                    '"model":"zhipu","prompt_id":"C01","status":"ok"' in manifest.read_text(encoding="utf-8"))
+            # 逐行查 model+prompt_id+status 三元组:RunRecord 字段序为
+            # week,model,prompt_id,run,prompt_set_version,rule_snapshot_version,status,...
+            # prompt_id 与 status 不相邻,跨字段连续子串永不匹配(2026-09-18 勘误)
+            if not manifest.exists():
+                return False
+            lines = manifest.read_text(encoding="utf-8").splitlines()
+            return (any('"model":"doubao"' in l and '"prompt_id":"C01"' in l
+                        and '"status":"ok"' in l for l in lines) and
+                    any('"model":"zhipu"' in l and '"prompt_id":"C01"' in l
+                        and '"status":"ok"' in l for l in lines))
         _wait_until(others_done, what="退避期间 doubao/zhipu 完成")
         assert calls["qwen"] == 1, "退避中:第二次尝试尚未发起"
     finally:
@@ -338,7 +345,7 @@ def test_subset_and_repeat_runs_complete_exactly_once(tmp_path, monkeypatch):
     assert len(recs2) == 8 and all(r.status == "skipped_exists" for r in recs2)
 ```
 
-注：`"model":"doubao","prompt_id":"C01","status":"ok"` 子串匹配依赖 RunRecord 字段序（week, model, prompt_id, run, ...），与 `model_dump_json()` 输出一致。
+注（2026-09-18 勘误）：原稿的跨字段连续子串 `"model":"doubao","prompt_id":"C01","status":"ok"` 依赖字段邻接，而 RunRecord 字段序（week, model, prompt_id, run, prompt_set_version, rule_snapshot_version, status, ...，见 `models.py:45-51`）中 prompt_id 与 status 隔三字段，永不匹配——Task 3 实现时改逐行三元组检查（如上），断言强度不降反升。
 
 - [ ] **Step 2: 运行新测试**
 
