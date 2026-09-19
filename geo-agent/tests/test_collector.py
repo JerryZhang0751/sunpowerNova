@@ -361,15 +361,25 @@ def test_completed_vendor_not_called_again(tmp_path, monkeypatch):
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps({"answer": "already there"}), encoding="utf-8")
 
+    calls: list[str] = []
+
     def must_not_call(prompt, **k):
+        # 2026-09-19 质检: collector 会把客户端异常吞成 failed 记录(_run_vendor_parallel
+        # except Exception),仅靠"存在 skipped_exists 记录"的成员断言无法证明零调用 ——
+        # 先计数再抛,由 calls==[] 严格证明。
+        calls.append(prompt)
         raise AssertionError("已完成供应商不得再调用")
 
     monkeypatch.setattr(collector, "CLIENTS",
                         {**collector.CLIENTS, "qwen": must_not_call})
     recs = run_collection(week=88, models=["qwen", "doubao"],
                           prompt_ids=["C01", "D01"], runs=1, rule_version="t")
-    st = {(r.model, r.status) for r in recs}
-    assert ("qwen", "skipped_exists") in st and ("doubao", "ok") in st
+    assert calls == []                       # 严格证明: qwen 零调用
+    keys = {(r.model, r.prompt_id, r.status) for r in recs}
+    assert keys == {("qwen", "C01", "skipped_exists"),
+                    ("qwen", "D01", "skipped_exists"),
+                    ("doubao", "C01", "ok"),
+                    ("doubao", "D01", "ok")}  # 全部预期任务的键与状态,无多余 failed 记录
 
 
 def test_subset_and_repeat_runs_complete_exactly_once(tmp_path, monkeypatch):

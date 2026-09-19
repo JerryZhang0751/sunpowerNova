@@ -104,9 +104,14 @@ const { items } = Astro.props;
   // 增强脚本: 滚动高亮当前章节(aria-current="location")。
   // 纯增强 —— 无 JS 时目录与原生锚点跳转完全可用。
   const links = Array.from(document.querySelectorAll<HTMLAnchorElement>("a.toc-link"));
-  const targets = links
-    .map((l) => document.getElementById((l.getAttribute("href") ?? "").slice(1)))
-    .filter((el): el is HTMLElement => el !== null);
+  // 桌面+移动两套目录指向同一批标题 → 按 DOM 元素去重(Set 保插入序=正文顺序),避免重复遍历
+  const targets = Array.from(
+    new Set(
+      links
+        .map((l) => document.getElementById((l.getAttribute("href") ?? "").slice(1)))
+        .filter((el): el is HTMLElement => el !== null),
+    ),
+  );
   function setActive(id: string | null) {
     for (const l of links) {
       if (id && l.getAttribute("href") === `#${id}`) {
@@ -120,8 +125,18 @@ const { items } = Astro.props;
     const line = window.scrollY + 100;   // 略低于顶部导航的"当前位置线"
     let current: HTMLElement | null = null;
     for (const h of targets) {
-      if (h.offsetTop <= line) current = h;   // 页顶→null;长章节间隙→保持上一个;文末→最后一个
+      if (h.offsetTop <= line) current = h;   // 页顶→null;长章节间隙→保持上一个
       else break;
+    }
+    // 末节过短时(末标题之后余下内容 < 视口高-100px)页面滚到底也越不过判断线 →
+    // 已贴文档底且末标题进入视口时强制激活末节(点击末节/直开锚点/刷新/手动滚到底均覆盖)。
+    if (targets.length > 0) {
+      const last = targets[targets.length - 1];
+      const doc = document.documentElement;
+      const atBottom = window.innerHeight + window.scrollY >= doc.scrollHeight - 2;
+      if (atBottom && last.getBoundingClientRect().top < window.innerHeight) {
+        current = last;
+      }
     }
     setActive(current ? current.id : null);
   }
@@ -136,5 +151,7 @@ const { items } = Astro.props;
   }
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("resize", onScroll, { passive: true });
+  // 原生锚点跳转若滚动位置不变(相邻锚点/前进后退)不触发 scroll 事件 → 补 hashchange
+  window.addEventListener("hashchange", onScroll);
   update();
 </script>

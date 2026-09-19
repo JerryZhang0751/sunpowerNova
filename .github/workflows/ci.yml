@@ -51,3 +51,6 @@ jobs:
 
       - name: TOC integrity (news articles)
         run: npm run checktoc
+
+      - name: TOC gate self-test (counterexamples)
+        run: npm run test:toc

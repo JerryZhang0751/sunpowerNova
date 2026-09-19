@@ -10,6 +10,7 @@
     "preview": "astro preview",
     "check": "node -e \"try{require.resolve('@astrojs/check');require.resolve('typescript')}catch(e){console.error('site: 缺 @astrojs/check / typescript —— 先 npm install,不得跳过静态检查');process.exit(1)}\" && astro check",
     "checktoc": "node scripts/check-news-toc.mjs",
+    "test:toc": "node --test scripts/check-news-toc.test.mjs",
     "deploy": "wrangler pages deploy dist --project-name sunhestia --branch main"
   },
   "dependencies": {
