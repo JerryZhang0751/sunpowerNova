@@ -57,8 +57,14 @@ def parse_production_thread(thread_id: str) -> tuple[int, bool] | None:
 def list_root_threads(conn: sqlite3.Connection) -> list[str]:
     """枚举根命名空间(checkpoint_ns='')的线程名。只读 TEXT 列,不解码
     checkpoint/metadata BLOB;每线程状态读取由调用方经 app.get_state() 进行。
-    库损坏/读取失败 → WeekSelectionError(不降级 w1)。"""
+    库损坏/读取失败 → WeekSelectionError(不降级 w1);
+    库在但 checkpoints 表不存在(空白库,从未跑过任何线程)→ 零线程,不算损坏。"""
     try:
+        has_table = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='checkpoints'"
+        ).fetchone()
+        if has_table is None:
+            return []
         rows = conn.execute(
             "SELECT DISTINCT thread_id FROM checkpoints WHERE checkpoint_ns = ''"
         ).fetchall()
@@ -100,3 +106,42 @@ def classify_threads(app, conn: sqlite3.Connection) -> Classification:
         else:
             c.incomplete_normal[week] = tid
     return c
+
+
+def weekly_artifacts_exist(repo) -> bool:
+    """按周产物目录存在性: data/analysis/w*/ | data/raw/w*/ | reports/w*/ 任一即 True。
+    只用于"无有效生产记录"时的矛盾检测(有产物却无记录 → 停止),
+    不用于完成判定(产物可能源于部分执行、失败或手工操作)。"""
+    for sub in ("data/analysis", "data/raw", "reports"):
+        base = repo / sub
+        if base.is_dir() and any(base.glob("w[0-9]*")):
+            return True
+    return False
+
+
+def select_week(app, conn: sqlite3.Connection, repo) -> WeekSelection:
+    """自动选周(spec §4): 最大完成生产周 + 1;空白项目 w1;异常一律报错不降级。"""
+    c = classify_threads(app, conn)
+    if not c.completed:
+        if weekly_artifacts_exist(repo):
+            raise WeekSelectionError(
+                "无有效生产执行记录但存在按周产物(data/analysis|data/raw|reports);"
+                "请恢复执行数据库(state/runs.sqlite)或显式传 --week,不凭文件夹猜测完成状态")
+        return WeekSelection(week=1, max_completed=None, mode="new",
+                             resume_thread=None, note="空白项目,新建线程")
+    max_completed = max(c.completed)               # 整数最大值,防字符串序
+    week = validate_production_week(max_completed + 1)
+    incomplete_force = sorted(c.incomplete_force.get(week, []))
+    if incomplete_force and week not in c.incomplete_normal:
+        raise WeekSelectionError(
+            f"自动选中 w{week} 只有未完成的强制重跑线程 {incomplete_force},"
+            f"拒绝悄悄另开普通线程重复执行;请处理该线程或显式传 --week {week}")
+    if week in c.incomplete_normal:
+        tid = c.incomplete_normal[week]
+        note = f"续跑未完成线程 {tid}"
+        if incomplete_force:
+            note += f";另有未完成强制线程 {incomplete_force}"
+        return WeekSelection(week=week, max_completed=max_completed, mode="resume",
+                             resume_thread=tid, note=note)
+    return WeekSelection(week=week, max_completed=max_completed, mode="new",
+                         resume_thread=None, note="新建线程")

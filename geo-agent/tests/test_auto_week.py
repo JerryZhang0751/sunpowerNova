@@ -133,3 +133,86 @@ def test_classify_threads_rejects_state_week_mismatch(tmp_path):
     with pytest.raises(WeekSelectionError, match="w5"):
         classify_threads(app, conn)
     conn.close()
+
+
+from geo.orchestrate.auto_week import select_week, weekly_artifacts_exist
+
+
+# ---- select_week: 场景表(spec §4) ----
+def test_select_week_blank_project_starts_w1(tmp_path):
+    conn = _mini_conn(tmp_path / "t.sqlite"); app = _mini_app(conn)
+    sel = select_week(app, conn, tmp_path)
+    assert (sel.week, sel.mode, sel.max_completed) == (1, "new", None)
+    conn.close()
+
+
+def test_select_week_after_w7_picks_w8(tmp_path):
+    conn = _mini_conn(tmp_path / "t.sqlite"); app = _mini_app(conn)
+    _run_thread(app, "w7", 7)
+    sel = select_week(app, conn, tmp_path)
+    assert (sel.week, sel.max_completed, sel.mode) == (8, 7, "new")
+    conn.close()
+
+
+def test_select_week_resumes_incomplete_w8(tmp_path):
+    conn = _mini_conn(tmp_path / "t.sqlite"); ff = {}; app = _mini_app(conn, ff)
+    _run_thread(app, "w7", 7); _crash_thread(app, "w8", 8, ff)
+    sel = select_week(app, conn, tmp_path)
+    assert (sel.week, sel.mode, sel.resume_thread) == (8, "resume", "w8")
+    conn.close()
+
+
+def test_select_week_numeric_max_w9_w10_picks_w11(tmp_path):
+    """按整数取最大(防 "w10" < "w9" 字符串序)。"""
+    conn = _mini_conn(tmp_path / "t.sqlite"); app = _mini_app(conn)
+    _run_thread(app, "w9", 9); _run_thread(app, "w10", 10)
+    assert select_week(app, conn, tmp_path).week == 11
+    conn.close()
+
+
+def test_select_week_test_threads_do_not_affect_result(tmp_path):
+    conn = _mini_conn(tmp_path / "t.sqlite"); app = _mini_app(conn)
+    _run_thread(app, "w7", 7)
+    _run_thread(app, "test_w99", 99)
+    _run_thread(app, "w901", 901)
+    assert select_week(app, conn, tmp_path).week == 8
+    conn.close()
+
+
+def test_select_week_force_completed_counts_force_only_incomplete_guards(tmp_path):
+    # 完成的强制线程计入: w7 普通 + w8-xxx 强制完成 → 选 w9
+    conn = _mini_conn(tmp_path / "t.sqlite"); app = _mini_app(conn)
+    _run_thread(app, "w7", 7); _run_thread(app, "w8-20260919-110000", 8)
+    assert select_week(app, conn, tmp_path).week == 9
+    conn.close()
+    # 选中周只有未完成强制线程 → 报出线程并停止,不悄悄另开普通线程
+    conn2 = _mini_conn(tmp_path / "t2.sqlite"); ff2 = {}; app2 = _mini_app(conn2, ff2)
+    _run_thread(app2, "w7", 7); _crash_thread(app2, "w8-20260919-110001", 8, ff2)
+    with pytest.raises(WeekSelectionError, match="w8-20260919-110001"):
+        select_week(app2, conn2, tmp_path)
+    conn2.close()
+
+
+def test_select_week_no_records_but_artifacts_stops(tmp_path):
+    """库在但无有效生产记录,盘上却有按周产物 → 停止,不凭文件夹猜完成。"""
+    (tmp_path / "data" / "analysis" / "w3").mkdir(parents=True)
+    (tmp_path / "data" / "analysis" / "w3" / "eval_report.json").write_text("{}", encoding="utf-8")
+    conn = _mini_conn(tmp_path / "t.sqlite"); app = _mini_app(conn)
+    with pytest.raises(WeekSelectionError, match="按周产物"):
+        select_week(app, conn, tmp_path)
+    conn.close()
+
+
+def test_select_week_into_test_band_errors(tmp_path):
+    """自动结果落入测试保留带 → validate_production_week 报错,不擅自跳号。"""
+    conn = _mini_conn(tmp_path / "t.sqlite"); app = _mini_app(conn)
+    _run_thread(app, "w899", 899)
+    with pytest.raises(ValueError, match="测试保留带"):
+        select_week(app, conn, tmp_path)
+    conn.close()
+
+
+def test_weekly_artifacts_exist(tmp_path):
+    assert weekly_artifacts_exist(tmp_path) is False
+    (tmp_path / "reports" / "w2").mkdir(parents=True)
+    assert weekly_artifacts_exist(tmp_path) is True
