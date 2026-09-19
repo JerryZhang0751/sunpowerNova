@@ -69,7 +69,7 @@ def list_root_threads(conn: sqlite3.Connection) -> list[str]:
             "SELECT DISTINCT thread_id FROM checkpoints WHERE checkpoint_ns = ''"
         ).fetchall()
     except sqlite3.DatabaseError as e:
-        raise WeekSelectionError(f"执行数据库读取失败,无法自动选周(不降级 w1): {e}") from e
+        raise WeekSelectionError(f"执行数据库读取失败,无法自动选周(不降级 w1): {e};请人工核查或显式传 --week") from e
     return sorted(r[0] for r in rows)
 
 
@@ -94,7 +94,7 @@ def classify_threads(app, conn: sqlite3.Connection) -> Classification:
             snap = app.get_state({"configurable": {"thread_id": tid}})
         except Exception as e:
             raise WeekSelectionError(
-                f"生产线程 {tid} 状态读取失败,无法自动选周(不降级 w1): {e}") from e
+                f"生产线程 {tid} 状态读取失败,无法自动选周(不降级 w1): {e};请人工核查或显式传 --week") from e
         if snap.values.get("week") != week:
             raise WeekSelectionError(
                 f"生产线程 {tid} 的状态 week={snap.values.get('week')!r} 与线程名不一致,"

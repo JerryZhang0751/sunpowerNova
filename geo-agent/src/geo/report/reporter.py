@@ -69,8 +69,6 @@ def render(report: dict, out: Path) -> Path:
 def main(argv: list[str] | None = None) -> None:
     """报告重渲染入口: 必须显式 --week(重渲染不属于流水线完成语义)。"""
     import argparse
-    import json
-    from geo.shared.config import settings
     from geo.shared.weeks import validate_production_week
 
     ap = argparse.ArgumentParser(prog="geo.report.reporter")
