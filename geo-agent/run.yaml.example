@@ -1,4 +1,4 @@
-week: 1
+# 周次由流水线自动选择(已完成最大生产周 + 1),不再手工维护 —— 详见 README
 mode: audit          # audit | experiment
 scope: core          # core(45) | full(129)
 runs: 1              # 每 prompt×model 重复次数

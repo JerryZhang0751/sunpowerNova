@@ -14,7 +14,7 @@ def _mk_repo(tmp_path):
     (repo / "rules" / "seo-rules.yaml").write_text((fix / "seo_rules_v1.yaml").read_text())
     (repo / "rules" / "changelog.md").write_text("# Rules changelog\n")
     (repo / "run.yaml").write_text(yaml.safe_dump(
-        {"week": 1, "mode": "audit", "scope": "core", "runs": 1,
+        {"mode": "audit", "scope": "core", "runs": 1,
          "rule_version": "geo-seo-v1", "providers": ["qwen"]}, sort_keys=False))
     return repo
 

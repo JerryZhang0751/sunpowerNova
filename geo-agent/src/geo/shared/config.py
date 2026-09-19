@@ -16,7 +16,6 @@ MODELS: dict[str, dict] = {
 }
 
 class RunSpec(BaseModel):
-    week: int = 1
     mode: str = "audit"
     scope: str = "core"
     runs: int = 1
@@ -40,7 +39,7 @@ class Settings(BaseSettings):
 
     # mtime 键控缓存(2026-09-02 backlog §3): 改写文件后自动失效重读。
     # review fix(2026-09-02): 键升 (st_mtime_ns, st_size) 消同刻度重写窗口
-    # (运行时写入方存在: keeper.iterate / do_rollback / graph --next-week)。
+    # (运行时写入方存在: keeper.iterate / do_rollback——只写 rule_version 键)。
     # 契约: 返回对象为进程内共享实例，调用方不得原地修改。
     _run_cache: tuple[tuple[int, int], RunSpec] | None = PrivateAttr(default=None)
     _targets_cache: tuple[tuple[int, int], dict] | None = PrivateAttr(default=None)

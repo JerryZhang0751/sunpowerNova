@@ -16,21 +16,21 @@ def test_models_registry_values():
 def test_settings_run_cached_until_mtime_changes(tmp_path):
     from geo.shared.config import Settings
     s = Settings(run_path=tmp_path / "run.yaml", targets_path=tmp_path / "t.yaml")
-    (tmp_path / "run.yaml").write_text("week: 3\n", encoding="utf-8")
+    (tmp_path / "run.yaml").write_text("runs: 1\n", encoding="utf-8")
     (tmp_path / "t.yaml").write_text("site: {url: 'https://x.com'}\n", encoding="utf-8")
     a = s.run
     assert s.run is a                       # mtime 未变 → 同一对象(缓存)
-    (tmp_path / "run.yaml").write_text("week: 4\n", encoding="utf-8")
+    (tmp_path / "run.yaml").write_text("runs: 2\n", encoding="utf-8")
     # mtime 粒度: 同秒内两次 write_text mtime 可能不变 → 显式拨后,保证失效路径被测到
     st = (tmp_path / "run.yaml").stat()
     os.utime(tmp_path / "run.yaml", (st.st_atime + 5, st.st_mtime + 5))
-    assert s.run.week == 4                  # mtime 变 → 重新读盘
+    assert s.run.runs == 2                  # mtime 变 → 重新读盘
 
 
 def test_settings_targets_cached_until_mtime_changes(tmp_path):
     from geo.shared.config import Settings
     s = Settings(run_path=tmp_path / "run.yaml", targets_path=tmp_path / "t.yaml")
-    (tmp_path / "run.yaml").write_text("week: 3\n", encoding="utf-8")
+    (tmp_path / "run.yaml").write_text("runs: 1\n", encoding="utf-8")
     (tmp_path / "t.yaml").write_text("site: {url: 'https://a.com'}\n", encoding="utf-8")
     a = s.targets
     assert s.targets is a                   # mtime 未变 → 同一对象(缓存)
@@ -47,14 +47,14 @@ def test_run_cache_invalidates_on_same_mtime_tick_rewrite(tmp_path, monkeypatch)
     import pathlib
     import geo.shared.config as cfg
     run = tmp_path / "run.yaml"
-    run.write_text("week: 3\nmode: audit\nscope: core\n", encoding="utf-8")
+    run.write_text("runs: 1\nmode: audit\nscope: core\n", encoding="utf-8")
     (tmp_path / "t.yaml").write_text("site: {url: 'https://x.com'}\n", encoding="utf-8")
     s = cfg.Settings(run_path=run, targets_path=tmp_path / "t.yaml")
-    assert s.run.week == 3
+    assert s.run.runs == 1
     stale_tick = run.stat().st_mtime        # 首版 mtime = "旧刻度"
 
-    # 同 size 重写(week 3→4),ns 级 mtime 变化;再把 stat 谎报成旧刻度
-    run.write_text("week: 4\nmode: audit\nscope: core\n", encoding="utf-8")
+    # 同 size 重写(runs 1→2),ns 级 mtime 变化;再把 stat 谎报成旧刻度
+    run.write_text("runs: 2\nmode: audit\nscope: core\n", encoding="utf-8")
     real_stat = pathlib.Path.stat
 
     def fake_stat(self, *a, **kw):
@@ -63,7 +63,7 @@ def test_run_cache_invalidates_on_same_mtime_tick_rewrite(tmp_path, monkeypatch)
                                st_size=st.st_size)
     monkeypatch.setattr(pathlib.Path, "stat", fake_stat)
 
-    assert s.run.week == 4                  # 旧键(仅 st_mtime)在此会命中缓存返回 3
+    assert s.run.runs == 2                  # 旧键(仅 st_mtime)在此会命中缓存返回 1
 
 
 # ---- 回归锁(2026-09-02 审核缺口 A3): MODELS 单一事实源 ----
