@@ -1,4 +1,5 @@
 import json
+import pytest
 import httpx
 import geo.collect.collector as collector
 import geo.shared.storage as storage
@@ -404,3 +405,27 @@ def test_subset_and_repeat_runs_complete_exactly_once(tmp_path, monkeypatch):
                            prompt_ids=["C01", "D01"], runs=2, rule_version="t")
     assert calls == []
     assert len(recs2) == 8 and all(r.status == "skipped_exists" for r in recs2)
+
+
+# ---- 2026-09-19 周次自动化: 独立入口必须显式 --week ----
+def test_collector_main_requires_explicit_week():
+    import geo.collect.collector as C
+    with pytest.raises(SystemExit):            # argparse required 缺参 → exit 2
+        C.main([])
+
+
+def test_collector_main_passes_explicit_week(monkeypatch):
+    import geo.collect.collector as C
+    seen = {}
+    monkeypatch.setattr(C, "run_collection",
+                        lambda week, models, prompt_ids, runs, rule_version:
+                        seen.update(week=week, models=models))
+    C.main(["--week", "3"])
+    assert seen["week"] == 3
+
+
+def test_collector_main_rejects_test_band_week(monkeypatch):
+    import geo.collect.collector as C
+    monkeypatch.setattr(C, "run_collection", lambda *a, **k: None)
+    with pytest.raises(ValueError, match="测试保留带"):
+        C.main(["--week", "901"])

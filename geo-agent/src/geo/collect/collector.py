@@ -189,5 +189,17 @@ def run_collection(week:int, models:list[str], prompt_ids:list[str]|None, runs:i
     recs.extend(_run_vendor_parallel(todo, week, rule_version))
     return recs
 
+def main(argv: list[str] | None = None) -> None:
+    """独立采集入口: 必须显式 --week(自动选周只属于完整流水线入口,
+    独立采集不开启也不完成一轮流水线)。其余参数仍取 settings。"""
+    import argparse
+    ap = argparse.ArgumentParser(prog="geo.collect.collector")
+    ap.add_argument("--week", type=int, required=True,
+                    help="生产周次(独立采集须显式指定)")
+    a = ap.parse_args(argv)
+    run_collection(validate_production_week(a.week), settings.run.providers, None,
+                   settings.run.runs, settings.run.rule_version)
+
+
 if __name__ == "__main__":
-    run_collection(validate_production_week(settings.run.week), settings.run.providers, None, settings.run.runs, settings.run.rule_version)
+    main()

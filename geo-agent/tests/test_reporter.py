@@ -4,6 +4,7 @@ Byte-level determinism tests (golden tests)
 """
 
 import json
+import pytest
 from pathlib import Path
 from geo.report.reporter import render
 
@@ -227,3 +228,23 @@ def test_robots_render_unchanged_without_flag(tmp_path):
     assert "未知(degraded)" not in html
     assert "允许 GPTBot <strong>0.0</strong>" in html
     assert "允许 ClaudeBot <strong>0.0</strong>" in html
+
+
+# ---- 2026-09-19 周次自动化: 独立入口必须显式 --week ----
+def test_reporter_main_requires_explicit_week():
+    import geo.report.reporter as R
+    with pytest.raises(SystemExit):
+        R.main([])
+
+
+def test_reporter_main_passes_explicit_week(monkeypatch, tmp_path):
+    import geo.report.reporter as R
+    monkeypatch.setattr(R, "REPO", tmp_path)
+    ana = tmp_path / "data" / "analysis" / "w3"
+    ana.mkdir(parents=True)
+    (ana / "eval_report.json").write_text('{"week": 3}', encoding="utf-8")
+    seen = {}
+    monkeypatch.setattr(R, "render", lambda rep, out: seen.update(week=rep["week"], out=out))
+    R.main(["--week", "3"])
+    assert seen["week"] == 3
+    assert str(seen["out"]).endswith("reports/w3/report.html")

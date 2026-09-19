@@ -66,22 +66,31 @@ def render(report: dict, out: Path) -> Path:
     out.write_text(html, encoding="utf-8")
     return out
 
-if __name__ == "__main__":
+def main(argv: list[str] | None = None) -> None:
+    """报告重渲染入口: 必须显式 --week(重渲染不属于流水线完成语义)。"""
+    import argparse
     import json
     from geo.shared.config import settings
+    from geo.shared.weeks import validate_production_week
 
-    week = settings.run.week
+    ap = argparse.ArgumentParser(prog="geo.report.reporter")
+    ap.add_argument("--week", type=int, required=True,
+                    help="生产周次(重渲染须显式指定)")
+    a = ap.parse_args(argv)
+    week = validate_production_week(a.week)
+
     rep = json.loads(
-        (REPO/"data"/"analysis"/f"w{week}"/"eval_report.json").read_text(encoding="utf-8")
+        (REPO / "data" / "analysis" / f"w{week}" / "eval_report.json").read_text(encoding="utf-8")
     )
-
-    # Load rules_iteration.json for §5 if it exists
-    ri_path = REPO/"data"/"analysis"/f"w{week}"/"rules_iteration.json"
+    ri_path = REPO / "data" / "analysis" / f"w{week}" / "rules_iteration.json"
     if ri_path.exists():
         rep["rules_iteration"] = json.loads(ri_path.read_text(encoding="utf-8"))
 
-    out = REPO/"reports"/f"w{week}"/"report.html"
+    out = REPO / "reports" / f"w{week}" / "report.html"
     out.parent.mkdir(parents=True, exist_ok=True)
-
     render(rep, out)
     print(out)
+
+
+if __name__ == "__main__":
+    main()
