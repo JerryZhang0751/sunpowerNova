@@ -69,3 +69,11 @@
 - 观察: SEO 权重证据流暂缺(GSC 太薄)→ 本期休眠
 - 观察: 证据口径 = 被检索源唯一 URL(页-周);观察性相关、无未检索对照组
 - 观察: 权重调整施加 2 周同向持续性门(v1.1)
+
+## geo-seo-v8 — 2026-09-19 (week 7)
+- version: geo-seo-v7 → geo-seo-v8(本周评分用 geo-seo-v7,变更自下周生效)
+- weights: citability 29→30, brand 17→16, eeat 20→21, schema 9→8
+- rollback: python3.11 -m geo.rules.run rollback --to geo-seo-v7
+- 观察: SEO 权重证据流暂缺(GSC 太薄)→ 本期休眠
+- 观察: 证据口径 = 被检索源唯一 URL(页-周);观察性相关、无未检索对照组
+- 观察: 权重调整施加 2 周同向持续性门(v1.1)

@@ -315,7 +315,7 @@ def test_membership_driven_and_rules_injection():
     brand = {"mention": 1, "cited": 0, "sov": 0.0, "entity_known": False}
     static = {"robots_ai": {"GPTBot": True, "ClaudeBot": True}, "https": True}
     full = score_geo(SRC, brand, static)
-    assert full.total == 66.7                       # geo-seo-v7 权重(29/17/20/15/9/10;v6 下=66.0,升版同步)
+    assert full.total == 67.3                       # geo-seo-v8 权重(30/16/21/15/8/10;v7 下=66.7,升版同步)
     tiny = types.SimpleNamespace(
         version="geo-seo-v1", composite="geo",
         weights={"citability": 100}, signals={"citability": ["has_definition_segment"]},

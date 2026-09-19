@@ -1,11 +1,11 @@
-version: geo-seo-v8
+version: geo-seo-v7
 composite: geo
 weights:
-  citability: 30
-  brand: 16
-  eeat: 21
+  citability: 29
+  brand: 17
+  eeat: 20
   technical_geo: 15
-  schema: 8
+  schema: 9
   platform: 10
 signals:
   citability:
@@ -63,7 +63,7 @@ entries:
   target: schema
   signal: has_breadcrumblist
   status: draft
-  statement: schema.BreadcrumbList 被检索源唯一页 share 20.8% (unique_n=24, platforms=1)
+  statement: schema.BreadcrumbList 被检索源唯一页 share 9.5% (unique_n=21, platforms=1)
   evidence:
     bucket: schema.BreadcrumbList
     history:
@@ -89,12 +89,6 @@ entries:
       with_n: 2
       unique_n: 21
       share: 0.0952
-      platforms:
-      - doubao
-    - week: 7
-      with_n: 5
-      unique_n: 24
-      share: 0.2083
       platforms: &id001
       - doubao
     weeks:
@@ -102,18 +96,17 @@ entries:
     - 3
     - 5
     - 6
-    - 7
-    share: 0.2083
-    unique_n: 24
+    share: 0.0952
+    unique_n: 21
     platforms: *id001
   since_version: null
-  decided_at_week: 7
+  decided_at_week: 6
 - id: remove-faq_block_count
   type: signal_remove
   target: citability
   signal: faq_block_count
   status: draft
-  statement: formats.qa 被检索源唯一页 share 4.2% (unique_n=24, platforms=1)
+  statement: formats.qa 被检索源唯一页 share 9.5% (unique_n=21, platforms=1)
   evidence:
     bucket: formats.qa
     history:
@@ -145,12 +138,6 @@ entries:
       with_n: 2
       unique_n: 21
       share: 0.0952
-      platforms:
-      - doubao
-    - week: 7
-      with_n: 1
-      unique_n: 24
-      share: 0.0417
       platforms: &id002
       - doubao
     weeks:
@@ -159,9 +146,8 @@ entries:
     - 4
     - 5
     - 6
-    - 7
-    share: 0.0417
-    unique_n: 24
+    share: 0.0952
+    unique_n: 21
     platforms: *id002
   since_version: null
-  decided_at_week: 7
+  decided_at_week: 6

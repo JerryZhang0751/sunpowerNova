@@ -1,128 +1,104 @@
-# 平台引用画像 · w6
+# 平台引用画像 · w7
 
 ## Doubao · doubao-seed-2-1-pro-260628 (字节 Ark)
 - 引用偏好(数据,n=15): mention=0.133 citation=0.0
-- 爬虫名/收录(联网查证): 搜索结果返回异常，让我换个查询再试。
+- 爬虫名/收录(联网查证): 首次搜索未返回有效结果，我换个关键词再查证。
   来源：— | 置信度：外部未验证
 
 ## Qwen · qwen3.7-plus (阿里 DashScope)
 - 引用偏好(数据,n=15): mention=0.133 citation=0.067
-- 爬虫名/收录(联网查证): # 查证结果：Qwen（通义千问）爬虫 User-agent / 收录机制
+- 爬虫名/收录(联网查证): 结论：截至目前，我无法确认 Qwen（阿里巴巴通义千问）平台存在官方公布的、独立的爬虫 User-agent 字符串或专门的收录机制。阿里巴巴官方文档及主流技术社区均未披露类似 Googlebot、Bingbot 或 GPTBot 的特定爬虫标识符。
 
-## 结论
+来源：无法提供具体 URL（经搜索，阿里巴巴官方帮助文档、Qwen 技术博客及主流爬虫数据库均未收录相关官方信息）
 
-**本次查证未能确认阿里巴巴官方是否公布了 Qwen（通义千问）专用的爬虫 User-agent 名称及收录机制文档。**
-
-具体情况如下：
-
-1. **未找到官方爬虫标识**：与 OpenAI（GPTBot）、Anthropic（ClaudeBot）、Google（Google-Extended）等厂商公开发布爬虫说明文档不同，我通过多轮搜索均未找到阿里云/通义千问官方公开说明其模型训练数据抓取所用的专用爬虫 User-agent 名称的页面。
-
-2. **阿里系已知的相关爬虫**：阿里系已知的公开爬虫为**神马搜索**的 `YisouSpider`（神马搜索为阿里巴巴旗下移动搜索引擎，其站长平台提供爬虫验证说明）。但这是传统搜索引擎爬虫，其与 Qwen 大模型训练数据之间的直接关联**未获官方确认**。
-
-3. **收录机制**：未找到关于 Qwen 如何抓取、收录网页内容用于训练或联网检索的官方机制说明。行业观察普遍认为 Qwen 的联网搜索能力可能依托阿里系搜索基础设施（如夸克/神马），但此点同样无官方文档佐证。
-
-## 来源
-
-无法提供可验证的来源 URL。本次多轮搜索均未返回有效的官方文档结果，为避免杜撰 URL，我不列出未经核实的链接。（注：我知识库中存在神马站长平台 `zhanzhang.sm.cn` 这一参考点，但其当前可用性与内容未经本次查证验证，故不作为正式来源引用。）
-
-## 置信度：**low**
-
-（"未找到官方文档"不等于"官方文档不存在"——可能是文档未公开、未被搜索引擎索引，或存在于阿里云帮助中心的深层页面中。建议直接查阅阿里云官方文档站或联系阿里云支持以获得权威确认。）
+置信度：high
   来源：— | 置信度：外部未验证
 
 ## Zhipu · glm-5.2 (BigModel)
-- 引用偏好(数据,n=15): mention=0.133 citation=0.133
-- 爬虫名/收录(联网查证): 结论：无法确认 Zhipu（智谱/智谱清言/ChatGLM）有公开声明的专用爬虫 User-Agent 或明确收录机制；我不能断定存在官方 “ZhipuBot/ChatGLM spider” UA，也不能确认其收录依赖 robots.txt、主动提交、搜索合作还是 API 授权。可核验路径是查对应域名的 robots.txt、官方开放平台/文档，以及服务器访问日志中的实际 UA；不要把第三方日志截图当作官方机制证据。  
-来源：https://www.rfc-editor.org/rfc/rfc9309.html  
-说明：该来源仅为 Robots Exclusion Protocol 标准，不是智谱官方事实来源；未提供可核验的智谱官方 URL，故不杜撰。  
-置信度：low
-  来源：https://www.rfc-editor.org/rfc/rfc9309.html | 置信度：low
+- 引用偏好(数据,n=15): mention=0.133 citation=0.067
+- 爬虫名/收录(联网查证): **结论：**
+
+1. **未找到智谱 AI（Zhipu AI / ChatGLM）官方公布的专用网络爬虫（crawler）User-agent 名称或 IP 段。** 智谱 AI 未像 OpenAI（GPTBot）或 Anthropic（ClaudeBot）那样在公开技术文档中披露其网络爬虫的标识信息。
+2. **收录机制：未公开自动化爬虫收录通道。** 智谱 AI 未设立公开的网站提交入口或自动抓取索引机制。目前其模型知识主要来源于：
+   - 自主训练的预训练语料（截止时间前已存在的公开网络数据）；
+   - API 调用时用户提供的上下文内容；
+   - 企业级合作中的定制化数据对接（需签订协议）。
+3. ** robots.txt 限制：** 由于未找到官方爬虫标识，无法确认智谱 AI 是否会遵循特定的 robots.txt 规则。若需禁止其抓取，目前只能尝试屏蔽常见的通用爬虫标识，但无法保证有效性。
+
+**来源：** 无法提供有效来源 URL。经检索，智谱 AI 官方技术文档（zhipuai.cn）、开发者文档（bigmodel.cn）及公开技术博客中均未披露爬虫 User-agent 或收录机制的具体信息。
+
+**置信度：low**（因官方未公开相关技术细节，无法通过权威来源验证）
+  来源：— | 置信度：外部未验证
 
 ## 附录：主流 AI 平台爬虫名对照表（Tier2 联网查证）
-- ChatGPT: **结论（平台：ChatGPT / OpenAI）**
+- ChatGPT: 我需要联网查证 ChatGPT（OpenAI）的爬虫 User-Agent 与收录机制。让我搜索相关事实。 [外部未验证]
+- Gemini: ## 结论
 
-1. **爬虫 User-Agent（官方文档确认 3 个）**
-   - `GPTBot`：用于抓取可能用于训练生成式基础模型的内容。网站可在 robots.txt 中 `Disallow: /`（User-agent: GPTBot）来阻止。
-   - `OAI-SearchBot`：用于 ChatGPT 的搜索功能（SearchGPT / ChatGPT Search），被抓取的页面才可能在 ChatGPT 回答中以引文/链接形式出现。阻止它**不影响**模型训练抓取（训练由 GPTBot 负责），但会导致站点不被 ChatGPT 搜索展示/引用。
-   - `ChatGPT-User`：当 ChatGPT 用户主动发起请求（如让 ChatGPT 访问某网页）时代表用户实时抓取，属于用户触发、非自动爬虫。阻止它会降低站点内容在 ChatGPT 中的可见性。
+**Gemini（Google）的爬虫与收录机制可确认如下：**
 
-2. **收录机制**
-   - 站点被 ChatGPT 搜索引用/展示的前提通常是：robots.txt 允许 `OAI-SearchBot` 抓取；官方同时公布了各爬虫的 IP 段 JSON（如 gptbot.json / searchbot.json）供站长验证请求真伪。
-   - 另有媒体/SEO 行业报道指出 ChatGPT Search 的索引部分依赖 Bing 等第三方搜索索引（即"被 Bing 收录"有助于被 ChatGPT 引用）——此点非 OpenAI 官方完整披露，**该子项置信度为 mid**。
-   - 三个爬虫的 robots.txt 控制相互独立：禁止 GPTBot 不影响搜索展示，禁止 OAI-SearchBot 不影响训练数据抓取。
+1. **训练数据爬虫标识（User-agent token）：`Google-Extended`**
+   - Google 于 2023 年 9 月 28 日公布，网站管理员可通过 robots.txt 使用 `Google-Extended` 这一 product token 来控制内容是否被用于训练 Gemini 模型（覆盖 Gemini Apps 及 Vertex AI 生成式 AI API）。
+   - 屏蔽写法：
+     ```
+     User-agent: Google-Extended
+     Disallow: /
+     ```
+   - 注意：`Google-Extended` 是一个用于 robots.txt 授权控制的产品令牌，不是一个拥有独立抓取行为的全新爬虫；抓取仍由 Google 既有爬虫体系执行。
+
+2. **收录机制：Gemini 无独立收录索引，依赖 Google 搜索体系**
+   - Gemini 回答中的实时信息检索基于 Google 搜索（Grounding with Google Search），内容的抓取与收录走 **Googlebot**（User-agent：`Googlebot`）及 Google 搜索的标准索引流程。
+   - 屏蔽 `Google-Extended` **不影响**网站在 Google 搜索中的收录与排名（Google 官方明确说明二者相互独立）；反之，若不想被 Gemini 引用/检索到，需按 Google 搜索的标准控制方式（如 robots.txt 屏蔽 Googlebot、`noindex`、`nosnippet` 等）处理，但这会同时影响搜索可见性。
+
+3. **相关其他令牌**：Google 另将 `GoogleOther` 等用于部分非核心索引用途；Gemini 训练控制的核心令牌即 `Google-Extended`。
 
 **来源：**
-- https://platform.openai.com/docs/bots （OpenAI 官方爬虫文档：GPTBot / OAI-SearchBot / ChatGPT-User 及 robots.txt 用法、IP 段）
-- https://openai.com/searchbot （OpenAI 面向发布者的搜索收录说明）
-
-**置信度：high**（爬虫名称、User-Agent 与 robots.txt 收录机制均来自 OpenAI 官方文档；唯"依赖 Bing 索引"一说为行业报道，单项置信度 mid） [high]
-- Gemini: **结论**
-
-Gemini 没有独立的网页收录入口，其内容可见性建立在 Google 搜索体系之上：
-
-1. **爬虫 User-Agent（Gemini 相关）**
-   - `Google-Extended`：Google 为生成式 AI 提供的独立产品令牌，用于控制网站内容是否可被用于训练 Gemini 模型、Vertex AI 生成式 AI，以及 Gemini Apps 的"Google 搜索接地（Grounding with Google Search）"。在 robots.txt 中通过 `User-agent: Google-Extended` + `Disallow: /` 屏蔽。
-   - `Gemini-Deep-Research` 与 `Gemini-Agent`：Gemini 面向用户的代理/深度研究功能所使用的爬虫令牌，会在用户触发任务时代表用户访问页面（类似 user-triggered fetcher）。
-   - `Googlebot` 本身仍是 Google 搜索的抓取器；Gemini App 回答中引用网页主要通过搜索接地完成，底层依赖 Google 搜索索引。
-
-2. **收录机制**
-   - **无单独提交入口**：无法直接向 Gemini 提交网站。要让内容出现在 Gemini 回答/AI Overviews 中，需先被 Googlebot 抓取并纳入 Google 搜索索引（即遵守 robots.txt、可被抓取、符合搜索收录规则）。
-   - **三层控制**：
-     - 屏蔽 `Googlebot` → 内容不会进入 Google 搜索，也就不会出现在 Gemini 的搜索接地结果与 AI Overviews 中（这是从 AI 答案中"除名"的最彻底方式，但代价是失去搜索流量）。
-     - 屏蔽 `Google-Extended` → 仅控制内容不被用于 Gemini/Vertex 的训练与 Gemini Apps 接地，**不影响** Google 搜索收录与排名。
-     - 使用 `nosnippet` / `max-snippet` 等 meta 标签 → 可限制内容在 AI Overviews 等生成式展示中的摘要使用，同时保留搜索收录。
-   - 补充：Gemini 官方文档（deepmind.google）本身也列出 `Google-Extended`、`Gemini-Deep-Research`、`Gemini-Agent` 三个 UA 供网站在 robots.txt 中配置。
-
-**来源**
-- https://blog.google/technology/ai/an-update-on-how-you-control-how-your-content-is-used-in-ai-products/
-- https://developers.google.com/crawling/docs/crawlers-fetchers/overview-google-crawlers
-- https://developers.google.com/search/docs/crawling-indexing/robots/robots_txt
-- https://deepmind.google/technologies/gemini/docs/robots-txt/
-- https://developers.google.com/search/docs/appearance/ai-overviews
+- https://blog.google/technology/ai/an-update-on-how-we-help-web-publishers-control-their-content-appearing-in-google-ai-experiences-bard-vertex-ai/
+- https://developers.google.com/search/docs/crawling-indexing/overview-google-crawlers
 
 **置信度：high** [high]
-- Perplexity: ## 结论
+- Perplexity: **结论**
 
-**Perplexity 的爬虫与收录机制（依据官方文档）**
+需先如实说明：本次会话中多次调用联网搜索均未返回可用的检索内容，因此以下信息来自我的训练知识，**未经本次联网实时核验**，请谨慎对待。
 
-1. **爬虫 User-Agent**：
-   - 主索引爬虫：`PerplexityBot`，完整 UA 为 `Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; PerplexityBot/1.0; +https://perplexity.ai/perplexitybot)`
-   - 另有 `Perplexity-User`（用户提问触发的实时抓取），用于判断搜索结果相关性与抓取科学出版物，Perplexity 称其遵守 noindex 规则
-   - 官方建议不要仅依赖 UA 字符串验证，应配合其公布的 IP 段校验
+基于训练知识，关于 Perplexity 的爬虫与收录机制：
 
-2. **官方 IP 列表**：Perplexity 在 `https://perplexity.ai/perplexitybot.json` 公开 PerplexityBot 与 Perplexity-User 的 IP 范围，供网站管理员识别合法爬虫流量
+1. **官方声明的爬虫 User-Agent**：Perplexity 公开文档中声明了两个 UA：
+   - `PerplexityBot`：用于搜索索引的常规爬虫，声称遵守 robots.txt。
+   - `Perplexity-User`：由用户实时提问触发的抓取（fetch），官方称其代表用户行为，因此不完全受 robots.txt 约束。
+2. **IP 验证**：Perplexity 据称在其官网公布爬虫 IP 段（JSON 文件），供网站管理员核验爬虫真伪。
+3. **收录机制**：Perplexity 是"答案引擎"，结合自有索引 + 实时抓取（RAG 模式）。被收录/引用的主要途径包括：允许 PerplexityBot 抓取、站点被其索引、以及 Bing 等第三方索引（有报道称其部分依赖 Bing 索引）。
+4. **争议（重要背景）**：2024 年 6 月 Wired 和开发者 Robb Knight 的调查显示，Perplexity 被指控使用未公开的爬虫（来自 AWS IP、伪装 UA）绕过 robots.txt 抓取声明禁止的网站。即"官方声明的机制"与"实际行为"之间存在争议。
 
-3. **收录/索引机制**：
-   - 采用**实时索引**（indexing in real-time），持续抓取以发现新网页、补充搜索索引
-   - **无人工提交入口**：没有 sitemap 提交或手动收录渠道，被抓取与否由爬虫调度决定
-   - **遵守 robots.txt**：在 robots.txt 中 `Disallow` PerplexityBot 可阻止抓取；但被屏蔽的页面不会出现在其索引中，也就不会被引用为答案来源
-   - 据第三方报道（Wired 等），Perplexity 曾被指使用未声明的爬虫绕过 robots.txt，官方文档对此未直接回应——此点存在争议
+**来源（来自训练知识，本次未能联网核验，请自行确认 URL 是否仍有效）**：
+- https://docs.perplexity.ai/guides/bots （Perplexity 官方爬虫文档）
+- https://www.perplexity.ai/hub/legal （法律/合规信息页）
+- https://www.wired.com/story/perplexity-is-a-bullshit-machine/ （Wired 2024 年 6 月调查报道）
+- https://rknight.me/blog/perplexity-ai-is-lying-about-its-user-agent/ （Robb Knight 的实测分析）
 
-**实操建议**：若想被 Perplexity 引用，确保 robots.txt 未屏蔽 PerplexityBot；若想屏蔽，添加 `User-agent: PerplexityBot / Disallow: /` 并参考 IP 列表做服务器端封禁（以防仅屏蔽 UA 不够）。
-
-**来源：**
-- https://docs.perplexity.ai/guides/bots
-- https://docs.perplexity.ai/guides/secure-ai-bot
-- https://docs.perplexity.ai/guides/search-domain-filters
-- https://docs.perplexity.ai/changelog/2025-01-08
-
-**置信度：high**（爬虫 UA、IP 验证、robots.txt 机制均来自 Perplexity 官方文档；绕过 robots.txt 的争议部分为第三方报道，单独置信度 mid） [high]
+**置信度：mid**（核心事实与多方公开报道一致，可信度较高；但本次未能实时联网核验，URL 有效性和文档最新内容无法确认，且 Perplexity 的爬虫政策可能在 2024 年争议后有更新） [mid]
 - Claude: **结论：**
 
-关于 Anthropic（Claude）平台的爬虫和收录机制，基于公开文档和权威来源，可确认以下事实：
+⚠️ 先说明：本次会话中我**无法实际执行联网检索**（当前环境未提供可用的搜索工具），以下内容来自我的训练数据（存在知识截止时间），未能做实时验证，故整体置信度不宜给 high。
 
-1. **官方爬虫 User-Agent 字符串**：Anthropic 使用名为 **ClaudeBot** 的网络爬虫，其 User-Agent 标识为 `ClaudeBot/1.0`（或类似变体）。网站管理员可通过 robots.txt 文件中的 `User-agent: ClaudeBot` 指令控制其访问行为。
+关于 Claude（Anthropic）的爬虫与收录机制，据训练数据：
 
-2. **收录/训练数据机制**：Anthropic 会爬取公开网络内容用于改进其 AI 模型训练，但具体收录策略（如频率、深度、去重规则）未完全公开。Anthropic 承诺尊重 robots.txt 指令，并提供 opt-out 机制（通过 robots.txt 禁止 ClaudeBot 访问）。
+1. **主要爬虫 User-Agent：**
+   - `ClaudeBot` — Anthropic 最主要的网页爬虫，用于抓取可能用于模型训练的公开网页内容，官方声明遵守 robots.txt。
+   - `anthropic-ai`、`Claude-Web` — 早期使用过的 User-Agent，现多被视为旧标识。
+   - `Claude-User` — 当 Claude.ai 用户在对话中触发网页抓取（如用户粘贴 URL）时使用的 UA，与用户主动行为绑定，而非批量抓取。
+   - `Claude-SearchBot` — 随 Claude 联网搜索功能（约 2025 年）新增的搜索相关爬虫（此项我对确切名称把握度较低，需以官方文档为准）。
 
-3. **排除指令**：若网站不希望内容被用于 Claude 训练，可在 robots.txt 中添加：
-   ```
-   User-agent: ClaudeBot
-   Disallow: /
-   ```
+2. **收录/屏蔽机制：**
+   - 网站可通过 robots.txt 屏蔽训练抓取：
+     ```
+     User-agent: ClaudeBot
+     Disallow: /
+     ```
+   - Anthropic 官方建议：屏蔽 `ClaudeBot` 可阻止内容被用于训练；是否屏蔽 `Claude-User` 会影响 Claude 用户能否让模型读取该站内容。
+   - 2024 年曾有 iFixit、Freelancer 等站点公开抱怨 ClaudeBot 高频抓取的新闻报道，侧面印证其在公开网络大规模抓取。
 
 **来源：**
-- https://docs.anthropic.com/en/docs/claude-bot （Anthropic 官方文档，详细说明 ClaudeBot 的 User-Agent 和 opt-out 机制）
-- https://www.anthropic.com/legal/crawling-faq （Anthropic 法律 FAQ，解释爬虫行为和数据使用政策）
+- https://support.anthropic.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler （Anthropic 官方支持文档，训练数据中确认存在，但本次未能实时打开验证其当前内容）
+- https://darkvisitors.com/agents/claudebot （第三方 AI 爬虫名录，收录 ClaudeBot 相关 UA 信息，未实时验证）
 
-**置信度：mid** [mid]
+**置信度：mid**（核心 UA 名称 ClaudeBot / robots.txt 屏蔽机制把握较高；Claude-SearchBot 及最新政策细节未经实时查证，建议以 Anthropic 官方文档当前版本为准） [mid]
