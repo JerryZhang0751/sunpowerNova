@@ -615,6 +615,7 @@ def test_run_pipeline_closes_own_conn(tmp_path, monkeypatch):
             if self.fail:
                 raise RuntimeError("boom")
 
+    monkeypatch.setattr(G, "REPO", tmp_path)
     monkeypatch.setattr(G, "_new_run_conn", fake_new_conn)
 
     def assert_closed():
@@ -649,3 +650,115 @@ def test_new_run_conn_enables_wal_and_busy_timeout(tmp_path, monkeypatch):
         assert conn.execute("PRAGMA busy_timeout").fetchone()[0] == 5000
     finally:
         conn.close()
+
+
+# ---- 2026-09-19 周次自动化: 自动选周/进程锁/无参运行 ----
+def test_run_pipeline_auto_selects_resumes_and_advances(tmp_path, monkeypatch, capsys):
+    """spec §4 场景 2/3: w7 完成,w8 中途崩 → 无参运行仍选 w8 从 checkpoint 续跑
+    (collect 不重复执行);w8 完成后再无参运行 → 自动 w9。"""
+    import geo.orchestrate.graph as G
+    calls = []
+    fail_flags = {}
+
+    def mk(name):
+        def f(state):
+            calls.append(name)
+            if fail_flags.get(name):
+                raise RuntimeError(f"boom at {name}")
+            return state
+        return f
+
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    for n in ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]:
+        monkeypatch.setattr(G, f"{n}_node", mk(n))
+
+    G.run_pipeline(week=7)                        # w7 完成
+    fail_flags["fetch"] = True
+    with pytest.raises(RuntimeError, match="boom at fetch"):
+        G.run_pipeline(week=8)                    # w8 崩在 fetch
+    fail_flags["fetch"] = False
+    calls.clear()
+    G.run_pipeline()                              # 无参 → 自动选 w8 续跑
+    assert calls == ["fetch", "snapshot", "assess", "research", "generate", "rules", "report"]
+    out = capsys.readouterr().out
+    assert "[week-select]" in out and "w8" in out and "续跑" in out
+    calls.clear()
+    G.run_pipeline()                              # w8 已完成 → 自动 w9
+    assert calls == ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]
+    assert "w9" in capsys.readouterr().out
+
+
+def test_run_pipeline_auto_blank_project_runs_w1(tmp_path, monkeypatch, capsys):
+    import geo.orchestrate  # noqa: F401  (确保包可导入)
+    import geo.orchestrate.graph as G
+    calls = []
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    for n in ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]:
+        monkeypatch.setattr(G, f"{n}_node", lambda s, _n=n: (calls.append(_n), s)[1])
+    G.run_pipeline()                              # 空白项目 → w1
+    assert calls == ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]
+    out = capsys.readouterr().out
+    assert "[week-select]" in out and "w1" in out
+
+
+def test_run_pipeline_auto_does_not_write_run_yaml(tmp_path, monkeypatch):
+    """spec §7-12: 自动选周与完成处理不得写 run.yaml(周次推进零写回)。"""
+    import geo.orchestrate.graph as G
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    run_yaml = tmp_path / "run.yaml"
+    run_yaml.write_text("mode: audit\nscope: core\nruns: 1\n", encoding="utf-8")
+    before = run_yaml.read_bytes()
+    for n in ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]:
+        monkeypatch.setattr(G, f"{n}_node", lambda s: s)
+    G.run_pipeline()
+    G.run_pipeline(week=1)                        # 完成跳过路径
+    assert run_yaml.read_bytes() == before
+
+
+def test_force_new_run_requires_explicit_week(tmp_path, monkeypatch):
+    import geo.orchestrate.graph as G
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    with pytest.raises(ValueError, match="--force-new-run"):
+        G.run_pipeline(force_new_run=True)
+
+
+def test_explicit_test_band_rejected_before_lock(tmp_path, monkeypatch):
+    """显式周校验先于锁:拒绝时不创建 state/ 目录。"""
+    import geo.orchestrate.graph as G
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    with pytest.raises(ValueError, match="测试保留带"):
+        G.run_pipeline(week=901)
+    assert not (tmp_path / "state").exists()
+
+
+def test_pipeline_lock_blocks_concurrent_run(tmp_path, monkeypatch):
+    """spec §6/§7-13: 锁被占 → 立即报错;释放后可运行。"""
+    import fcntl
+    import os
+    import geo.orchestrate.graph as G
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    lock = tmp_path / "state" / "pipeline.lock"
+    lock.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(lock, os.O_CREAT | os.O_RDWR)
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)      # 模拟已在运行的流水线进程
+    try:
+        with pytest.raises(RuntimeError, match="已有流水线"):
+            G.run_pipeline(week=9)
+    finally:
+        os.close(fd)                                     # 释放
+    for n in ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]:
+        monkeypatch.setattr(G, f"{n}_node", lambda s: s)
+    G.run_pipeline(week=9)                               # 锁已放 → 正常进入
+
+
+def test_pipeline_lock_released_after_run(tmp_path, monkeypatch):
+    import fcntl
+    import os
+    import geo.orchestrate.graph as G
+    monkeypatch.setattr(G, "REPO", tmp_path)
+    for n in ["collect", "fetch", "snapshot", "assess", "research", "generate", "rules", "report"]:
+        monkeypatch.setattr(G, f"{n}_node", lambda s: s)
+    G.run_pipeline(week=9)
+    fd = os.open(tmp_path / "state" / "pipeline.lock", os.O_CREAT | os.O_RDWR)
+    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)       # 不抛 = run_pipeline 已释放
+    os.close(fd)

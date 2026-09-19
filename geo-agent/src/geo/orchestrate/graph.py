@@ -3,6 +3,8 @@ from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.sqlite import SqliteSaver
 import sqlite3
+import os
+from contextlib import contextmanager
 from geo.shared.config import settings, REPO
 from geo.collect.collector import run_collection, collection_health, COLLECTION_GATE
 from geo.fetch.fetcher import fetch_source
@@ -11,6 +13,7 @@ from geo.fetch.site_signals import snapshot_static_signals
 from geo.assess.analyst import assemble
 from geo.report.reporter import render
 from geo.shared.weeks import validate_production_week
+from geo.orchestrate.auto_week import is_complete, select_week
 
 class S(TypedDict): week: int
 
@@ -118,61 +121,83 @@ def build_graph(conn: sqlite3.Connection | None = None):
     conn = conn or _new_run_conn()
     return g.compile(checkpointer=SqliteSaver(conn))
 
-def _bump_run_yaml_week(week: int) -> None:
-    """--next-week:run.yaml week+1;经 atomic_write_text 原子落盘(不保注释,spec §0 裁量)。"""
-    import yaml as _y
-    from geo.shared.io_utils import atomic_write_text
-    run_raw = _y.safe_load((REPO / "run.yaml").read_text(encoding="utf-8"))
-    run_raw["week"] = week + 1
-    atomic_write_text(REPO / "run.yaml",
-                      _y.safe_dump(run_raw, allow_unicode=True, sort_keys=False))
-    print(f"run.yaml week → {week + 1}")
+@contextmanager
+def pipeline_lock(repo):
+    """完整流水线入口互斥(spec 2026-09-19 §6): 选周前取得、退出释放。
+    flock 随 fd 关闭释放;锁文件残留无害,不删除。重复启动立即报错,不排队。"""
+    import fcntl
+    lock_path = repo / "state" / "pipeline.lock"
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR, 0o644)
+    try:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as e:
+            raise RuntimeError(f"已有流水线进程在运行(锁: {lock_path}): {e}") from e
+        yield
+    finally:
+        os.close(fd)
 
-def run_pipeline(week: int, next_week: bool = False, force_new_run: bool = False):
-    validate_production_week(week)
+
+def run_pipeline(week: int | None = None, force_new_run: bool = False):
+    """week=None 时自动选周(已完成最大生产周+1,spec 2026-09-19);显式周保留
+    完成跳过/失败续跑语义。force_new_run 必须配显式 week(重跑目标明确)。"""
+    if week is not None:
+        validate_production_week(week)      # 先于锁: 拒绝时不碰 state/
+    if force_new_run and week is None:
+        raise ValueError("--force-new-run 须同时显式传入 --week(重跑目标明确)")
     from datetime import datetime
 
-    if force_new_run:
-        # Timestamped thread ID: w{week}-{YYYYMMDD-HHMMSS}
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        thread_id = f"w{week}-{timestamp}"
-    else:
-        thread_id = f"w{week}"
+    with pipeline_lock(REPO):
+        conn = _new_run_conn()
+        try:
+            app = build_graph(conn)
 
-    conn = _new_run_conn()
-    try:
-        app = build_graph(conn)
-        config = {"configurable": {"thread_id": thread_id}}
+            if week is None:
+                sel = select_week(app, conn, REPO)
+                week = sel.week
+                if sel.max_completed is None:
+                    print(f"[week-select] 无完成生产周(空白项目) → 本次执行 w{week}({sel.note})")
+                else:
+                    print(f"[week-select] 最大完成生产周: {sel.max_completed} → "
+                          f"本次执行 w{week}({sel.note})")
 
-        # Completion check via get_state: a graph at END has next == (). DO NOT test
-        # channel_values.week alone — it is set from the very first checkpoint, so a
-        # crashed run is indistinguishable from a completed one that way (w202 incident).
-        partial = False
-        if not force_new_run:
-            snap = app.get_state(config)
-            if snap.values.get("week") == week and not snap.next:
-                print(f"[pipeline] w{week} already completed (thread {thread_id}) — skip")
-                return
-            partial = snap.values.get("week") == week
-            if partial:
-                print(f"[pipeline] w{week} resuming from checkpoint, pending nodes: {list(snap.next)}")
+            if force_new_run:
+                # Timestamped thread ID: w{week}-{YYYYMMDD-HHMMSS}
+                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                thread_id = f"w{week}-{timestamp}"
+            else:
+                thread_id = f"w{week}"
+            config = {"configurable": {"thread_id": thread_id}}
 
-        # invoke(None) resumes a partial thread from its checkpoint (only pending
-        # nodes re-run); passing fresh input would restart the graph from START
-        # and re-execute already-checkpointed (paid) work.
-        app.invoke(None if partial else {"week": week}, config=config)
+            # Completion check via get_state: a graph at END has next == (). DO NOT test
+            # channel_values.week alone — it is set from the very first checkpoint, so a
+            # crashed run is indistinguishable from a completed one that way (w202 incident).
+            partial = False
+            if not force_new_run:
+                snap = app.get_state(config)
+                if is_complete(snap, week):
+                    print(f"[pipeline] w{week} already completed (thread {thread_id}) — skip")
+                    return
+                partial = snap.values.get("week") == week
+                if partial:
+                    print(f"[pipeline] w{week} resuming from checkpoint, pending nodes: {list(snap.next)}")
 
-        if next_week:
-            _bump_run_yaml_week(week)
-    finally:
-        conn.close()
+            # invoke(None) resumes a partial thread from its checkpoint (only pending
+            # nodes re-run); passing fresh input would restart the graph from START
+            # and re-execute already-checkpointed (paid) work.
+            app.invoke(None if partial else {"week": week}, config=config)
+        finally:
+            conn.close()
 
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(prog="geo.orchestrate.graph")
-    ap.add_argument("--week", type=int, default=None)
-    ap.add_argument("--next-week", action="store_true", help="Increment run.yaml week after run")
+    ap.add_argument("--week", type=int, default=None,
+                    help="显式选择生产周;省略时自动 = 已完成的最大生产周 + 1")
     ap.add_argument("--force-new-run", action="store_true",
-                    help="Ignore existing checkpoint, use timestamped thread for fresh run")
+                    help="忽略既有 checkpoint 强制重跑(须同时显式传 --week)")
     a = ap.parse_args()
-    run_pipeline(a.week or settings.run.week, next_week=a.next_week, force_new_run=a.force_new_run)
+    if a.force_new_run and a.week is None:
+        ap.error("--force-new-run 须同时显式传入 --week")
+    run_pipeline(a.week, force_new_run=a.force_new_run)
