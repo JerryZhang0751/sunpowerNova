@@ -190,7 +190,7 @@ npm run build
 ### 配置真实周迭代
 
 > [!WARNING]
-> 真实周迭代会调用外部模型和 GSC、写入当周数据，并可能产生费用。首次运行前必须核对周号、规则版本、API 配额、代理和本地数据备份。
+> 真实周迭代会调用外部模型和 GSC、写入当周数据，并可能产生费用。首次运行前必须核对目标周次、规则版本、API 配额、代理和本地数据备份。
 
 在 `geo-agent/.env` 中配置所需凭据。该文件与 GSC 私钥已被 Git 忽略，不应提交到仓库。
 
@@ -206,7 +206,7 @@ GSC_KEY_FILE=/absolute/path/to/gsc-service-account.json
 
 | 文件 | 负责内容 |
 | --- | --- |
-| [`geo-agent/run.yaml`](geo-agent/run.yaml) | 周号、运行模式、范围、次数、规则版本与 provider |
+| [`geo-agent/run.yaml`](geo-agent/run.yaml) | 运行模式、范围、次数、规则版本与 provider |
 | [`geo-agent/run.yaml.example`](geo-agent/run.yaml.example) | 参数说明与无凭据示例 |
 | [`geo-agent/targets.yaml`](geo-agent/targets.yaml) | 站点 URL、评估页面、品牌词与当前代理 |
 | [`geo-agent/targets.yaml.example`](geo-agent/targets.yaml.example) | 可移植的直连配置示例 |
@@ -214,16 +214,34 @@ GSC_KEY_FILE=/absolute/path/to/gsc-service-account.json
 确认配置后，在 `geo-agent/` 中运行：
 
 ```bash
-python -m geo.orchestrate.graph --week 5
+python -m geo.orchestrate.graph
 ```
+
+不带参数时自动选周：**本次周次 = 已完成的最大生产周次 + 1**（完成状态只认执行数据库里的 LangGraph checkpoint；没有历史记录的新项目从 w1 开始）。同一周已完整运行会跳过，中途失败会从 checkpoint 续跑，已付费节点不重复执行。
 
 | 参数 | 行为 |
 | --- | --- |
-| `--week N` | 显式选择生产周；测试保留 `900–999`，生产入口会拒绝该区间 |
-| `--next-week` | 完成后原子递增 `run.yaml` 中的周号 |
-| `--force-new-run` | 忽略同周 checkpoint，从头运行并再次调用付费接口 |
+| `--week N` | 显式选择生产周；省略时自动选周。测试保留 `900–999`，生产入口会拒绝该区间 |
+| `--force-new-run` | 忽略同周 checkpoint、开时间戳线程从头运行并再次调用付费接口；**须同时显式传 `--week`** |
 
-默认情况下，同周完整运行会跳过，部分运行会从 checkpoint 继续。不要把 `--force-new-run` 当作日常选项。
+显式续跑某一未完成周（不自动跳到下一周）：
+
+```bash
+python -m geo.orchestrate.graph --week 8
+```
+
+强制重跑历史周：
+
+```bash
+python -m geo.orchestrate.graph --week 7 --force-new-run
+```
+
+其他说明：
+
+- 完整流水线入口有进程锁（`state/pipeline.lock`）：已有流水线在运行时重复启动会立即报错退出。
+- 执行数据库缺失或无有效生产记录、但盘上存在按周产物（`data/analysis` / `data/raw` / `reports`）时，自动选周会明确报错——请恢复执行数据库或显式传 `--week`，不凭文件夹猜测完成状态。
+- 独立采集与报告重渲染入口不参与周次推进，须显式指定：`python -m geo.collect.collector --week N`、`python -m geo.report.reporter --week N`。
+- 周次推进不再读写 `run.yaml` 的 week 字段（该字段已删除）；流水线运行期仍会更新 `run.yaml` 的 `rule_version`（规则升版，属既有功能）。
 
 ## 当前验证快照
 
